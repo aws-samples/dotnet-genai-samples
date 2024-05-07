@@ -1,12 +1,11 @@
 ﻿@page "/image-playground"
-@using Amazon.Bedrock.Model;
-@using Amazon.Bedrock;
-@using Amazon.BedrockRuntime;
 @using System.Text.Json.Nodes
-@using Amazon.GenAI.Internal
+@using Amazon.Bedrock
+@using Amazon.Bedrock.Model
+@using Amazon.BedrockRuntime
+@using Amazon.GenAI.Abstractions.Bedrock
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject AmazonBedrockClient BedrockClient
-@inject IJSRuntime JS
 
 <MudText Typo="Typo.h3">Image Playground</MudText>
 <MudStack>
@@ -50,9 +49,7 @@
 
 @code {
     private readonly List<string> _listBase64Images = new();
-
     private bool _isThinking;
-
     private string? _prompt;
 
     protected override async Task OnInitializedAsync()

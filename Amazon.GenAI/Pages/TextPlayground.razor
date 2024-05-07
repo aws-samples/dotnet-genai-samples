@@ -2,9 +2,9 @@
 @using Amazon.BedrockRuntime;
 @using Amazon.Bedrock;
 @using Amazon.Bedrock.Model
+@using Amazon.GenAI.Abstractions.Bedrock
 @using Markdig
 @using System.Text.Json.Nodes
-@using Amazon.GenAI.Internal
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject AmazonBedrockClient BedrockClient
 @inject IJSRuntime JS
@@ -15,16 +15,9 @@
     <MudCard>
         <MudCardContent>
             <MudSelect T="FoundationModelSummary" @bind-Value="_selectedModel" @bind-Value:after="ModelChanged" ToStringFunc="@_selectConverter" Required="true">
-
                 <MudSelectItem Value="@_titanModel" />
                 <MudSelectItem Value="@_claudeModel" />
-               
             </MudSelect>
-          @*   <MudGrid>
-                <MudItem xs="9">
-                    Amazon Titan Text G1 - Lite (amazon.titan-text-lite-v1)
-                </MudItem>
-            </MudGrid> *@
         </MudCardContent>
     </MudCard>
     <form method="post" @onsubmit="OnSubmit">
@@ -67,14 +60,12 @@
 
     readonly Func<FoundationModelSummary, string> _selectConverter = fms => string.Concat(fms?.ProviderName, " ", fms?.ModelName, " (", fms?.ModelId, ")");
 
-
     protected override async Task OnInitializedAsync()
     {
         _titanModel = new FoundationModelSummary();
         _titanModel.ModelId = "amazon.titan-text-lite-v1";
         _titanModel.ProviderName = "Amazon";
         _titanModel.ModelName = "Titan Text G1 - Lite";
-
 
         _claudeModel = new FoundationModelSummary();
         _claudeModel.ModelId = "anthropic.claude-3-haiku-20240307-v1:0";
@@ -97,7 +88,6 @@
         {
             await InvokeAnthropicModel();
         }
-
     }
 
     private async Task InvokeAmazonModel()
@@ -116,7 +106,6 @@
         await Completed(null, generatedText);
     }
 
-
    private async Task OnSubmit()
     {
         var modelId = "amazon.titan-text-lite-v1";
@@ -129,9 +118,6 @@
         var response = await BedrockRuntimeClient.InvokeModelAsync(modelId, bodyJson).ConfigureAwait(false);
         var generatedText = response?["results"]?[0]?["outputText"]?.GetValue<string>() ?? string.Empty;
         await Completed(null, generatedText);
-
-
-
     }
 
     private async Task Completed(object? sender, string? text)
@@ -145,4 +131,3 @@
         });
     }
 }
-

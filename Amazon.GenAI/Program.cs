@@ -3,22 +3,23 @@ using Amazon.Bedrock;
 using Amazon.BedrockRuntime;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
+using Markdig;
+using Markdown.ColorCode;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
 builder.Services.AddMudServices();
 
-//builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
-//    new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()
-//    {
-//        RegionEndpoint = RegionEndpoint.USEast1
-//    }));
+var pipeline = new MarkdownPipelineBuilder()
+    .UseAdvancedExtensions()
+    .UseColorCode()
+    .Build();
 
+builder.Services.AddSingleton(pipeline);
 
 AWSCredentials awsCredentials;
 var chain = new CredentialProfileStoreChain();
@@ -38,6 +39,19 @@ if (chain.TryGetAWSCredentials("Bedrock", out awsCredentials))
     {
         RegionEndpoint = RegionEndpoint.USEast1
     }));
+}
+else
+{
+    builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
+    new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()
+    {
+        RegionEndpoint = RegionEndpoint.USEast1
+    }));
+    builder.Services.AddSingleton<AmazonBedrockClient>(
+        new AmazonBedrockClient(new AmazonBedrockConfig()
+        {
+            RegionEndpoint = RegionEndpoint.USEast1
+        }));
 }
 //builder.Services.AddSingleton<AmazonBedrockAgentRuntimeClient>(
 //    new AmazonBedrockAgentRuntimeClient()

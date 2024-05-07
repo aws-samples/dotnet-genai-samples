@@ -1,13 +1,11 @@
 ﻿@page "/chat-playground"
-@using Amazon.Bedrock.Model;
-@using Amazon.Bedrock;
-@using Amazon.BedrockRuntime;
-@using Amazon.GenAI.Internal
+@using Amazon.BedrockRuntime
+@using Amazon.GenAI.Abstractions.Bedrock
+@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Abstractions.Message
 @using Markdig
-@using System.Text.Json.Nodes
 
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
-@inject AmazonBedrockClient BedrockClient
 @inject IJSRuntime JS
 
 <MudText Typo="Typo.h3">Chat Playground</MudText>
@@ -61,7 +59,6 @@
 	private readonly ChatMessageHistory _chatMessageHistory = new();
 	private bool _isThinking;
 	private MudTextField<string>? _promptField;
-	private static BaseChatMessageHistory GetChatMessageHistory() => new ChatMessageHistory();
 
 	protected override async Task OnInitializedAsync()
 	{

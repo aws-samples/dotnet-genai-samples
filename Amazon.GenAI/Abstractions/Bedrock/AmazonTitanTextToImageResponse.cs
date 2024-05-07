@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Amazon.GenAI.Internal;
+namespace Amazon.GenAI.Abstractions.Bedrock;
 
 public class AmazonTitanTextToImageResponse
 {

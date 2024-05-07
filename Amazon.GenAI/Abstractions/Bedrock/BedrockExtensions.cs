@@ -4,13 +4,13 @@ using Amazon.BedrockRuntime;
 using Amazon.BedrockRuntime.Model;
 using Amazon.Util;
 
-namespace Amazon.GenAI.Internal;
+namespace Amazon.GenAI.Abstractions.Bedrock;
 
 internal static class BedrockExtensions
 {
     internal static async Task<JsonNode?> InvokeModelAsync(
         this AmazonBedrockRuntimeClient client,
-        string id,
+        string? id,
         MemoryStream memoryStream,
         CancellationToken cancellationToken = default)
     {
@@ -37,7 +37,7 @@ internal static class BedrockExtensions
 
     public static async Task<JsonNode?> InvokeModelAsync(
         this AmazonBedrockRuntimeClient client,
-        string id,
+        string? id,
         byte[] bytes,
         CancellationToken cancellationToken = default)
     {
@@ -51,7 +51,7 @@ internal static class BedrockExtensions
 
     public static async Task<JsonNode?> InvokeModelAsync(
         this AmazonBedrockRuntimeClient client,
-        string id,
+        string? id,
         JsonObject jsonObject,
         CancellationToken cancellationToken = default)
     {

@@ -1,14 +1,13 @@
-﻿using System;
-using Amazon.CDK;
+﻿using Amazon.CDK;
 using Constructs;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.S3.Notifications;
 using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.S3.Deployment;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 
@@ -29,9 +28,9 @@ public class KbCustomResourceStack : Stack
         props.KbCustomResourceRole = CreateKnowledgeBaseCustomResourceRole(this, props);
         props.KbRole = CreateKnowledgeBaseServiceRole(this, props);
         props.DataSyncLambdaRole = CreateDataSyncLambdaRole(this, props);
-       // KbServiceRole = CreateKnowledgeBaseServiceRole(this, props);
 
         Bucket = S3Bucket.Create(this, props);
+        UploadAssetsToBucket(scope, props);
 
         var provider = KbProvider.Get(this, props, Bucket);
 
@@ -46,41 +45,16 @@ public class KbCustomResourceStack : Stack
         Bucket.GrantReadWrite(props.KbRole);
         Bucket.GrantReadWrite(dataSyncLambda);
         Bucket.AddEventNotification(EventType.OBJECT_CREATED, new LambdaDestination(dataSyncLambda));
+    }
 
-        new CfnOutput(this, "knowledgeBaseBucketName", new CfnOutputProps
+    private void UploadAssetsToBucket(Construct scope, KbCustomResourceStackProps props = null)
+    {
+        var name = $"{props?.AppProps.NamePrefix}-deploy-assets-{props?.AppProps.NameSuffix}";
+        var bucketDeployment = new BucketDeployment(scope, name, new BucketDeploymentProps
         {
-            Value = Bucket.BucketName
+            Sources = [Source.Asset(Constants.ShareHolderLettersFolder)],
+            DestinationBucket = Bucket,
         });
-
-        //new CfnOutput(this, "knowledgeBaseId", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("knowledgeBaseId")
-        //});
-
-        //new CfnOutput(this, "collectionArn", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("collectionArn")
-        //});
-
-        //new CfnOutput(this, "collectionId", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("collectionId")
-        //});
-
-        //new CfnOutput(this, "dataSourceId", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("dataSourceId")
-        //});
-
-        //new CfnOutput(this, "collectionName", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("collectionName")
-        //});
-
-        //new CfnOutput(this, "collectionEndpoint", new CfnOutputProps
-        //{
-        //    Value = KbCustomResource.GetAttString("collectionEndpoint")
-        //});
     }
 
     private Role CreateKnowledgeBaseServiceRole(Construct kbSecurity, KbCustomResourceStackProps props)
@@ -260,61 +234,6 @@ public class KbCustomResourceStack : Stack
         });
 
         return kbCustomResourceRole;
-    }
-
-    private static Role CreateKnowledgeBaseRole(Construct kbSecurity, KbCustomResourceStackProps props)
-    {
-        var lambdaRoleName = $"{props.AppProps.NamePrefix}-kb-role-{props.AppProps.NameSuffix}";
-        var kbRole = new Role(kbSecurity, lambdaRoleName, new RoleProps
-        {
-            RoleName = lambdaRoleName,
-            AssumedBy = new CompositePrincipal(
-                new ServicePrincipal("bedrock.amazonaws.com"),
-                new ServicePrincipal("lambda.amazonaws.com"),
-                new ArnPrincipal(props.KbCustomResourceRole.RoleArn)
-            ),
-            InlinePolicies = new Dictionary<string, PolicyDocument>
-            {
-                {
-                    "bedrock-policy",
-                    new PolicyDocument(new PolicyDocumentProps
-                    {
-                        Statements = new []
-                        {
-                            new PolicyStatement(new PolicyStatementProps
-                            {
-                                Effect = Effect.ALLOW,
-                                Resources = new [] { "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1" },
-                                Actions = new []
-                                {
-                                    "bedrock:InvokeModel",
-                                }
-                            }),
-                        },
-                    })
-                },
-                {
-                    "aoss-policy",
-                    new PolicyDocument(new PolicyDocumentProps
-                    {
-                        Statements = new []
-                        {
-                            new PolicyStatement(new PolicyStatementProps
-                            {
-                                Effect = Effect.ALLOW,
-                                Resources = new [] { "*" },
-                                Actions = new []
-                                {
-                                    "aoss:*",
-                                }
-                            }),
-                        },
-                    })
-                },
-            }
-        });
-
-        return kbRole;
     }
 
     private static Role CreateDataSyncLambdaRole(Construct kbSecurity, KbCustomResourceStackProps props)

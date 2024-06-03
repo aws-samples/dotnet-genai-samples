@@ -31,7 +31,7 @@ internal sealed class Program
         {
             Env = env,
             AppProps = appStackProp,
-            KnowledgeBaseEmbeddingModelArn = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
+            KnowledgeBaseEmbeddingModelArn = Constants.EmbeddingModelArn
         });
 
         app.Synth();

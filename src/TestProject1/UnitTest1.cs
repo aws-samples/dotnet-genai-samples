@@ -1,27 +1,67 @@
-﻿using System.Text.Json;
-using Amazon.Lambda.Core;
+using System.Text.Json;
 using Amazon.OpenSearchServerless;
+using Amazon.IdentityManagement;
 using Amazon.OpenSearchServerless.Model;
+using OpenSearch.Client;
 using System.Text.Json.Nodes;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgent.Model;
-using Amazon.GenAI.KbLambda.Abstractions.OpenSearch;
-using Amazon.SimpleSystemsManagement;
-using Amazon.SimpleSystemsManagement.Model;
-using OpenSearch.Client;
+using Amazon.IdentityManagement.Model;
+using Amazon.SecurityToken;
+using Amazon.SecurityToken.Model;
 using OpenSearch.Net.Auth.AwsSigV4;
+using TestProject1.Abstractions.OpenSearch;
+using Environment = Amazon.CDK.Environment;
 
-namespace Amazon.GenAI.KbLambda;
+namespace TestProject1;
 
-public static class Create
+public class Tests
 {
-    private static ILambdaContext? _context;
+    public CollectionDetail? CollectionDetail { get; set; }
+    private static string? _namePrefix;
+    private static string? _nameSuffix;
+    private static Environment? _environment;
 
-    public static void SetContext(ILambdaContext? context) => _context = context;
-
-    public static async Task<CollectionDetail> Collection(string? namePrefix, string? nameSuffix)
+    [SetUp]
+    public void Setup()
     {
-        _context?.Logger.LogLine("Creating Collection");
+        var identityTask = GetIdentity();
+        identityTask.Wait();
+        var identity = identityTask.Result;
+
+        //_namePrefix = "test";
+        //_nameSuffix = DateTime.Now.ToString("yyyyMMddHHmmss");
+
+        _namePrefix = "dotnet-genai";
+        _nameSuffix = "20240602140856";
+
+        _environment = MakeEnv();
+
+        //var networkSecurityPolicy = NetworkSecurityPolicy(_namePrefix, _nameSuffix);
+        //networkSecurityPolicy.Wait();
+
+        //var encryptionSecurityPolicy = EncryptionSecurityPolicy(_namePrefix, _nameSuffix);
+        //encryptionSecurityPolicy.Wait();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        var client = new AmazonOpenSearchServerlessClient();
+
+        //var request = new DeleteCollectionRequest
+        //{
+        //    ClientToken = Guid.NewGuid().ToString(),
+        //    Id = CollectionDetail!.Id
+        //};
+        //var deleteCollectionTask = client.DeleteCollectionAsync(request);
+        //deleteCollectionTask.Wait();
+    }
+
+    [Test]
+    public async Task CreateCollection()
+    {
+        Console.WriteLine("Creating Collection");
 
         try
         {
@@ -30,7 +70,7 @@ public static class Create
             var request = new CreateCollectionRequest
             {
                 ClientToken = Guid.NewGuid().ToString(),
-                Name = $"{namePrefix}-{nameSuffix}",
+                Name = $"{_namePrefix}-{_nameSuffix}",
                 Type = "VECTORSEARCH",
 
             };
@@ -43,7 +83,7 @@ public static class Create
 
             while (attempts < maxAttempts)
             {
-                _context?.Logger.LogLine($"Checking Collection Status Attempt: {attempts}");
+                Console.WriteLine($"Checking Collection Status Attempt: {attempts}");
 
                 var batchCollectionRequest = new BatchGetCollectionRequest
                 {
@@ -57,33 +97,18 @@ public static class Create
                 if (collections is not null && collections.Count > 0)
                 {
                     var collection = collections[0];
-                    _context?.Logger.LogLine($"Collection Status: {collection.Status}");
+                    Console.WriteLine($"Collection Status: {collection.Status}");
 
                     if (collection.Status == "ACTIVE")
                     {
-                        _context?.Logger.LogLine($"  -- in ACTIVE Collection Status");
+                        Console.WriteLine($"  -- in ACTIVE Collection Status");
+                        Console.WriteLine($"  -- trying to store: {collection.Id}");
+                        Console.WriteLine($"  -- trying to store: {collection.Arn}");
+                        Console.WriteLine($"  -- trying to store: {_namePrefix}-{_nameSuffix}/collectionId");
 
-                        await StoreParameters(
-                                name: $"{namePrefix}-{nameSuffix}/collectionId",
-                                value: collection.Id!
-                            );
+                        CollectionDetail = collection;
 
-                        await StoreParameters(
-                            name: $"{namePrefix}-{nameSuffix}/collectionArn",
-                            value: collection.Arn!
-                        );
-
-                        await StoreParameters(
-                            name: $"{namePrefix}-{nameSuffix}/collectionName",
-                            value: collection.Name!
-                        );
-
-                        await StoreParameters(
-                            name: $"{namePrefix}-{nameSuffix}/collectionEndpoint",
-                            value: collection.CollectionEndpoint!
-                        );
-
-                        return collection;
+                        break;
                     }
                 }
 
@@ -96,50 +121,50 @@ public static class Create
             Console.WriteLine(e);
             throw;
         }
-
-        return new CollectionDetail();
     }
 
-    public static Task Index(string host, string? namePrefix, string? nameSuffix)
+    [Test]
+    public async Task CreateIndex()
     {
-        _context?.Logger.LogLine("Waiting 90s before creating Index");
-        Thread.Sleep(30000);
-        _context?.Logger.LogLine("60 more");
-        Thread.Sleep(30000);
-        _context?.Logger.LogLine("30 more");
-        Thread.Sleep(15000);
-        _context?.Logger.LogLine("15 more");
-        Thread.Sleep(15000);
+        //   await CreateCollection();
+        CollectionDetail = new CollectionDetail
+        {
+            CollectionEndpoint = "https://fl7ahga4v8bgwpajvpfh.us-east-1.aoss.amazonaws.com"
+        };
 
-        _context?.Logger.LogLine("Creating Index");
+        Console.WriteLine("Creating Index");
 
         try
         {
-            var endpoint = new Uri(host);
+            var endpoint = new Uri(CollectionDetail?.CollectionEndpoint!);
 
-            _context?.Logger.LogLine($"   -- host: {host}");
+            Console.WriteLine($"   -- host: {CollectionDetail?.CollectionEndpoint!}");
 
             var connection = new AwsSigV4HttpConnection(service: AwsSigV4HttpConnection.OpenSearchServerlessService);
             var config = new ConnectionSettings(endpoint, connection);
             var client = new OpenSearchClient(config);
 
-            var createIndexResponse = (client?.Indices.Create($"{namePrefix}-{nameSuffix}", c => c
+            var createIndexResponse = await (client?.Indices.CreateAsync($"{_namePrefix}-{_nameSuffix}", c => c
                 .Settings(x => x
                     .Setting("index.knn", true)
                 )
                 .Map<VectorRecord>(m => m
                     .Properties(p => p
+                        //.FieldAlias(a=>a.Name($"{namePrefix}-vector"))
+                        //.Keyword(k => k.Name(n => n.Id))
+                        //.Nested<Dictionary<string, object>>(n => n.Name(x => x.Metadata))
+                        // .Text(t => t.Name(n => n.Text))
                         .KnnVector(x => x
-                            .Name($"{namePrefix}-vector")
-                            .Method(n => n.Name("hnsw")
-                                .Parameters(p => p.Parameter("ef_construction", 512))
-                                .Parameters(p => p.Parameter("m", 12))
-                                .Engine("faiss"))
-                            .Dimension(1024)
+                                .Name(n => $"{_namePrefix}-vector")
+                                //.Method(n => n.Name("hnsw")
+                                //    .Parameters(p => p.Parameter("ef_construction", 512))
+                                //    .Parameters(p => p.Parameter("m", 12))
+                                //    .Engine("faiss"))
+                                .Dimension(1024)
+                        // .Similarity("cosine")
                         )
                     )
-                ))!);
-
+                ))!).ConfigureAwait(false);
 
             Console.WriteLine($"createIndexResponse.Acknowledged: {createIndexResponse.Acknowledged}");
         }
@@ -148,39 +173,30 @@ public static class Create
             Console.WriteLine(e);
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
-    public static async Task<CreateKnowledgeBaseResponse?> KnowledgeBase(
-        string? knowledgeBaseRoleArn,
-        string? namePrefix,
-        string? nameSuffix,
-        string? knowledgeBaseEmbeddingModelArn,
-        string? collectionArn)
+    [Test]
+    public async Task CreateKnowledgeBase()
     {
-        _context?.Logger.LogLine("Waiting 60s before creating KnowledgeBase");
-        Thread.Sleep(30000);
-        _context?.Logger.LogLine("30 more");
-        Thread.Sleep(15000);
-        _context?.Logger.LogLine("15 more");
-        Thread.Sleep(15000);
+        await CreateIndex();
 
-        _context?.Logger.LogLine("Creating KnowledgeBase");
+        Console.WriteLine("Creating KnowledgeBase");
 
         try
         {
+            var knowledgeBaseRole = await GetKnowledgeBaseRole();
+
             var request = new CreateKnowledgeBaseRequest
             {
                 ClientToken = Guid.NewGuid().ToString(),
-                Name = $"{namePrefix}-{nameSuffix}",
-                RoleArn = knowledgeBaseRoleArn,
+                Name = $"{_namePrefix}-{_nameSuffix}",
+                RoleArn = knowledgeBaseRole.Arn,
                 KnowledgeBaseConfiguration = new KnowledgeBaseConfiguration
                 {
                     Type = KnowledgeBaseType.VECTOR,
                     VectorKnowledgeBaseConfiguration = new VectorKnowledgeBaseConfiguration
                     {
-                        EmbeddingModelArn = knowledgeBaseEmbeddingModelArn
+                        EmbeddingModelArn = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
                     }
                 },
                 StorageConfiguration = new StorageConfiguration
@@ -188,12 +204,11 @@ public static class Create
                     Type = KnowledgeBaseStorageType.OPENSEARCH_SERVERLESS,
                     OpensearchServerlessConfiguration = new OpenSearchServerlessConfiguration
                     {
-                        CollectionArn = collectionArn,
-                        VectorIndexName = $"{namePrefix}-{nameSuffix}",
+                        CollectionArn = CollectionDetail.Arn,
+                        VectorIndexName = $"{_namePrefix}-{_nameSuffix}",
                         FieldMapping = new OpenSearchServerlessFieldMapping
                         {
-                            
-                            VectorField = $"{namePrefix}-vector",
+                            VectorField = $"{_namePrefix}-vector",
                             TextField = "text",
                             MetadataField = "metadata"
                         }
@@ -207,21 +222,9 @@ public static class Create
             if (response is null ||
                 response.KnowledgeBase is null ||
                 response.KnowledgeBase.KnowledgeBaseId is null ||
-                response.KnowledgeBase.KnowledgeBaseArn is null) return response;
+                response.KnowledgeBase.KnowledgeBaseArn is null) return;
 
-            _context?.Logger.LogLine("   ---- KnowledgeBase created");
-
-            await StoreParameters(
-                name: $"{namePrefix}-{nameSuffix}/knowledgeBaseId",
-                value: response.KnowledgeBase.KnowledgeBaseId!
-            );
-
-            await StoreParameters(
-                name: $"{namePrefix}-{nameSuffix}/knowledgeBaseArn",
-                value: response.KnowledgeBase.KnowledgeBaseArn!
-            );
-
-            return response;
+            Console.WriteLine("   ---- KnowledgeBase created");
         }
         catch (Exception e)
         {
@@ -230,88 +233,21 @@ public static class Create
         }
     }
 
-    public static async Task<CreateDataSourceResponse?> DataSource(
-        string? knowledgeBaseBucketArn,
-        string knowledgeBaseId,
-        string? namePrefix,
-        string? nameSuffix
-        )
+
+    [Test]
+    public async Task DeleteKnowledgeBaseStacks()
     {
-        _context?.Logger.LogLine("Creating DataSource");
 
-        try
-        {
-            var request = new CreateDataSourceRequest
-            {
-                ClientToken = Guid.NewGuid().ToString(),
-                Name = $"{namePrefix}-{nameSuffix}",
-                KnowledgeBaseId = knowledgeBaseId,
-                DataSourceConfiguration = new DataSourceConfiguration
-                {
-                    Type = DataSourceType.S3,
-                    S3Configuration = new S3DataSourceConfiguration
-                    {
-                        BucketArn = knowledgeBaseBucketArn,
-                    }
-                }
-            };
-
-            var client = new AmazonBedrockAgentClient();
-
-            var response = await client.CreateDataSourceAsync(request);
-
-            if (response is null ||
-                response.DataSource is null ||
-                response.DataSource.DataSourceId is null) return response;
-
-            _context?.Logger.LogLine("   ---- DataSource created");
-
-            await StoreParameters(
-                name: $"{namePrefix}-{nameSuffix}/dataSourceId",
-                value: response.DataSource.DataSourceId!
-            );
-
-            return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
     }
 
-    private static async Task<string> StoreParameters(string name, string value)
+    public static async Task AccessPolicy(
+    string? namePrefix,
+    string? nameSuffix,
+    string? knowledgeBaseRoleArn,
+    string? knowledgeBaseCustomResourceRoleArn
+    )
     {
-        try
-        {
-            var client = new AmazonSimpleSystemsManagementClient();
-
-            var request = new PutParameterRequest()
-            {
-                Name = "/" + name,
-                Value = value,
-                Type = ParameterType.String,
-                Overwrite = true,
-                Description = ""
-            };
-            var response = await client.PutParameterAsync(request);
-
-            return response.Tier;
-        }
-        catch (Exception e)
-        {
-            _context?.Logger.LogLine(e.Message);
-            throw;
-        }
-    }
-
-    public static async Task AccessPolicy(string? namePrefix,
-        string? nameSuffix,
-        string? knowledgeBaseRoleArn,
-        string knowledgeBaseCustomResourceRoleArn,
-        string? accessPolicyArns)
-    {
-        _context?.Logger.LogLine("Creating Access Policy");
+        Console.WriteLine("Creating Access Policy");
 
         var policyJson = new JsonArray
         {
@@ -320,8 +256,7 @@ public static class Create
                 ["Principal"] = new JsonArray
                 {
                     { knowledgeBaseRoleArn },
-                    { knowledgeBaseCustomResourceRoleArn },
-                    { accessPolicyArns }
+                    { "arn:aws:iam::676229420717:user/dev_acct" }
                 },
                 ["Description"] = "",
                 ["Rules"] = new JsonArray
@@ -373,7 +308,7 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateAccessPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Console.WriteLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {
@@ -387,7 +322,7 @@ public static class Create
         string? nameSuffix
         )
     {
-        _context?.Logger.LogLine("Creating Network Security Policy");
+        Console.WriteLine("Creating Network Security Policy");
 
         var policyJson = new JsonArray
         {
@@ -429,7 +364,7 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateSecurityPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Console.WriteLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {
@@ -440,7 +375,7 @@ public static class Create
 
     public static async Task EncryptionSecurityPolicy(string? namePrefix, string? nameSuffix)
     {
-        _context?.Logger.LogLine("Creating Encryption Security Policy");
+        Console.WriteLine("Creating Encryption Security Policy");
 
         var policyJson = new JsonObject
         {
@@ -471,12 +406,43 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateSecurityPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Console.WriteLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             throw;
         }
+    }
+
+    public static async Task<Role> GetKnowledgeBaseCustomResourceRole()
+    {
+        var client = new AmazonIdentityManagementServiceClient();
+        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-kb-role-20240602084839" });
+        return role.Role;
+    }
+
+    public static async Task<Role> GetKnowledgeBaseRole()
+    {
+        var client = new AmazonIdentityManagementServiceClient();
+        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-kb-role-20240602084839" });
+        return role.Role;
+    }
+
+    private static Environment MakeEnv(string account = null, string region = null)
+    {
+        return new Environment
+        {
+            Account = account ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
+            Region = region ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION")
+        };
+    }
+
+    private static async Task<GetCallerIdentityResponse> GetIdentity()
+    {
+        var client = new AmazonSecurityTokenServiceClient();
+        var response = await client.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+
+        return response;
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Amazon.Lambda.Core;
-using Amazon.Lambda;
+using Amazon.BedrockAgent;
+using Amazon.BedrockAgent.Model;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -91,10 +92,12 @@ public class Function
 
                     var dataSource = await Create.DataSource(
                         knowledgeBaseBucketArn: knowledgeBaseBucketArn,
-                        knowledgeBaseId: knowledgeBase.KnowledgeBase?.KnowledgeBaseId!,
+                        knowledgeBaseId: knowledgeBase?.KnowledgeBase?.KnowledgeBaseId!,
                         namePrefix: namePrefix,
                         nameSuffix: nameSuffix
                     );
+
+                    await StartDataSync(knowledgeBase, dataSource);
 
                     //response.Data = new ResponseData()
                     //{
@@ -210,24 +213,17 @@ public class Function
             throw;
         }
     }
-}
 
-public class CustomResourceRequest
-{
-    public string RequestType { get; set; }
-    public string StackId { get; set; }
-    public string RequestId { get; set; }
-    public string LogicalResourceId { get; set; }
-    public Dictionary<string, object> ResourceProperties { get; set; }
-}
-
-public class CustomResourceResponse
-{
-    public string Status { get; set; }
-    public string PhysicalResourceId { get; set; }
-    public string StackId { get; set; }
-    public string RequestId { get; set; }
-    public string LogicalResourceId { get; set; }
-    public string Reason { get; set; }
-    public Dictionary<string, object> Data { get; set; }
+    private static async Task StartDataSync(CreateKnowledgeBaseResponse? knowledgeBase,
+        CreateDataSourceResponse? dataSource)
+    {
+        var client = new AmazonBedrockAgentClient();
+        var request = new StartIngestionJobRequest
+        {
+            ClientToken = Guid.NewGuid().ToString(),
+            KnowledgeBaseId = knowledgeBase?.KnowledgeBase?.KnowledgeBaseId,
+            DataSourceId = dataSource?.DataSource.DataSourceId
+        };
+        await client.StartIngestionJobAsync(request);
+    }
 }

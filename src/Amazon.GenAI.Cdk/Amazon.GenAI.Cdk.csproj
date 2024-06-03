@@ -15,6 +15,36 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="share-holder-letters\AMZN-2019-Shareholder-Letter.pdf.metadata.json" />
+	  <None Remove="share-holder-letters\AMZN-2020-Shareholder-Letter.pdf.metadata.json" />
+	  <None Remove="share-holder-letters\AMZN-2021-Shareholder-Letter.pdf.metadata.json" />
+	  <None Remove="share-holder-letters\AMZN-2022-Shareholder-Letter.pdf.metadata.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="share-holder-letters\AMZN-2019-Shareholder-Letter.pdf.metadata.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
+	  <Content Include="share-holder-letters\AMZN-2020-Shareholder-Letter.pdf.metadata.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
+	  <Content Include="share-holder-letters\AMZN-2021-Shareholder-Letter.pdf.metadata.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
+	  <Content Include="share-holder-letters\AMZN-2022-Shareholder-Letter.pdf.metadata.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- CDK Construct Library dependencies -->
 		<PackageReference Include="Amazon.CDK.Lib" Version="2.130.0" />
 		<PackageReference Include="AWSSDK.SecurityToken" Version="3.7.300.99" />

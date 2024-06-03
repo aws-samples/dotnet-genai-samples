@@ -11,7 +11,7 @@
 
 
 <MudText Typo="Typo.h3">Text Playground</MudText>
-@* <MudStack>
+<MudStack>
 	<MudCard>
 		<MudCardContent>
 			<MudSelect T="FoundationModelSummary" @bind-Value="_selectedModel" @bind-Value:after="ModelChanged" ToStringFunc="@_selectConverter" Required="true">
@@ -129,4 +129,4 @@
 			return Task.CompletedTask;
 		});
 	}
-} *@
+}

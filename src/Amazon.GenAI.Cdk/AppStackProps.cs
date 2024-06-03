@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Amazon.GenAI.Cdk;
+﻿namespace Amazon.GenAI.Cdk;
 
 public class AppStackProps
 {

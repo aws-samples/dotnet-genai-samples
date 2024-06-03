@@ -5,41 +5,33 @@
 @using Amazon.BedrockAgentRuntime.Model
 @using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Abstractions.Message
-@using Amazon.Runtime.Documents
 @using Markdig
 @inject MarkdownPipeline Pipeline
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 
-<MudText Typo="Typo.h4">Knowledge base Playground</MudText>
-@* <MudStack Style="width: 100%">
-    <MudExpansionPanels>
-        <MudExpansionPanel Text="Configuration">
-            <MudGrid>
-                <MudItem xs="7">
-                    Text Model: <strong>Claude 3 Haiku (@_textModelId)</strong>
-                </MudItem>
-
-                <MudItem xs="5">
-                    <MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
-                               Label="Select Knowledgebase"
-                               Variant="Variant.Outlined">
-                        @if (_knowledgeBases != null)
-                        {
-                            @foreach (var item in _knowledgeBases)
-                            {
-                                _knowledgeBase ??= item;
-                                <MudSelectItem Value="@item" />
-                            }
-                        }
-                    </MudSelect>
-                </MudItem>
-            </MudGrid>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
-
+<MudStack Style="width: 100%">
     <MudCard>
         <MudCardContent>
+            <div>
+                <MudText Typo="Typo.h4">Knowledge base Playground</MudText>
+                <MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
+                           Label="Select Knowledgebase"
+                           Variant="Variant.Outlined">
+                    @if (_knowledgeBases != null)
+                    {
+                        @foreach (var item in _knowledgeBases)
+                        {
+                            _knowledgeBase ??= item;
+                            <MudSelectItem Value="@item" />
+                        }
+                    }
+                </MudSelect>
+                <div>
+                    Text Model: <strong>Claude 3 Haiku (@_textModelId)</strong>
+                </div>
+                <div>@_knowledgeBase?.Description</div>
+            </div>
             <br />
             <MudTimeline Reverse="true">
                 @foreach (var item in _chatMessageHistory.Messages)
@@ -107,7 +99,7 @@
     private MudTextField<string>? _promptField;
 
     private KnowledgeBaseSummary? _knowledgeBase;
-    private List<KnowledgeBaseSummary>? _knowledgeBases;
+    private List<KnowledgeBaseSummary?> _knowledgeBases;
     readonly Func<KnowledgeBaseSummary, string> _selectConverter = kb => string.Concat(kb?.Name, " , (", kb?.KnowledgeBaseId, ")");
 
     #endregion
@@ -120,6 +112,7 @@
 
         var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
         _knowledgeBases = (await new AmazonBedrockAgentClient().ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+            .OrderBy(x => x.UpdatedAt)
             .Where(x => x.Status.Equals("Active"))
             .ToList();
 
@@ -201,4 +194,4 @@
     }
 
     #endregion
-} *@
+}

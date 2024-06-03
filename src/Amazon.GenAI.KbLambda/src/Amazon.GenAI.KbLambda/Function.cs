@@ -44,7 +44,7 @@ public class Function
         context.Logger.LogLine("evnt");
         context.Logger.LogLine(serialize);
 
-        Create.SetContext(context);
+        LambdaBaseFunction.SetContext(context);
 
         try
         {
@@ -140,55 +140,49 @@ public class Function
                 case "Delete":
                     context.Logger.LogLine("Delete");
 
-                    //await Delete.AccessPolicy(
-                    //    nameSuffix: nameSuffix,
-                    //    namePrefix: namePrefix
-                    //);
-                    //await Delete.SecurityPolicy(
-                    //    nameSuffix: nameSuffix,
-                    //    namePrefix: namePrefix,
-                    //    type: "network"
-                    //);
-                    //await Delete.SecurityPolicy(
-                    //    nameSuffix: nameSuffix,
-                    //    namePrefix: namePrefix,
-                    //    type: "encryption"
-                    //);
-                    //await Delete.Collection(
-                    //    nameSuffix: nameSuffix,
-                    //    namePrefix: namePrefix
-                    //);
-                    //await Delete.KnowledgeBase(
-                    //    nameSuffix: nameSuffix,
-                    //    namePrefix: namePrefix
-                    //);
-                    //await deleteParameter(
-                    //    name: $"{requestProperties.NamePrefix}-{ requestProperties.NameSuffix}/ collectionArn"
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ collectionEndpoint`,
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ collectionId`,
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ collectionName`,
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ dataSourceId`,
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ knowledgeBaseArn`,
-                    //);
-                    //await deleteParameter(
-                    //    name: `/${ requestProperties.namePrefix}
-                    //    -${ requestProperties.nameSuffix}/ knowledgeBaseId`,
-                    //);
+                    await Delete.AccessPolicy(
+                        nameSuffix: nameSuffix,
+                        namePrefix: namePrefix
+                    );
+                    await Delete.SecurityPolicy(
+                        nameSuffix: nameSuffix,
+                        namePrefix: namePrefix,
+                        type: "network"
+                    );
+                    await Delete.SecurityPolicy(
+                        nameSuffix: nameSuffix,
+                        namePrefix: namePrefix,
+                        type: "encryption"
+                    );
+                    await Delete.Collection(
+                        nameSuffix: nameSuffix,
+                        namePrefix: namePrefix
+                    );
+                    await Delete.KnowledgeBase(
+                        nameSuffix: nameSuffix,
+                        namePrefix: namePrefix
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/collectionArn"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/collectionEndpoint"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/collectionId"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/collectionName"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/dataSourceId"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/knowledgeBaseArn"
+                    );
+                    await LambdaParameters.DeleteParameter(
+                        name: $"{namePrefix}-{nameSuffix}/knowledgeBaseId"
+                    );
 
                     response.Reason = "DeleteKnowledgeBase successful";
                     break;

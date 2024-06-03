@@ -13,15 +13,11 @@ using OpenSearch.Net.Auth.AwsSigV4;
 
 namespace Amazon.GenAI.KbLambda;
 
-public static class Create
+public class Create : LambdaBaseFunction
 {
-    private static ILambdaContext? _context;
-
-    public static void SetContext(ILambdaContext? context) => _context = context;
-
     public static async Task<CollectionDetail> Collection(string? namePrefix, string? nameSuffix)
     {
-        _context?.Logger.LogLine("Creating Collection");
+        Context?.Logger.LogLine("Creating Collection");
 
         try
         {
@@ -43,7 +39,7 @@ public static class Create
 
             while (attempts < maxAttempts)
             {
-                _context?.Logger.LogLine($"Checking Collection Status Attempt: {attempts}");
+                Context?.Logger.LogLine($"Checking Collection Status Attempt: {attempts}");
 
                 var batchCollectionRequest = new BatchGetCollectionRequest
                 {
@@ -57,11 +53,11 @@ public static class Create
                 if (collections is not null && collections.Count > 0)
                 {
                     var collection = collections[0];
-                    _context?.Logger.LogLine($"Collection Status: {collection.Status}");
+                    Context?.Logger.LogLine($"Collection Status: {collection.Status}");
 
                     if (collection.Status == "ACTIVE")
                     {
-                        _context?.Logger.LogLine($"  -- in ACTIVE Collection Status");
+                        Context?.Logger.LogLine($"  -- in ACTIVE Collection Status");
 
                         await StoreParameters(
                                 name: $"{namePrefix}-{nameSuffix}/collectionId",
@@ -102,22 +98,22 @@ public static class Create
 
     public static Task Index(string host, string? namePrefix, string? nameSuffix)
     {
-        _context?.Logger.LogLine("Waiting 90s before creating Index");
+        Context?.Logger.LogLine("Waiting 90s before creating Index");
         Thread.Sleep(30000);
-        _context?.Logger.LogLine("60 more");
+        Context?.Logger.LogLine("60 more");
         Thread.Sleep(30000);
-        _context?.Logger.LogLine("30 more");
+        Context?.Logger.LogLine("30 more");
         Thread.Sleep(15000);
-        _context?.Logger.LogLine("15 more");
+        Context?.Logger.LogLine("15 more");
         Thread.Sleep(15000);
 
-        _context?.Logger.LogLine("Creating Index");
+        Context?.Logger.LogLine("Creating Index");
 
         try
         {
             var endpoint = new Uri(host);
 
-            _context?.Logger.LogLine($"   -- host: {host}");
+            Context?.Logger.LogLine($"   -- host: {host}");
 
             var connection = new AwsSigV4HttpConnection(service: AwsSigV4HttpConnection.OpenSearchServerlessService);
             var config = new ConnectionSettings(endpoint, connection);
@@ -159,14 +155,14 @@ public static class Create
         string? knowledgeBaseEmbeddingModelArn,
         string? collectionArn)
     {
-        _context?.Logger.LogLine("Waiting 60s before creating KnowledgeBase");
+        Context?.Logger.LogLine("Waiting 60s before creating KnowledgeBase");
         Thread.Sleep(30000);
-        _context?.Logger.LogLine("30 more");
+        Context?.Logger.LogLine("30 more");
         Thread.Sleep(15000);
-        _context?.Logger.LogLine("15 more");
+        Context?.Logger.LogLine("15 more");
         Thread.Sleep(15000);
 
-        _context?.Logger.LogLine("Creating KnowledgeBase");
+        Context?.Logger.LogLine("Creating KnowledgeBase");
 
         try
         {
@@ -209,7 +205,7 @@ public static class Create
                 response.KnowledgeBase.KnowledgeBaseId is null ||
                 response.KnowledgeBase.KnowledgeBaseArn is null) return response;
 
-            _context?.Logger.LogLine("   ---- KnowledgeBase created");
+            Context?.Logger.LogLine("   ---- KnowledgeBase created");
 
             await StoreParameters(
                 name: $"{namePrefix}-{nameSuffix}/knowledgeBaseId",
@@ -237,7 +233,7 @@ public static class Create
         string? nameSuffix
         )
     {
-        _context?.Logger.LogLine("Creating DataSource");
+        Context?.Logger.LogLine("Creating DataSource");
 
         try
         {
@@ -264,7 +260,7 @@ public static class Create
                 response.DataSource is null ||
                 response.DataSource.DataSourceId is null) return response;
 
-            _context?.Logger.LogLine("   ---- DataSource created");
+            Context?.Logger.LogLine("   ---- DataSource created");
 
             await StoreParameters(
                 name: $"{namePrefix}-{nameSuffix}/dataSourceId",
@@ -300,7 +296,7 @@ public static class Create
         }
         catch (Exception e)
         {
-            _context?.Logger.LogLine(e.Message);
+            Context?.Logger.LogLine(e.Message);
             throw;
         }
     }
@@ -311,7 +307,7 @@ public static class Create
         string knowledgeBaseCustomResourceRoleArn,
         string? accessPolicyArns)
     {
-        _context?.Logger.LogLine("Creating Access Policy");
+        Context?.Logger.LogLine("Creating Access Policy");
 
         var policyJson = new JsonArray
         {
@@ -373,7 +369,7 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateAccessPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {
@@ -387,7 +383,7 @@ public static class Create
         string? nameSuffix
         )
     {
-        _context?.Logger.LogLine("Creating Network Security Policy");
+        Context?.Logger.LogLine("Creating Network Security Policy");
 
         var policyJson = new JsonArray
         {
@@ -429,7 +425,7 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateSecurityPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {
@@ -440,7 +436,7 @@ public static class Create
 
     public static async Task EncryptionSecurityPolicy(string? namePrefix, string? nameSuffix)
     {
-        _context?.Logger.LogLine("Creating Encryption Security Policy");
+        Context?.Logger.LogLine("Creating Encryption Security Policy");
 
         var policyJson = new JsonObject
         {
@@ -471,7 +467,7 @@ public static class Create
             var client = new AmazonOpenSearchServerlessClient();
             var response = await client.CreateSecurityPolicyAsync(request);
 
-            _context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
+            Context?.Logger.LogLine($"HttpStatusCode: {response.HttpStatusCode}");
         }
         catch (Exception e)
         {

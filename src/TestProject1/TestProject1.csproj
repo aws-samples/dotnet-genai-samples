@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.CDK" Version="1.204.0" />
+    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.310" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.308.5" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.303" />
+    <PackageReference Include="AWSSDK.CloudFormation" Version="3.7.308.4" />
+    <PackageReference Include="AWSSDK.CloudWatch" Version="3.7.304.24" />
+    <PackageReference Include="AWSSDK.IdentityManagement" Version="3.7.301.24" />
+    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.87" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" Version="3.7.304.17" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="NUnit" Version="4.1.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
+    <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
+    <PackageReference Include="PdfPig" Version="0.1.8" />
+    <PackageReference Include="System.Memory.Data" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,132 @@
+﻿@page "/text-playground"
+@using Amazon.BedrockRuntime;
+@using Amazon.Bedrock;
+@using Amazon.Bedrock.Model
+@using Amazon.GenAI.Abstractions.Bedrock
+@using Markdig
+@using System.Text.Json.Nodes
+@inject AmazonBedrockRuntimeClient BedrockRuntimeClient
+@inject AmazonBedrockClient BedrockClient
+@inject IJSRuntime JS
+
+
+<MudText Typo="Typo.h3">Text Playground</MudText>
+@* <MudStack>
+	<MudCard>
+		<MudCardContent>
+			<MudSelect T="FoundationModelSummary" @bind-Value="_selectedModel" @bind-Value:after="ModelChanged" ToStringFunc="@_selectConverter" Required="true">
+				<MudSelectItem Value="@_titanModel" />
+				<MudSelectItem Value="@_claudeModel" />
+			</MudSelect>
+		</MudCardContent>
+	</MudCard>
+	<form method="post" @onsubmit="OnSubmit">
+		<MudCard>
+			<MudCardContent>
+				<MudTextField Counter=0 id="PromptId" Label="Prompt" @bind-Value="_prompt" Lines=5 Variant="Variant.Outlined" />
+			</MudCardContent>
+			<MudCardActions>
+				<MudButton ButtonType="ButtonType.Submit" Disabled="@_isThinking" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">
+					@if (_isThinking)
+					{
+						<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+						<MudText Class="ms-2">Thinking...</MudText>
+					}
+					else
+					{
+						<MudIcon Class="ms-n1" Icon="@Icons.Material.Filled.Forward" Size="Size.Small"></MudIcon>
+						<MudText Class="ms-2">Submit</MudText>
+					}
+				</MudButton>
+			</MudCardActions>
+		</MudCard>
+	</form>
+	<MudCard>
+		<MudCardContent>
+			<MudField Id="ResponseField" Label="Response" Class="white-space-pre-line">
+				@((MarkupString)Markdown.ToHtml(_outputText!))
+			</MudField>
+		</MudCardContent>
+	</MudCard>
+</MudStack>
+
+@code {
+	private string? _outputText = string.Empty;
+	private string? _prompt;
+	private bool _isThinking;
+	private FoundationModelSummary _titanModel;
+	private FoundationModelSummary _claudeModel;
+	private FoundationModelSummary _selectedModel;
+
+	readonly Func<FoundationModelSummary, string> _selectConverter = fms => string.Concat(fms?.ProviderName, " ", fms?.ModelName, " (", fms?.ModelId, ")");
+
+	protected override async Task OnInitializedAsync()
+	{
+		_titanModel = new FoundationModelSummary();
+		_titanModel.ModelId = "amazon.titan-text-premier-v1:0";
+		_titanModel.ProviderName = "Amazon";
+		_titanModel.ModelName = "Titan Text G1 - Premier";
+
+		_claudeModel = new FoundationModelSummary();
+		_claudeModel.ModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+		_claudeModel.ProviderName = "Anthropic";
+		_claudeModel.ModelName = "Claude 3 Haiku";
+
+		_selectedModel = _claudeModel;
+		await base.OnInitializedAsync();
+
+		StateHasChanged();
+	}
+
+	private async Task ModelChanged()
+	{
+		if (_selectedModel.ModelId.Equals(_titanModel.ModelId))
+		{
+			await InvokeAmazonModel();
+		}
+		else
+		{
+			await InvokeAnthropicModel();
+		}
+	}
+
+	private async Task InvokeAmazonModel()
+	{
+		var bodyJson = AmazonTitanText.CreateBodyJson(_prompt!);
+		var response = await BedrockRuntimeClient.InvokeModelAsync(_titanModel.ModelId, bodyJson).ConfigureAwait(false);
+		var generatedText = response?["results"]?[0]?["outputText"]?.GetValue<string>() ?? string.Empty;
+		await Completed(null, generatedText);
+	}
+
+	private async Task InvokeAnthropicModel()
+	{
+		var bodyJson = AnthropicClaude3.CreateBodyJson(_prompt!);
+		var response = await BedrockRuntimeClient.InvokeModelAsync(_claudeModel.ModelId, bodyJson).ConfigureAwait(false);
+		var generatedText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? "";
+		await Completed(null, generatedText);
+	}
+
+	private async Task OnSubmit()
+	{
+		_isThinking = true;
+		_outputText = "";
+		StateHasChanged();
+		await Task.Delay(1);
+
+		var bodyJson = AmazonTitanText.CreateBodyJson(_prompt!);
+		var response = await BedrockRuntimeClient.InvokeModelAsync(_titanModel.ModelId, bodyJson).ConfigureAwait(false);
+		var generatedText = response?["results"]?[0]?["outputText"]?.GetValue<string>() ?? string.Empty;
+		await Completed(null, generatedText);
+	}
+
+	private async Task Completed(object? sender, string? text)
+	{
+		await InvokeAsync(() =>
+		{
+			_isThinking = false;
+			_outputText = text;
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
+} *@

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <AWSProjectType>Lambda</AWSProjectType>
+    <!-- This property makes the build directory similar to a publish directory and helps the AWS .NET Lambda Mock Test Tool find project dependencies. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- Generate ready to run images during publishing to improve cold start time. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Amazon.CDK.AWS.Lambda" Version="1.204.0" />
+    <PackageReference Include="Amazon.Lambda.Core" Version="2.2.0" />
+    <PackageReference Include="Amazon.Lambda.S3Events" Version="3.1.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.1" />
+    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.310" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.308.5" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.302.7" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.305.30" />
+    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.84" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" Version="3.7.304.17" />
+    <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
+    <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
+    <PackageReference Include="PdfPig" Version="0.1.8" />
+    <PackageReference Include="System.Memory.Data" Version="8.0.0" />
+  </ItemGroup>
+</Project>

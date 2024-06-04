@@ -2,6 +2,9 @@ using System.Text.Json;
 using Amazon.Lambda.Core;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgent.Model;
+using System.Net;
+using Amazon.S3;
+using Amazon.S3.Transfer;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -29,6 +32,7 @@ public class Function
         var accessPolicyArns = Environment.GetEnvironmentVariable("accessPolicyArns") ?? "";
         var knowledgeBaseEmbeddingModelArn = Environment.GetEnvironmentVariable("knowledgeBaseEmbeddingModelArn") ?? "";
         var knowledgeBaseBucketArn = Environment.GetEnvironmentVariable("knowledgeBaseBucketArn") ?? "";
+        var knowledgeBaseBucketName = Environment.GetEnvironmentVariable("knowledgeBaseBucketName") ?? "";
 
         var response = new CustomResourceResponse
         {
@@ -53,6 +57,8 @@ public class Function
                 case "Create":
                     context.Logger.LogLine("Create");
 
+                    await UploadAssets(knowledgeBaseBucketName);
+                   
                     await Create.AccessPolicy(
                        namePrefix: namePrefix,
                        nameSuffix: nameSuffix,
@@ -97,7 +103,7 @@ public class Function
                         nameSuffix: nameSuffix
                     );
 
-                    await StartDataSync(knowledgeBase, dataSource);
+                    //await StartDataSync(knowledgeBase, dataSource);
 
                     //response.Data = new ResponseData()
                     //{
@@ -136,7 +142,6 @@ public class Function
                     response.Reason = "UpdateKnowledgeBase successful";
                     break;
 
-
                 case "Delete":
                     context.Logger.LogLine("Delete");
 
@@ -163,25 +168,25 @@ public class Function
                         namePrefix: namePrefix
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/collectionArn"
+                        name: $"/{namePrefix}-{nameSuffix}/collectionArn"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/collectionEndpoint"
+                        name: $"/{namePrefix}-{nameSuffix}/collectionEndpoint"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/collectionId"
+                        name: $"/{namePrefix}-{nameSuffix}/collectionId"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/collectionName"
+                        name: $"/{namePrefix}-{nameSuffix}/collectionName"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/dataSourceId"
+                        name: $"/{namePrefix}-{nameSuffix}/dataSourceId"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/knowledgeBaseArn"
+                        name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseArn"
                     );
                     await LambdaParameters.DeleteParameter(
-                        name: $"{namePrefix}-{nameSuffix}/knowledgeBaseId"
+                        name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseId"
                     );
 
                     response.Reason = "DeleteKnowledgeBase successful";
@@ -204,7 +209,38 @@ public class Function
                 LogicalResourceId = evnt.LogicalResourceId,
                 Reason = ex.Message
             };
+        }
+    }
+
+    private static async Task UploadAssets(string bucketName)
+    {
+        var client = new AmazonS3Client();
+
+        try
+        {
+            var workingDirectory = Environment.CurrentDirectory;
+            Console.WriteLine("workingDirectory: " + workingDirectory);
+            var projectDirectory = Directory.GetParent(workingDirectory)?.Parent?.Parent?.FullName;
+            Console.WriteLine("projectDirectory: " + projectDirectory);
+            var filePaths = Directory.GetFiles($"{projectDirectory}/share-holder-letters", "*", SearchOption.TopDirectoryOnly);
+
+            foreach (var filePath in filePaths)
+            {
+                Console.WriteLine("filePath: " + filePath);
+                var filename = Path.GetFileName(filePath);
+                var fileTransferUtility = new TransferUtility(client);
+                await fileTransferUtility.UploadAsync(filePath, bucketName, filename);
+                Console.WriteLine("Upload completed!");
+            }
+        }
+        catch (AmazonS3Exception e)
+        {
+            Console.WriteLine("Error encountered on server. Message:'{0}' when writing an object", e.Message);
             throw;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Unknown encountered on server. Message:'{0}' when writing an object", e.Message);
         }
     }
 

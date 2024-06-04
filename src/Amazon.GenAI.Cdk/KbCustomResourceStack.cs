@@ -30,7 +30,6 @@ public class KbCustomResourceStack : Stack
         props.DataSyncLambdaRole = CreateDataSyncLambdaRole(this, props);
 
         Bucket = S3Bucket.Create(this, props);
-        UploadAssetsToBucket(scope, props);
 
         var provider = KbProvider.Get(this, props, Bucket);
 
@@ -45,16 +44,6 @@ public class KbCustomResourceStack : Stack
         Bucket.GrantReadWrite(props.KbRole);
         Bucket.GrantReadWrite(dataSyncLambda);
         Bucket.AddEventNotification(EventType.OBJECT_CREATED, new LambdaDestination(dataSyncLambda));
-    }
-
-    private void UploadAssetsToBucket(Construct scope, KbCustomResourceStackProps props = null)
-    {
-        var name = $"{props?.AppProps.NamePrefix}-deploy-assets-{props?.AppProps.NameSuffix}";
-        var bucketDeployment = new BucketDeployment(scope, name, new BucketDeploymentProps
-        {
-            Sources = [Source.Asset(Constants.ShareHolderLettersFolder)],
-            DestinationBucket = Bucket,
-        });
     }
 
     private Role CreateKnowledgeBaseServiceRole(Construct kbSecurity, KbCustomResourceStackProps props)
@@ -178,6 +167,7 @@ public class KbCustomResourceStack : Stack
                                 {
                                     "bedrock:*KnowledgeBase",
                                     "bedrock:*DataSource",
+                                    "bedrock:StartIngestionJob",
                                     "iam:PassRole"
                                 }
                             }),

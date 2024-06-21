@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="bin\**" />
+    <Content Remove="bin\**" />
+    <EmbeddedResource Remove="bin\**" />
+    <None Remove="bin\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Bedrock" Version="3.7.302.7" />
+    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.308.1" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.305.7" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.302.7" />
+    <PackageReference Include="Markdig" Version="0.37.0" />
+    <PackageReference Include="Markdown.ColorCode" Version="2.2.2" />
+    <PackageReference Include="MudBlazor" Version="6.19.1" />
+    <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
+    <PackageReference Include="PdfPig" Version="0.1.8" />
+    <PackageReference Include="System.Memory.Data" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Pages\Component.razor">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

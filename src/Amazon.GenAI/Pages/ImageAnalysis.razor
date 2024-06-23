@@ -1,0 +1,224 @@
+﻿@page "/image-analysis"
+@using Amazon.BedrockRuntime
+@using Amazon.GenAI.Abstractions.Bedrock
+@using Amazon.GenAI.Abstractions
+@using Markdig
+@inject MarkdownPipeline Pipeline
+@inject AmazonBedrockRuntimeClient BedrockRuntimeClient
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4">Image Analysis</MudText>
+<MudStack Style="width: 100%">
+    <MudCard>
+        <MudCardContent>
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                           @bind-Files="Files"
+                           Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+                           OnFilesChanged="OnInputFileChanged"
+                           For="@(() => Files)"
+                           Hidden="false" Class="flex-1"
+                           MaximumFileCount="1"
+                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
+                           @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
+                <ButtonTemplate>
+                    <MudPaper Height="100px" Outlined="true" Class="@_dragClass">
+                        <MudText Typo="Typo.h6">Drag and drop image file here or click</MudText>
+                        @foreach (var file in _loadedFiles)
+                        {
+                            <MudChip Color="Color.Dark" Text="@file.Key" />
+                        }
+                    </MudPaper>
+                </ButtonTemplate>
+            </MudFileUpload>
+
+            <div>
+                <img width="400px" src="@_imageDataUrl" />
+            </div>
+
+            <MudCard>
+                <MudCardActions>
+                    <MudButton OnClick="Clear" Disabled="@(!_loadedFiles.Any())" Color="Color.Error" Variant="Variant.Filled" Class="ms-3">Clear</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudCardContent>
+    </MudCard>
+    <MudCard>
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="9">
+                    Claude 3 Haiku (@_textModelId)
+                </MudItem>
+            </MudGrid>
+            <MudCardContent>
+                <MudTextField T="string" Text="@_prompt" ValueChanged="@OnPromptChanged"
+                              Label="Human" AutoGrow Variant="Variant.Outlined"></MudTextField>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Class="ml-auto" Disabled="@(_status > Status.Default)" Variant="Variant.Filled"
+                           Color="Color.Primary" OnClick="OnSubmit">
+                    @switch (_status)
+                    {
+                        case Status.Thinking:
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Thinking...</MudText>
+                            break;
+
+                        case Status.Default:
+                        default:
+                            <MudIcon Class="ms-n1" Icon="@Icons.Material.Filled.Forward" Size="Size.Small"></MudIcon>
+                            <MudText Class="ms-2">Submit</MudText>
+                            break;
+                    }
+                </MudButton>
+            </MudCardActions>
+        </MudCardContent>
+    </MudCard>
+    <MudCard>
+        <MudCardContent>
+            <MudField Id="ResponseField" Label="Response" Class="white-space-pre-line">
+                @((MarkupString)Markdown.ToHtml(_outputText!))
+            </MudField>
+        </MudCardContent>
+    </MudCard>
+</MudStack>
+
+@code {
+
+    #region Variables
+
+    private string? _textModelId;
+    private string? _outputText = string.Empty;
+    IReadOnlyList<IBrowserFile>? Files { get; set; } = new List<IBrowserFile>();
+    private string _imageDataUrl = string.Empty;
+    private string _targetFile = string.Empty;
+
+    enum Status
+    {
+        Default,
+        Thinking,
+    }
+    Status _status = Status.Default;
+
+    private string _prompt = string.Empty;
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string _dragClass = DefaultDragClass;
+    private Dictionary<string, string> _loadedFiles = new();
+
+    string? _uploadDirectory;
+
+    #endregion
+
+    protected override async Task OnInitializedAsync()
+    {
+        _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+
+        _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
+        if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
+
+        await base.OnInitializedAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnSubmit()
+    {
+        _status = Status.Thinking;
+        _outputText = "";
+        StateHasChanged();
+        await Task.Delay(1);
+
+        var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(_targetFile)) ?? "";
+        var image = BinaryData.FromBytes(await File.ReadAllBytesAsync(_targetFile), contentType);
+
+        var bodyJson = AnthropicClaude3.CreateBodyJson(_prompt, image);
+        var response = await BedrockRuntimeClient.InvokeModelAsync(_textModelId!, bodyJson).ConfigureAwait(false);
+
+        _outputText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? "";
+
+        await Completed(null, _outputText);
+    }
+
+    private async Task OnPromptChanged(string question)
+    {
+        if (string.IsNullOrEmpty(question))
+            return;
+
+        await InvokeAsync(() =>
+        {
+            _status = Status.Default;
+            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task Completed(object? sender, string? text)
+    {
+        await InvokeAsync(() =>
+        {
+            _status = Status.Default;
+            _outputText = text;
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        _loadedFiles.Clear();
+
+        _prompt = @"
+            Describe every detail you can about this image, be extremely thorough and detail even the most minute aspects of the image.
+            If a more specific question is presented by the user, make sure to prioritize that answer.
+            ";
+
+        const long maxFileSize = 1024L * 1024L * 1024L * 2L;
+
+        foreach (var inputFile in e.GetMultipleFiles())
+        {
+            _targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
+            var file = inputFile;
+
+            if (inputFile.Size > 1024 * 4000)
+            {
+                file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 1024, int.MaxValue);
+            }
+
+            await using var outputStream = File.Create(_targetFile);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(outputStream);
+            outputStream.Close();
+
+            var bytes = await File.ReadAllBytesAsync(_targetFile);
+            var base64String = Convert.ToBase64String(bytes);
+
+            _imageDataUrl = $"data:image/png;base64,{base64String}";
+
+            _loadedFiles.Add(inputFile.Name, _targetFile);
+        }
+    }
+
+    #region Utility Methods
+
+    private async Task Clear()
+    {
+        _loadedFiles.Clear();
+        _prompt = string.Empty;
+        _outputText = string.Empty;
+        _imageDataUrl = string.Empty;
+        ClearDragClass();
+        await Task.Delay(100);
+    }
+
+    private void SetDragClass()
+    {
+        _dragClass = $"{DefaultDragClass} mud-border-primary";
+    }
+
+    private void ClearDragClass()
+    {
+        _dragClass = DefaultDragClass;
+    }
+
+    #endregion
+}

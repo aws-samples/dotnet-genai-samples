@@ -1,12 +1,11 @@
 ﻿@page "/image-analysis"
+@using Amazon.Bedrock.Model
 @using Amazon.BedrockRuntime
 @using Amazon.GenAI.Abstractions.Bedrock
 @using Amazon.GenAI.Abstractions
 @using Markdig
-@inject MarkdownPipeline Pipeline
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject IJSRuntime JsRuntime
-@inject ISnackbar Snackbar
 
 <MudText Typo="Typo.h4">Image Analysis</MudText>
 <MudStack Style="width: 100%">
@@ -45,11 +44,20 @@
     </MudCard>
     <MudCard>
         <MudCardContent>
-            <MudGrid>
-                <MudItem xs="9">
-                    Claude 3 Haiku (@_textModelId)
-                </MudItem>
-            </MudGrid>
+            <MudCard>
+                <MudCardContent>
+                    <MudSelect T="FoundationModelSummary" @bind-Value="_selectedModel" ToStringFunc="@_selectConverter" Required="true">
+                        @if (_textModels != null)
+                        {
+                            @foreach (var item in _textModels)
+                            {
+                                _selectedModel ??= item;
+                                <MudSelectItem Value="@item" />
+                            }
+                        }
+                    </MudSelect>
+                </MudCardContent>
+            </MudCard>
             <MudCardContent>
                 <MudTextField T="string" Text="@_prompt" ValueChanged="@OnPromptChanged"
                               Label="Human" AutoGrow Variant="Variant.Outlined"></MudTextField>
@@ -87,11 +95,13 @@
 
     #region Variables
 
-    private string? _textModelId;
+    private FoundationModelSummary? _selectedModel;
+    private readonly IList<FoundationModelSummary>? _textModels = new List<FoundationModelSummary>();
     private string? _outputText = string.Empty;
     IReadOnlyList<IBrowserFile>? Files { get; set; } = new List<IBrowserFile>();
     private string _imageDataUrl = string.Empty;
     private string _targetFile = string.Empty;
+    readonly Func<FoundationModelSummary, string> _selectConverter = fms => string.Concat(fms?.ProviderName, " ", fms?.ModelName, " (", fms?.ModelId, ")");
 
     enum Status
     {
@@ -103,7 +113,7 @@
     private string _prompt = string.Empty;
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
     private string _dragClass = DefaultDragClass;
-    private Dictionary<string, string> _loadedFiles = new();
+    private readonly Dictionary<string, string> _loadedFiles = new();
 
     string? _uploadDirectory;
 
@@ -111,10 +121,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
+
+        _textModels?.Add(new FoundationModelSummary
+        {
+            ProviderName = "Anthropic",
+            ModelId = "anthropic.claude-3-haiku-20240307-v1:0",
+            ModelName = "Claude 3 Haiku"
+        });
+
+        _textModels?.Add(new FoundationModelSummary
+        {
+            ProviderName = "Anthropic",
+                ModelId = "anthropic.claude-3-sonnet-20240229-v1:0",
+            ModelName = "Claude 3 Sonnet"
+        });
+
+        _textModels?.Add(new FoundationModelSummary
+        {
+            ProviderName = "Anthropic",
+            ModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            ModelName = "Claude 3.5 Sonnet"
+        });
+
+        _selectedModel = _textModels?[2];
 
         await base.OnInitializedAsync();
         StateHasChanged();
@@ -131,34 +162,34 @@
         var image = BinaryData.FromBytes(await File.ReadAllBytesAsync(_targetFile), contentType);
 
         var bodyJson = AnthropicClaude3.CreateBodyJson(_prompt, image);
-        var response = await BedrockRuntimeClient.InvokeModelAsync(_textModelId!, bodyJson).ConfigureAwait(false);
+        var response = await BedrockRuntimeClient.InvokeModelAsync(_selectedModel?.ModelId!, bodyJson).ConfigureAwait(false);
 
         _outputText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? "";
 
-        await Completed(null, _outputText);
+        await Completed();
     }
 
-    private async Task OnPromptChanged(string question)
+    private async Task OnPromptChanged(string prompt)
     {
-        if (string.IsNullOrEmpty(question))
+        if (string.IsNullOrEmpty(prompt))
             return;
 
+        _prompt = prompt;
+
+        await InvokeAsync(() =>
+        {
+            _status = Status.Default;
+
+            return  Completed();
+        });
+    }
+
+    private async Task Completed(object? sender = null)
+    {
         await InvokeAsync(() =>
         {
             _status = Status.Default;
             JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
-
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
-
-    private async Task Completed(object? sender, string? text)
-    {
-        await InvokeAsync(() =>
-        {
-            _status = Status.Default;
-            _outputText = text;
             StateHasChanged();
             return Task.CompletedTask;
         });
@@ -167,11 +198,9 @@
     private async Task OnInputFileChanged(InputFileChangeEventArgs e)
     {
         _loadedFiles.Clear();
+        _outputText = string.Empty;
 
-        _prompt = @"
-            Describe every detail you can about this image, be extremely thorough and detail even the most minute aspects of the image.
-            If a more specific question is presented by the user, make sure to prioritize that answer.
-            ";
+        _prompt = "Provide a comprehensive description of this image, ensuring you cover every detail with meticulous attention to even the smallest elements.  Search the internet for more background information.";
 
         const long maxFileSize = 1024L * 1024L * 1024L * 2L;
 

@@ -33,7 +33,7 @@ public class KbCustomResourceStack : Stack
 
         var provider = KbProvider.Get(this, props, Bucket);
 
-        var kbCustomResourceName = $"{props.AppProps.NamePrefix}-kb-cr-{props.AppProps.NameSuffix}";
+        var kbCustomResourceName = $"{props.AppProps.NamePrefix}-cr-{props.AppProps.NameSuffix}";
         KbCustomResource = new CustomResource(this, kbCustomResourceName, new CustomResourceProps
         {
             ServiceToken = provider.ServiceToken,
@@ -48,7 +48,7 @@ public class KbCustomResourceStack : Stack
 
     private Role CreateKnowledgeBaseServiceRole(Construct kbSecurity, KbCustomResourceStackProps props)
     {
-        var roleName = $"{props.AppProps.NamePrefix}-kb-service-role-{props.AppProps.NameSuffix}";
+        var roleName = $"{props.AppProps.NamePrefix}-service-role-{props.AppProps.NameSuffix}";
         var role = new Role(kbSecurity, roleName, new RoleProps
         {
             AssumedBy = new CompositePrincipal(
@@ -147,7 +147,7 @@ public class KbCustomResourceStack : Stack
 
     private static Role CreateKnowledgeBaseCustomResourceRole(Construct kbSecurity, KbCustomResourceStackProps props)
     {
-        var kbCustomResourceRoleName = $"{props.AppProps.NamePrefix}-kb-cr-role-{props.AppProps.NameSuffix}";
+        var kbCustomResourceRoleName = $"{props.AppProps.NamePrefix}-cr-role-{props.AppProps.NameSuffix}";
         var kbCustomResourceRole = new Role(kbSecurity, kbCustomResourceRoleName, new RoleProps
         {
             AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),

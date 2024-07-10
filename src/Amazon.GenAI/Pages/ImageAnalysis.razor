@@ -25,7 +25,7 @@
                         <MudText Typo="Typo.h6">Drag and drop image file here or click</MudText>
                         @foreach (var file in _loadedFiles)
                         {
-                            <MudChip Color="Color.Dark" Text="@file.Key" />
+                            <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
                         }
                     </MudPaper>
                 </ButtonTemplate>
@@ -134,7 +134,7 @@
         _textModels?.Add(new FoundationModelSummary
         {
             ProviderName = "Anthropic",
-                ModelId = "anthropic.claude-3-sonnet-20240229-v1:0",
+            ModelId = "anthropic.claude-3-sonnet-20240229-v1:0",
             ModelName = "Claude 3 Sonnet"
         });
 
@@ -145,7 +145,7 @@
             ModelName = "Claude 3.5 Sonnet"
         });
 
-        _selectedModel = _textModels?[2];
+        _selectedModel = _textModels?.Last();
 
         await base.OnInitializedAsync();
         StateHasChanged();
@@ -176,12 +176,7 @@
 
         _prompt = prompt;
 
-        await InvokeAsync(() =>
-        {
-            _status = Status.Default;
-
-            return  Completed();
-        });
+        await Completed();
     }
 
     private async Task Completed(object? sender = null)
@@ -209,7 +204,7 @@
             _targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
             var file = inputFile;
 
-            if (inputFile.Size > 1024 * 4000)
+            if (inputFile.Size > 1024 * 2000)
             {
                 file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 1024, int.MaxValue);
             }

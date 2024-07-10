@@ -26,7 +26,7 @@ internal sealed class Program
 
         var appStackProp = new AppStackProps();
 
-        var kbCustomResourceName = $"{appStackProp.NamePrefix}-kb-cr-{appStackProp.NameSuffix}";
+        var kbCustomResourceName = $"{appStackProp.NamePrefix}-cr-{appStackProp.NameSuffix}";
         var kbCustomResourceStack = new KbCustomResourceStack(app, kbCustomResourceName, new KbCustomResourceStackProps
         {
             Env = env,

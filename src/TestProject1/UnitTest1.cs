@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Amazon.OpenSearchServerless;
 using Amazon.IdentityManagement;
@@ -7,11 +8,14 @@ using System.Text.Json.Nodes;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgent.Model;
 using Amazon.IdentityManagement.Model;
+using Amazon.Runtime.Internal;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using OpenSearch.Net.Auth.AwsSigV4;
 using TestProject1.Abstractions.OpenSearch;
 using Environment = Amazon.CDK.Environment;
+using System.Text.RegularExpressions;
+using Amazon;
 
 namespace TestProject1;
 
@@ -42,6 +46,9 @@ public class Tests
 
         //var encryptionSecurityPolicy = EncryptionSecurityPolicy(_namePrefix, _nameSuffix);
         //encryptionSecurityPolicy.Wait();
+
+        //var accessPolicy = AccessPolicy(_namePrefix, _nameSuffix);
+        //accessPolicy.Wait();
     }
 
     [TearDown]
@@ -124,16 +131,47 @@ public class Tests
     }
 
     [Test]
-    public async Task CreateIndex()
+    public async Task CanCreateIndex()
     {
-        //   await CreateCollection();
+        var sw = new Stopwatch();
+        sw.Start();
+
+        await CreateIndexWrapper(5);
+
+        sw.Stop();
+
+        Console.WriteLine($"duration: {sw.ElapsedMilliseconds}");
+        Console.WriteLine($"duration: {sw.Elapsed.Minutes}");
+    }
+
+    private async Task CreateIndexWrapper(int attempt)
+    {
+        if (CollectionDetail?.CollectionEndpoint is null)
+        {
+            await CreateCollection();
+        }
+
         CollectionDetail = new CollectionDetail
         {
-            CollectionEndpoint = "https://fl7ahga4v8bgwpajvpfh.us-east-1.aoss.amazonaws.com"
+            CollectionEndpoint = CollectionDetail?.CollectionEndpoint
         };
 
         Console.WriteLine("Creating Index");
+        
+        Console.WriteLine($"  --- Attempt: {attempt}");
+        Console.WriteLine("Please wait 60 secs");
+        Thread.Sleep(30000);
+        Console.WriteLine("30 more");
+        Thread.Sleep(15000);
+        Console.WriteLine("15 more");
+        Thread.Sleep(15000);
 
+        var isAcknowledged = await CreateIndex();
+        if (isAcknowledged == false && attempt > 0) await CreateIndexWrapper(--attempt);
+    }
+
+    private async Task<bool> CreateIndex()
+    {
         try
         {
             var endpoint = new Uri(CollectionDetail?.CollectionEndpoint!);
@@ -150,23 +188,20 @@ public class Tests
                 )
                 .Map<VectorRecord>(m => m
                     .Properties(p => p
-                        //.FieldAlias(a=>a.Name($"{namePrefix}-vector"))
-                        //.Keyword(k => k.Name(n => n.Id))
-                        //.Nested<Dictionary<string, object>>(n => n.Name(x => x.Metadata))
-                        // .Text(t => t.Name(n => n.Text))
                         .KnnVector(x => x
-                                .Name(n => $"{_namePrefix}-vector")
-                                //.Method(n => n.Name("hnsw")
-                                //    .Parameters(p => p.Parameter("ef_construction", 512))
-                                //    .Parameters(p => p.Parameter("m", 12))
-                                //    .Engine("faiss"))
-                                .Dimension(1024)
-                        // .Similarity("cosine")
+                            .Name(n => $"{_namePrefix}-vector")
+                            .Method(n => n.Name("hnsw")
+                                .Parameters(p => p.Parameter("ef_construction", 512))
+                                .Parameters(p => p.Parameter("m", 12))
+                                .Engine("faiss"))
+                            .Dimension(1024)
                         )
                     )
                 ))!).ConfigureAwait(false);
 
             Console.WriteLine($"createIndexResponse.Acknowledged: {createIndexResponse.Acknowledged}");
+            Console.WriteLine($"createIndexResponse.DebugInformation: {createIndexResponse.DebugInformation}");
+            return createIndexResponse.Acknowledged;
         }
         catch (Exception e)
         {
@@ -204,7 +239,7 @@ public class Tests
                     Type = KnowledgeBaseStorageType.OPENSEARCH_SERVERLESS,
                     OpensearchServerlessConfiguration = new OpenSearchServerlessConfiguration
                     {
-                        CollectionArn = CollectionDetail.Arn,
+                        CollectionArn = CollectionDetail?.Arn,
                         VectorIndexName = $"{_namePrefix}-{_nameSuffix}",
                         FieldMapping = new OpenSearchServerlessFieldMapping
                         {
@@ -233,18 +268,21 @@ public class Tests
         }
     }
 
-
-    [Test]
-    public async Task DeleteKnowledgeBaseStacks()
+    [TestCase("6o64y4qxwb2k8vcyusp8", "dotnet-genai-20240707022407")]
+    public async Task DoesIndexExist(string uniqueIdentifier, string indexName)
     {
+        var endpoint = new Uri($"https://{uniqueIdentifier}.us-east-1.aoss.amazonaws.com");
+        var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+        var config = new ConnectionSettings(endpoint, connection);
+        var client = new OpenSearchClient(config);
 
+        var response = await client.Indices.ExistsAsync(new IndexExistsRequest(indexName));
     }
 
     public static async Task AccessPolicy(
     string? namePrefix,
-    string? nameSuffix,
-    string? knowledgeBaseRoleArn,
-    string? knowledgeBaseCustomResourceRoleArn
+    string? nameSuffix
+   // string? knowledgeBaseRoleArn
     )
     {
         Console.WriteLine("Creating Access Policy");
@@ -255,7 +293,7 @@ public class Tests
             {
                 ["Principal"] = new JsonArray
                 {
-                    { knowledgeBaseRoleArn },
+                    //{ knowledgeBaseRoleArn },
                     { "arn:aws:iam::676229420717:user/dev_acct" }
                 },
                 ["Description"] = "",
@@ -418,14 +456,14 @@ public class Tests
     public static async Task<Role> GetKnowledgeBaseCustomResourceRole()
     {
         var client = new AmazonIdentityManagementServiceClient();
-        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-kb-role-20240602084839" });
+        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-role-20240602084839" });
         return role.Role;
     }
 
     public static async Task<Role> GetKnowledgeBaseRole()
     {
         var client = new AmazonIdentityManagementServiceClient();
-        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-kb-role-20240602084839" });
+        var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = "dotnet-genai-role-20240602084839" });
         return role.Role;
     }
 

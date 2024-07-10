@@ -57,7 +57,7 @@ public class Function
                 case "Create":
                     context.Logger.LogLine("Create");
 
-                    await UploadAssets(knowledgeBaseBucketName);
+                    //await UploadAssets(knowledgeBaseBucketName);
                    
                     await Create.AccessPolicy(
                        namePrefix: namePrefix,
@@ -88,20 +88,20 @@ public class Function
                         nameSuffix: nameSuffix
                     );
 
-                    var knowledgeBase = await Create.KnowledgeBase(
-                        knowledgeBaseRoleArn: knowledgeBaseRoleArn,
-                        namePrefix: namePrefix,
-                        nameSuffix: nameSuffix,
-                        knowledgeBaseEmbeddingModelArn: knowledgeBaseEmbeddingModelArn,
-                        collectionArn: collection.Arn!
-                    );
+                    //var knowledgeBase = await Create.KnowledgeBase(
+                    //    knowledgeBaseRoleArn: knowledgeBaseRoleArn,
+                    //    namePrefix: namePrefix,
+                    //    nameSuffix: nameSuffix,
+                    //    knowledgeBaseEmbeddingModelArn: knowledgeBaseEmbeddingModelArn,
+                    //    collectionArn: collection.Arn!
+                    //);
 
-                    var dataSource = await Create.DataSource(
-                        knowledgeBaseBucketArn: knowledgeBaseBucketArn,
-                        knowledgeBaseId: knowledgeBase?.KnowledgeBase?.KnowledgeBaseId!,
-                        namePrefix: namePrefix,
-                        nameSuffix: nameSuffix
-                    );
+                    //var dataSource = await Create.DataSource(
+                    //    knowledgeBaseBucketArn: knowledgeBaseBucketArn,
+                    //    knowledgeBaseId: knowledgeBase?.KnowledgeBase?.KnowledgeBaseId!,
+                    //    namePrefix: namePrefix,
+                    //    nameSuffix: nameSuffix
+                    //);
 
                     //await StartDataSync(knowledgeBase, dataSource);
 
@@ -114,7 +114,7 @@ public class Function
                     //    //DataSourceId = dataSource.dataSource.dataSourceId,
                     //    //KnowledgeBaseId = knowledgeBase.KnowledgeBase.KnowledgeBaseId,
                     //};
-                    response.Reason = "CreateKnowledgeBase successful";
+                    response.Reason = "Create Collection successful";
                     break;
 
                 case "Update":

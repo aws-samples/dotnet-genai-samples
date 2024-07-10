@@ -48,7 +48,7 @@
                         <MudText Typo="Typo.h6">Drag and drop files here or click</MudText>
                         @foreach (var file in _loadedFiles)
                         {
-                            <MudChip Color="Color.Dark" Text="@file.Key" />
+                            <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
                         }
                     </MudPaper>
                 </ButtonTemplate>

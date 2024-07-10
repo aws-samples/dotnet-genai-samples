@@ -115,7 +115,7 @@ public class Create : LambdaBaseFunction
 
             Context?.Logger.LogLine($"   -- host: {host}");
 
-            var connection = new AwsSigV4HttpConnection(service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+            var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
             var config = new ConnectionSettings(endpoint, connection);
             var client = new OpenSearchClient(config);
 
@@ -125,17 +125,30 @@ public class Create : LambdaBaseFunction
                 )
                 .Map<VectorRecord>(m => m
                     .Properties(p => p
+                        .Text(t => t.Name(n => n.Text))
                         .KnnVector(x => x
                             .Name($"{namePrefix}-vector")
                             .Method(n => n.Name("hnsw")
                                 .Parameters(p => p.Parameter("ef_construction", 512))
                                 .Parameters(p => p.Parameter("m", 12))
                                 .Engine("faiss"))
-                            .Dimension(1024)
+                            .Dimension(1536)
                         )
                     )
                 ))!);
 
+            //var createIndexResponse = client?.Indices.Create($"{namePrefix}-{nameSuffix}", c => c
+            //    .Settings(x => x
+            //        .Setting("index.knn", true)
+            //        .Setting("index.knn.space_type", "cosinesimil")
+            //    )
+            //    .Map<VectorRecord>(m => m
+            //        .Properties(p => p
+            //            .Keyword(k => k.Name(n => n.Id))
+            //            .Text(t => t.Name(n => n.Text))
+            //            .KnnVector(d => d.Name(n => n.Vector).Dimension(1536).Similarity("cosine"))
+            //        )
+            //    ));
 
             Console.WriteLine($"createIndexResponse.Acknowledged: {createIndexResponse.Acknowledged}");
         }
@@ -188,7 +201,7 @@ public class Create : LambdaBaseFunction
                         VectorIndexName = $"{namePrefix}-{nameSuffix}",
                         FieldMapping = new OpenSearchServerlessFieldMapping
                         {
-                            
+
                             VectorField = $"{namePrefix}-vector",
                             TextField = "text",
                             MetadataField = "metadata"

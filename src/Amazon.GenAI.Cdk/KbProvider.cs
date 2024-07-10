@@ -16,11 +16,11 @@ public class KbProvider
     {
         var kbCustomResourceLambda = CreateKnowledgeBaseCustomResourceLambda(kbCustomResourceStack, props, bucket);
 
-        var providerName = $"{props.AppProps.NamePrefix}-kb-provider-{props.AppProps.NameSuffix}";
+        var providerName = $"{props.AppProps.NamePrefix}-provider-{props.AppProps.NameSuffix}";
         var provider = new Provider(kbCustomResourceStack, providerName, new ProviderProps
         {
             OnEventHandler = kbCustomResourceLambda,
-            LogRetention = RetentionDays.ONE_WEEK,
+            LogRetention = RetentionDays.THREE_DAYS,
         });
 
         return provider;
@@ -29,7 +29,7 @@ public class KbProvider
     private static Function CreateKnowledgeBaseCustomResourceLambda(Construct kbCustomResource,
         KbCustomResourceStackProps props, Bucket bucket)
     {
-        var functionName = $"{props.AppProps.NamePrefix}-kb-lambda-{props.AppProps.NameSuffix}";
+        var functionName = $"{props.AppProps.NamePrefix}-lambda-{props.AppProps.NameSuffix}";
         var handler = "Amazon.GenAI.KbLambda::Amazon.GenAI.KbLambda.Function::FunctionHandler";
         var lambdaFunction = new Function(kbCustomResource, functionName, new FunctionProps
         {

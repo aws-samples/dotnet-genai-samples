@@ -16,7 +16,7 @@ public static class S3Bucket
         // the stack is deleted to avoid charges on an unused resource - EVEN IF IT CONTAINS DATA
         // - BEWARE!
         //
-        var bucketName = $"{props.AppProps.NamePrefix}-kb-bucket-{props.AppProps.NameSuffix}";
+        var bucketName = $"{props.AppProps.NamePrefix}-bucket-{props.AppProps.NameSuffix}";
         var bucket = new Bucket(kbCustomResourceStack, bucketName, new BucketProps
         {
             // !DO NOT USE THESE TWO SETTINGS FOR PRODUCTION DEPLOYMENTS - YOU WILL LOSE DATA

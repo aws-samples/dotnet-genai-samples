@@ -17,7 +17,7 @@
     "framework"             : "net8.0",
     "function-name"         : "kb-lambda",
     "package-type"          : "Zip",
-    "function-role"         : "arn:aws:iam::676229420717:role/dotnet-genai-kb-security--dotnetgenaikbcrrole202406-PpEHAVoOiFPP",
+    "function-role"         : "arn:aws:iam::676229420717:role/dotnet-genai-security--dotnetgenaikbcrrole202406-PpEHAVoOiFPP",
     "function-subnets"      : "",
     "function-security-groups" : "",
     "tracing-mode"             : "PassThrough",

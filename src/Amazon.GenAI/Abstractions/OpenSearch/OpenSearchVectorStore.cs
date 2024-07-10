@@ -77,8 +77,9 @@ public class OpenSearchVectorStore
 
             var vectorRecord = new VectorRecord
             {
-                Id = i++.ToString(CultureInfo.InvariantCulture),
+              //  Id = i++.ToString(CultureInfo.InvariantCulture),
                 Text = document.PageContent,
+                Path = document.Metadata["path"] as string,
                 Vector = embeddings.ToArray().SelectMany(x => x).ToArray()
             };
 
@@ -144,7 +145,7 @@ public class OpenSearchVectorStore
             )
             .Map<VectorRecord>(m => m
                 .Properties(p => p
-                    .Keyword(k => k.Name(n => n.Id))
+                  //  .Keyword(k => k.Name(n => n.Id))
                     .Text(t => t.Name(n => n.Text))
                     .KnnVector(d => d.Name(n => n.Vector).Dimension(_options.Dimensions).Similarity("cosine"))
                 )

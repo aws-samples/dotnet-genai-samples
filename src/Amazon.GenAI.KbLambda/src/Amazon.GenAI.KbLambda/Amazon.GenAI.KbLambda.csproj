@@ -45,14 +45,14 @@
     <PackageReference Include="Amazon.CDK.AWS.Lambda" Version="1.204.0" />
     <PackageReference Include="Amazon.Lambda.Core" Version="2.2.0" />
     <PackageReference Include="Amazon.Lambda.S3Events" Version="3.1.0" />
-    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.1" />
-    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.310" />
-    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.308.5" />
-    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.302.7" />
-    <PackageReference Include="AWSSDK.Lambda" Version="3.7.305.30" />
-    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.84" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.308.8" />
-    <PackageReference Include="AWSSDK.SimpleSystemsManagement" Version="3.7.304.17" />
+    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.3" />
+    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.310.16" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.308.21" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.306.5" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.305.46" />
+    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.103" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.310.2" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" Version="3.7.305.5" />
     <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
     <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
     <PackageReference Include="PdfPig" Version="0.1.8" />

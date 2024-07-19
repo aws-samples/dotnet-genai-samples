@@ -6,18 +6,15 @@ public static class AmazonTitanEmbedding
 {
     public static JsonObject CreateBodyJson(string prompt, BinaryData? image = null)
     {
-        string? base64 = null;
+        var bodyJson = new JsonObject
+        {
+            ["inputText"] = prompt
+        };
 
         if (image != null)
         {
-            base64 = Convert.ToBase64String(image.ToArray());
+            bodyJson["inputImage"] = Convert.ToBase64String(image.ToArray());
         }
-
-        var bodyJson = new JsonObject
-        {
-            ["inputText"] = prompt,
-            ["inputImage"] = base64
-        };
 
         return bodyJson;
     }

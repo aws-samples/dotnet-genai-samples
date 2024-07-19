@@ -31,13 +31,13 @@ if (chain.TryGetAWSCredentials("Bedrock", out awsCredentials))
     builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
     new AmazonBedrockRuntimeClient(awsCredentials,new AmazonBedrockRuntimeConfig()
     {
-        RegionEndpoint = RegionEndpoint.USEast1
+        RegionEndpoint = RegionEndpoint.USWest2
     }));
 
     builder.Services.AddSingleton<AmazonBedrockClient>(
     new AmazonBedrockClient(awsCredentials, new AmazonBedrockConfig()
     {
-        RegionEndpoint = RegionEndpoint.USEast1
+        RegionEndpoint = RegionEndpoint.USWest2
     }));
 }
 else
@@ -45,12 +45,12 @@ else
     builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
     new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()
     {
-        RegionEndpoint = RegionEndpoint.USEast1
+        RegionEndpoint = RegionEndpoint.USWest2
     }));
     builder.Services.AddSingleton<AmazonBedrockClient>(
         new AmazonBedrockClient(new AmazonBedrockConfig()
         {
-            RegionEndpoint = RegionEndpoint.USEast1
+            RegionEndpoint = RegionEndpoint.USWest2
         }));
 }
 //builder.Services.AddSingleton<AmazonBedrockAgentRuntimeClient>(

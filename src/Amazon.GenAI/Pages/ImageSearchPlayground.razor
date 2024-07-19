@@ -188,7 +188,7 @@
 
         var options = new OpenSearchVectorStoreOptions
             {
-                Region = RegionEndpoint.USEast1,
+                Region = RegionEndpoint.USWest2,
                 IndexName = _indexName,
                 Dimensions = Dimensions,
                 CollectionArn = _collections[0]?.Arn,
@@ -210,7 +210,7 @@
             StateHasChanged();
         });
 
-        await _openSearchVectorStore!.AddDocumentsAsync(_loadedFiles, _savedBytesList).ConfigureAwait(false);
+        await _openSearchVectorStore!.AddImageDocumentsAsync(_loadedFiles, _savedBytesList).ConfigureAwait(false);
         await InvokeAsync(() =>
         {
             _status = Status.Default;

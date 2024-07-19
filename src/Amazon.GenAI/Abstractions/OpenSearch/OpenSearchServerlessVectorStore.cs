@@ -30,7 +30,7 @@ public class OpenSearchServerlessVectorStore
 
         var match = Regex.Match(options.CollectionArn!, @"(?<=\/)[^\/]+$");
         var endpoint = new Uri($"https://{match.Value}.{options.Region?.SystemName}.aoss.amazonaws.com");
-        var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+        var connection = new AwsSigV4HttpConnection(RegionEndpoint.USWest2, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
         var config = new ConnectionSettings(endpoint, connection);
         _client = new OpenSearchClient(config);
 
@@ -57,7 +57,63 @@ public class OpenSearchServerlessVectorStore
             ));
     }
 
-    public async Task<bool> AddDocumentsAsync(
+    public async Task<IEnumerable<string>> AddTextDocumentsAsync(
+        IEnumerable<Document> documents,
+        int chuckSize = 10_000,
+        CancellationToken cancellationToken = default)
+    {
+        var embeddingModel = new EmbeddingModel(_bedrockRuntimeClient, _embeddingModelId);
+        var bulkDescriptor = new BulkDescriptor();
+        var i = 1;
+
+        var enumerable = documents as Document[] ?? documents.ToArray();
+        foreach (var document in enumerable)
+        {
+            var content = document.PageContent.Trim();
+            if (string.IsNullOrEmpty(content)) continue;
+
+            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chuckSize);
+            var splitText = textSplitter.SplitText(content);
+            var embeddings = new List<float[]>(capacity: splitText.Count);
+
+            var tasks = splitText.Select(async text => await embeddingModel.CreateEmbeddingsAsync(document.PageContent))
+                .ToList();
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            foreach (var response in results)
+            {
+                var embedding = response?["embedding"]?.AsArray();
+                if (embedding == null) continue;
+
+                var f = new float[(int)_options.Dimensions!];
+                for (var j = 0; j < embedding.Count; j++)
+                {
+                    f[j] = (float)embedding[j]?.AsValue()!;
+                }
+
+                embeddings.Add(f);
+            }
+
+            var vectorRecord = new VectorRecord
+            {
+                Text = document.PageContent,
+                Path = document.Metadata["path"] as string,
+                Vector = embeddings.ToArray().SelectMany(x => x).ToArray()
+            };
+
+            bulkDescriptor.Index<VectorRecord>(desc => desc
+                .Document(vectorRecord)
+                .Index(_indexName)
+            );
+        }
+
+        var bulkResponse = await _client!.BulkAsync(bulkDescriptor, cancellationToken)
+            .ConfigureAwait(false);
+
+        return enumerable.Select(x => x.PageContent);
+    }
+
+    public async Task<bool> AddImageDocumentsAsync(
         Dictionary<string, string> files,
         List<byte[]> cachedImages,
         int chuckSize = 10_000,

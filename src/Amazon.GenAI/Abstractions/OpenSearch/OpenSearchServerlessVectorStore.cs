@@ -30,7 +30,7 @@ public class OpenSearchServerlessVectorStore
 
         var match = Regex.Match(options.CollectionArn!, @"(?<=\/)[^\/]+$");
         var endpoint = new Uri($"https://{match.Value}.{options.Region?.SystemName}.aoss.amazonaws.com");
-        var connection = new AwsSigV4HttpConnection(RegionEndpoint.USWest2, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+        var connection = new AwsSigV4HttpConnection(options.Region, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
         var config = new ConnectionSettings(endpoint, connection);
         _client = new OpenSearchClient(config);
 
@@ -226,7 +226,7 @@ public class OpenSearchServerlessVectorStore
         return bulkDescriptor;
     }
 
-    internal async Task<IReadOnlyCollection<VectorRecord>> SimilaritySearchByVectorAsync(
+    internal async Task<IReadOnlyCollection<VectorSearchResponse>> SimilaritySearchByVectorAsync(
         float[] embedding,
         int k = 4,
         CancellationToken cancellationToken = default)
@@ -241,6 +241,14 @@ public class OpenSearchServerlessVectorStore
                 )
             )).ConfigureAwait(false);
 
-        return searchResponse.Documents;
+        return searchResponse.Hits.Select(hit => new VectorSearchResponse
+            {
+                Score = hit.Score,
+                Base64 = hit.Source.Base64,
+                Vector = hit.Source.Vector,
+                Path = hit.Source.Path,
+                Text = hit.Source.Text
+            })
+            .ToList();
     }
 }

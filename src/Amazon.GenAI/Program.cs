@@ -1,6 +1,8 @@
 using Amazon;
 using Amazon.Bedrock;
 using Amazon.BedrockRuntime;
+using Amazon.EC2.Model;
+using Amazon.GenAI;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Markdig;
@@ -21,23 +23,28 @@ var pipeline = new MarkdownPipelineBuilder()
 
 builder.Services.AddSingleton(pipeline);
 
+var appInit = new ApiInitializerService();
+await appInit.InitializeAsync();
+
+var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
+
 AWSCredentials awsCredentials;
 var chain = new CredentialProfileStoreChain();
 
 if (chain.TryGetAWSCredentials("Bedrock", out awsCredentials))
 {
-    AmazonBedrockClient client = new AmazonBedrockClient(awsCredentials);
+    var client = new AmazonBedrockClient(awsCredentials);
 
     builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
     new AmazonBedrockRuntimeClient(awsCredentials,new AmazonBedrockRuntimeConfig()
     {
-        RegionEndpoint = RegionEndpoint.USWest2
+        RegionEndpoint = regionEndpoint
     }));
 
     builder.Services.AddSingleton<AmazonBedrockClient>(
     new AmazonBedrockClient(awsCredentials, new AmazonBedrockConfig()
     {
-        RegionEndpoint = RegionEndpoint.USWest2
+        RegionEndpoint = regionEndpoint
     }));
 }
 else
@@ -45,12 +52,12 @@ else
     builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
     new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()
     {
-        RegionEndpoint = RegionEndpoint.USWest2
+        RegionEndpoint = regionEndpoint
     }));
     builder.Services.AddSingleton<AmazonBedrockClient>(
         new AmazonBedrockClient(new AmazonBedrockConfig()
         {
-            RegionEndpoint = RegionEndpoint.USWest2
+            RegionEndpoint = regionEndpoint
         }));
 }
 //builder.Services.AddSingleton<AmazonBedrockAgentRuntimeClient>(

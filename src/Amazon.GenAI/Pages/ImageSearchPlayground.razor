@@ -40,7 +40,7 @@
                            OnFilesChanged="OnInputFileChanged"
                            For="@(() => Files)"
                            Hidden="false" Class="flex-1"
-                           MaximumFileCount="50"
+                           MaximumFileCount="100"
                            InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
                            @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
                 <ButtonTemplate>
@@ -121,10 +121,15 @@
 
     <div class="container text-center">
         <div class="row">
-            @foreach (var imageSrc in _listBase64Images)
+            @foreach (var result in _searchResults)
             {
                 <div class="col">
-                    <img width="400px" src="@imageSrc" />
+                    <div class="position-relative" style="width:400px">
+                        <img width="400px" src="@($"data:image/png;base64,{result.Base64}")" />
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 1.5em">
+                            @Math.Round((double)(result.Score * 100)!)%
+                        </span>
+                    </div>
                 </div>
             }
         </div>
@@ -149,7 +154,7 @@
     private const int Dimensions = 1024;
 
     private readonly List<byte[]> _savedBytesList = new();
-    private readonly HashSet<string> _listBase64Images = new();
+    public required List<VectorSearchResponse> _searchResults = new();
 
     enum Status
     {
@@ -175,7 +180,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _textModelId = "anthropic.claude-3-sonnet-20240229-v1:0";
+        _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
         _embeddingModelId = "amazon.titan-embed-image-v1";
         _indexName = "my-images-index";
 
@@ -186,9 +191,10 @@
             .CollectionSummaries
             .ToList();
 
+        var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
         var options = new OpenSearchVectorStoreOptions
             {
-                Region = RegionEndpoint.USWest2,
+                Region = regionEndpoint,
                 IndexName = _indexName,
                 Dimensions = Dimensions,
                 CollectionArn = _collections[0]?.Arn,
@@ -223,7 +229,7 @@
         if (string.IsNullOrEmpty(question))
             return;
 
-        _listBase64Images.Clear();
+        _searchResults.Clear();
         _status = Status.Thinking;
         StateHasChanged();
 
@@ -236,11 +242,7 @@
             f[i] = (float)embedding[i]?.AsValue()!;
         }
 
-        var documents = await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 2).ConfigureAwait(false);
-        foreach (var vectorRecord in documents)
-        {
-            _listBase64Images.Add($"data:image/png;base64,{vectorRecord.Base64}");
-        }
+        _searchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
 
         await InvokeAsync(() =>
         {
@@ -287,6 +289,7 @@
         _loadedFiles.Clear();
         _imageDataUrls.Clear();
         _savedBytesList.Clear();
+        _searchResults.Clear();
         await _chatMessageHistory.Clear();
         ClearDragClass();
         await _promptField?.SetText("")!;

@@ -55,6 +55,11 @@ public class OpenSearchServerlessVectorStore
                     .KnnVector(d => d.Name(n => n.Vector).Dimension(_options.Dimensions).Similarity("cosine"))
                 )
             ));
+
+        if (createIndexResponse!.IsValid == false)
+        {
+            throw new Exception(createIndexResponse.DebugInformation);
+        }
     }
 
     public async Task<IEnumerable<string>> AddTextDocumentsAsync(
@@ -110,6 +115,11 @@ public class OpenSearchServerlessVectorStore
         var bulkResponse = await _client!.BulkAsync(bulkDescriptor, cancellationToken)
             .ConfigureAwait(false);
 
+        if (bulkResponse!.IsValid == false)
+        {
+            throw new Exception(bulkResponse.DebugInformation);
+        }
+
         return enumerable.Select(x => x.PageContent);
     }
 
@@ -134,13 +144,70 @@ public class OpenSearchServerlessVectorStore
         var bulkResponse = await _client!.BulkAsync(bulkDescriptor, cancellationToken)
             .ConfigureAwait(false);
 
+        if (bulkResponse!.IsValid == false)
+        {
+            throw new Exception(bulkResponse.DebugInformation);
+        }
+
         return bulkResponse.IsValid;
+    }
+
+    public async Task<List<VectorSearchResponse>> QueryImageDocumentsAsync(
+        Dictionary<string, string> files,
+        List<byte[]> cachedImages,
+        int chuckSize = 10_000,
+        CancellationToken cancellationToken = default)
+    {
+        var documents = new List<Document>();
+        var textModel = new TextModel(_bedrockRuntimeClient, _textModelId);
+
+        var images = new List<Tuple<string, string, BinaryData>>();
+        var tasks = new Task<string>[files.Count];
+
+        var searchResults = new List<VectorSearchResponse>();
+
+        await GenerateTextFromImages(files, tasks, textModel, images, cachedImages);
+
+        CreateImageDocuments(tasks, images, documents);
+
+        var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), _embeddingModelId);
+
+        foreach (var document in documents)
+        {
+            var content = document.PageContent.Trim();
+            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chuckSize);
+            var splitText = textSplitter.SplitText(content);
+            var embeddings = new List<float[]>(capacity: splitText.Count);
+            var bytes = Convert.FromBase64String((document.Metadata["base64"] as string)!);
+            var image = BinaryData.FromBytes(bytes);
+            var embeddingTasks = splitText.Select(text => embeddingModel.CreateEmbeddingsAsync(document.PageContent, image))
+                .ToList();
+            var results = await Task.WhenAll(embeddingTasks).ConfigureAwait(false);
+
+            foreach (var response in results)
+            {
+                var embedding = response?["embedding"]?.AsArray();
+                if (embedding == null) continue;
+
+                var f = new float[_options.Dimensions!.Value];
+                for (var j = 0; j < embedding.Count; j++)
+                {
+                    f[j] = (float)embedding[j]?.AsValue()!;
+                }
+
+                searchResults = (List<VectorSearchResponse>)await SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+
+                embeddings.Add(f);
+            }
+        }
+
+        return searchResults;
     }
 
     private async Task GenerateTextFromImages(
         Dictionary<string, string> files,
-        Task<string>[] tasks, 
-        TextModel textModel, 
+        Task<string>[] tasks,
+        TextModel textModel,
         List<Tuple<string, string, BinaryData>> images,
         List<byte[]> cachedImages)
     {
@@ -180,6 +247,7 @@ public class OpenSearchServerlessVectorStore
 
     private async Task<BulkDescriptor> CreateBulkDescriptorFromImageDocuments(List<Document> documents)
     {
+        var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), _embeddingModelId);
         const int chuckSize = 10_000;
         var bulkDescriptor = new BulkDescriptor();
         foreach (var document in documents)
@@ -188,7 +256,6 @@ public class OpenSearchServerlessVectorStore
             var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chuckSize);
             var splitText = textSplitter.SplitText(content);
             var embeddings = new List<float[]>(capacity: splitText.Count);
-            var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), _embeddingModelId);
             var bytes = Convert.FromBase64String((document.Metadata["base64"] as string)!);
             var image = BinaryData.FromBytes(bytes);
             var embeddingTasks = splitText.Select(text => embeddingModel.CreateEmbeddingsAsync(document.PageContent, image))
@@ -241,14 +308,48 @@ public class OpenSearchServerlessVectorStore
                 )
             )).ConfigureAwait(false);
 
+        if (searchResponse!.IsValid == false)
+        {
+            throw new Exception(searchResponse.DebugInformation);
+        }
+
         return searchResponse.Hits.Select(hit => new VectorSearchResponse
-            {
-                Score = hit.Score,
-                Base64 = hit.Source.Base64,
-                Vector = hit.Source.Vector,
-                Path = hit.Source.Path,
-                Text = hit.Source.Text
-            })
-            .ToList();
+        {
+            Score = hit.Score,
+            Base64 = hit.Source.Base64,
+            Vector = hit.Source.Vector,
+            Path = hit.Source.Path,
+            Text = hit.Source.Text
+        }).ToList();
+    }
+
+    internal async Task<(IReadOnlyCollection<VectorSearchResponse>, long TotalHits)> GetAllAsync(
+        int pageSize = 10,
+        int pageNumber = 1,
+        bool ascending = true)
+    {
+        var searchRequest = new SearchRequest
+        {
+            From = (pageNumber - 1) * pageSize,
+            Size = pageSize,
+            Query = new MatchAllQuery(),
+
+        };
+
+        var searchResponse = await _client.SearchAsync<VectorRecord>(searchRequest).ConfigureAwait(false);
+
+        if (searchResponse.IsValid == false)
+        {
+            throw new Exception($"Error searching documents: {searchResponse.DebugInformation}");
+        }
+
+        return (searchResponse.Hits.Select(hit => new VectorSearchResponse
+        {
+            Score = hit.Score,
+            Base64 = hit.Source.Base64,
+            Vector = hit.Source.Vector,
+            Path = hit.Source.Path,
+            Text = hit.Source.Text
+        }).ToList(), searchResponse.Total);
     }
 }

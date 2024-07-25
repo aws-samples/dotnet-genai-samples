@@ -11,7 +11,9 @@
                 var styleWidth = $"width:{Width}px";
                 <div class="col">
                     <div class="position-relative" style="@styleWidth">
-                        <MudImage Width="@Width" Src="@($"data:image/png;base64,{result.Base64}")" Alt="@fileName" Elevation="6" Class="pa-3 ma-2" />
+                        <MudTooltip Text="@result.Text" Arrow="true" Placement="Placement.Top" ShowOnHover="true" Inline="true" Style="@styleWidth">
+                            <MudImage Width="@Width" Src="@($"data:image/png;base64,{result.Base64}")" Alt="@fileName" Elevation="6" Class="pa-3 ma-2" />
+                        </MudTooltip>
                         <div>
                             <MudChip T="string" Color="Color.Dark" Text="@fileName" />
                         </div>

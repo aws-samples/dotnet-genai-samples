@@ -21,6 +21,7 @@
     <PackageReference Include="AWSSDK.EC2" Version="3.7.335" />
     <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.108" />
     <PackageReference Include="AWSSDK.OpenSearchService" Version="3.7.311.3" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.400" />
     <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Markdown.ColorCode" Version="2.3.0" />
     <PackageReference Include="MudBlazor" Version="6.21.0" />

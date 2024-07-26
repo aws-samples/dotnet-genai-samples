@@ -11,5 +11,6 @@ public enum Status
 public enum ActionType
 {
     Searching,
-    Adding
+    Adding,
+    S3Adding
 }

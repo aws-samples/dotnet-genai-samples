@@ -7,334 +7,390 @@
 @using Amazon.OpenSearchServerless.Model
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
+@using Amazon.S3.Model
 @using Markdig
+@using Amazon.S3
 @inject MarkdownPipeline Pipeline
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
+@inject AmazonS3Client S3Client
 
 <MudText Typo="Typo.h4">Image Search Playground</MudText>
 <MudStack Style="width: 100%">
-    <MudCard>
-        <MudCardContent>
-            <div>
-                <MudSelect T="CollectionSummary" @bind-Value="_collection" ToStringFunc="@_selectConverter" Required="true"
-                           Label="Select OpenSearchServerless Collections"
-                           Variant="Variant.Outlined">
-                    @if (_collections != null)
-                    {
-                        @foreach (var item in _collections)
-                        {
-                            _collection ??= item;
-                            <MudSelectItem Value="@item" />
-                        }
-                    }
-                </MudSelect>
-            </div>
-        </MudCardContent>
-    </MudCard>
+	<MudCard>
+		<MudCardContent>
+			<div>
+				<MudSelect T="CollectionSummary" @bind-Value="_collection" ToStringFunc="@_selectConverter" Required="true"
+						   Label="Select OpenSearchServerless Collections"
+						   Variant="Variant.Outlined">
+					@if (_collections != null)
+					{
+						@foreach (var item in _collections)
+						{
+							_collection ??= item;
+							<MudSelectItem Value="@item" />
+						}
+					}
+				</MudSelect>
+			</div>
+		</MudCardContent>
+	</MudCard>
 
-    <MudRadioGroup @bind-Value="_actionType">
-        <MudRadio Value="ActionType.Searching" Color="Color.Primary">Search</MudRadio>
-        <MudRadio Value="ActionType.Adding" Color="Color.Secondary">Add Images</MudRadio>
-    </MudRadioGroup>
+	<MudRadioGroup @bind-Value="_actionType">
+		<MudRadio Value="ActionType.Searching" Color="Color.Primary">Search</MudRadio>
+		<MudRadio Value="ActionType.Adding" Color="Color.Secondary">Add Images</MudRadio>
+		<MudRadio Value="ActionType.S3Adding" Color="Color.Secondary">Add Images from S3</MudRadio>
+	</MudRadioGroup>
 
-    @if (_actionType == ActionType.Searching)
-    {
-        <MudPaper Elevation="5" Class="mb-2">
-            <MudToolBar>
-                <MudIconButton Icon="@Icons.Material.Outlined.Search" Color="Color.Inherit" Class="mr-5" />
-                <MudRadioGroup @bind-Value="SearchType">
-                    <MudRadio Value="true" Color="Color.Primary">Text</MudRadio>
-                    <MudRadio Value="false" Color="Color.Secondary">Image</MudRadio>
-                </MudRadioGroup>
-                @if (SearchType)
-                {
-                    <MudAutocomplete T="string" Class="mt-n4" Label="Search Text" SearchFunc="@Search" ShowProgressIndicator="true" />
-                }
-                else
-                {
-                    <MudPaper Class="pl-2 pr-2" Outlined="true">
-                        <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-                                  Files="QueryImages"
-                                  FileCount="1"
-                                  OnFileChangedCallback="OnInputFileChanged">
-                        </Uploader>
-                    </MudPaper>
-                }
-            </MudToolBar>
-            @if (SearchType == false)
-            {
-                <ImageListing ActionType="_actionType"
-                              SearchType="SearchType"
-                              ImageUrls="_imageDataUrls"
-                              Files="_inputFiles"
-                              Width="200">
-                </ImageListing>
+	@if (_actionType == ActionType.Searching)
+	{
+		<MudPaper Elevation="5" Class="mb-2">
+			<MudToolBar>
+				<MudIconButton Icon="@Icons.Material.Outlined.Search" Color="Color.Inherit" Class="mr-5" />
+				<MudRadioGroup @bind-Value="SearchType">
+					<MudRadio Value="true" Color="Color.Primary">Text</MudRadio>
+					<MudRadio Value="false" Color="Color.Secondary">Image</MudRadio>
+				</MudRadioGroup>
+				@if (SearchType)
+				{
+					<MudAutocomplete T="string" Class="mt-n4" Label="Search Text" SearchFunc="@Search" ShowProgressIndicator="true" />
+				}
+				else
+				{
+					<MudPaper Class="pl-2 pr-2" Outlined="true">
+						<Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+								  Files="QueryImages"
+								  FileCount="1"
+								  OnFileChangedCallback="OnInputFileChanged">
+						</Uploader>
+					</MudPaper>
+				}
+			</MudToolBar>
+			@if (SearchType == false)
+			{
+				<ImageListing ActionType="_actionType"
+							  SearchType="SearchType"
+							  ImageUrls="_imageDataUrls"
+							  Files="_inputFiles"
+							  Width="200">
+				</ImageListing>
 
-                <EditForm Model="@_chatMessageHistory" OnSubmit="OnSearch">
-                    <MudCard>
-                        <MudCardActions>
-                            <MudButton ButtonType="ButtonType.Submit" Disabled="@(!_inputFiles.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Search</MudButton>
-                            <MudButton OnClick="Clear" Disabled="@(!_inputFiles.Any())" Color="Color.Error" Variant="Variant.Filled" Class="ms-3">Reset</MudButton>
-                        </MudCardActions>
+				<EditForm Model="@_chatMessageHistory" OnSubmit="OnSearch">
+					<MudCard>
+						<MudCardActions>
+							<MudButton ButtonType="ButtonType.Submit" Disabled="@(!_inputFiles.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Search</MudButton>
+							<MudButton OnClick="Clear" Disabled="@(!_inputFiles.Any())" Color="Color.Error" Variant="Variant.Filled" Class="ms-3">Reset</MudButton>
+						</MudCardActions>
 
-                        <Progress Status="_status" OnClickCallback="Submit"></Progress>
-                    </MudCard>
-                </EditForm>
-            }
-        </MudPaper>
+						<Progress Status="_status" OnClickCallback="Submit"></Progress>
+					</MudCard>
+				</EditForm>
+			}
+		</MudPaper>
 
-        <MudExpansionPanels>
-            <MudExpansionPanel Text="@_totalImages" ExpandedChanged="OnExpandedChanged" @ref="_expansionPanels">
-                <div class="container text-center">
-                    <ImageListing ActionType="_actionType"
-                                  SearchType="SearchType"
-                                  SearchResults="_searchResults"
-                                  Width="400">
-                    </ImageListing>
-                    <MudPagination BoundaryCount="1" MiddleCount="1" Count="@(_pageCount)" SelectedChanged="PageChanged" />
-                </div>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    }
+		<MudExpansionPanels>
+			<MudExpansionPanel Text="@_totalImages" ExpandedChanged="OnExpandedChanged" @ref="_expansionPanels">
+				<div class="container text-center">
+					<ImageListing ActionType="_actionType"
+								  SearchType="SearchType"
+								  SearchResults="_searchResults"
+								  Width="400">
+					</ImageListing>
+					<MudPagination BoundaryCount="1" MiddleCount="1" Count="@(_pageCount)" SelectedChanged="PageChanged" />
+				</div>
+			</MudExpansionPanel>
+		</MudExpansionPanels>
+	}
 
-    @if (_actionType == ActionType.Adding)
-    {
-        <MudPaper Outlined="true">
-            <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-                      Files="Files"
-                      FileCount="100"
-                      OnFileChangedCallback="OnInputFileChanged">
-            </Uploader>
-        </MudPaper>
+	@if (_actionType == ActionType.Adding)
+	{
+		<MudPaper Elevation="5" Class="p-3">
+			<Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+					  Files="Files"
+					  FileCount="100"
+					  OnFileChangedCallback="OnInputFileChanged">
+			</Uploader>
+		</MudPaper>
 
-        <ImageListing ActionType="_actionType"
-                      SearchType="SearchType"
-                      ImageUrls="_imageDataUrls"
-                      Files="_inputFiles"
-                      Width="400">
-        </ImageListing>
+		<ImageListing ActionType="_actionType"
+					  SearchType="SearchType"
+					  ImageUrls="_imageDataUrls"
+					  Files="_inputFiles"
+					  Width="400">
+		</ImageListing>
 
-        <EditForm Model="@_chatMessageHistory" OnSubmit="OnSubmit">
-            <MudCard>
-                <MudCardActions>
-                    <MudButton ButtonType="ButtonType.Submit" Disabled="@(!_inputFiles.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Add Images</MudButton>
-                    <MudButton OnClick="Clear" Disabled="@(!_inputFiles.Any())" Color="Color.Error" Variant="Variant.Filled" Class="ms-3">Clear</MudButton>
-                </MudCardActions>
+		<EditForm Model="@_chatMessageHistory" OnSubmit="OnSubmit">
+			<MudCard>
+				<MudCardActions>
+					<MudButton ButtonType="ButtonType.Submit" Disabled="@(!_inputFiles.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Add Images</MudButton>
+					<MudButton OnClick="Clear" Disabled="@(!_inputFiles.Any())" Color="Color.Error" Variant="Variant.Filled" Class="ms-3">Clear</MudButton>
+				</MudCardActions>
 
-                <Progress Status="_status" OnClickCallback="Submit"></Progress>
-            </MudCard>
-        </EditForm>
-    }
+				<Progress Status="_status" OnClickCallback="Submit"></Progress>
+			</MudCard>
+		</EditForm>
+	}
+
+	@if (_actionType == ActionType.S3Adding)
+	{
+
+		<MudPaper Elevation="5" Class="p-3">
+			<div>
+				<MudSelect T="S3Bucket" @bind-Value="_bucket" Required="true"
+						   Label="Select S3 Bucket"
+						   Variant="Variant.Outlined">
+					@if (_buckets != null)
+					{
+						@foreach (var item in _buckets)
+						{
+							_bucket ??= item;
+							<MudSelectItem Value="@item">@item.BucketName</MudSelectItem>
+						}
+					}
+				</MudSelect>
+			</div>
+		</MudPaper>
+
+		<EditForm Model="@_chatMessageHistory" OnSubmit="OnS3Submit">
+			<MudCard>
+				<MudCardActions>
+					<MudButton ButtonType="ButtonType.Submit" Disabled="@(_bucket is null)" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Add Images from S3</MudButton>
+				</MudCardActions>
+
+				<Progress Status="_status" OnClickCallback="Submit"></Progress>
+			</MudCard>
+		</EditForm>
+	}
 </MudStack>
 
 @code {
 
-    #region Variables
+	#region Variables
 
-    readonly Func<CollectionSummary, string> _selectConverter = coll => string.Concat(coll?.Name, " , (", coll?.Id, ")");
-    private CollectionSummary? _collection;
-    private List<CollectionSummary?>? _collections;
-    private OpenSearchServerlessVectorStore? _openSearchVectorStore;
-    private string? _indexName;
-    private const int Dimensions = 1024;
+	readonly Func<CollectionSummary, string> _selectConverter = coll => string.Concat(coll?.Name, " , (", coll?.Id, ")");
+	private CollectionSummary? _collection;
+	private List<CollectionSummary?>? _collections;
+	private OpenSearchServerlessVectorStore? _openSearchVectorStore;
+	private string? _indexName;
+	private const int Dimensions = 1024;
 
-    private string? _uploadDirectory;
-    IReadOnlyList<IBrowserFile>? Files { get; set; } = new List<IBrowserFile>();
-    private readonly List<string> _imageDataUrls = new();
+	private string? _uploadDirectory;
+	IReadOnlyList<IBrowserFile>? Files { get; set; } = new List<IBrowserFile>();
+	private readonly List<string> _imageDataUrls = new();
 
-    private string? _textModelId;
-    private string? _embeddingModelId;
+	private string? _textModelId;
+	private string? _embeddingModelId;
 
-    private readonly List<byte[]> _savedBytesList = new();
-    public required IReadOnlyCollection<VectorSearchResponse> _searchResults = new List<VectorSearchResponse>();
+	private readonly List<byte[]> _savedBytesList = new();
+	public required IReadOnlyCollection<VectorSearchResponse> _searchResults = new List<VectorSearchResponse>();
 
-    Status _status = Status.Default;
+	Status _status = Status.Default;
 
-    private readonly ChatMessageHistory _chatMessageHistory = new();
+	private readonly ChatMessageHistory _chatMessageHistory = new();
 
-    private Dictionary<string, string> _inputFiles = new();
+	private Dictionary<string, string> _inputFiles = new();
 
-    private readonly int _pageSize = 15;
-    string? _totalImages;
-    private int _pageCount;
+	private readonly int _pageSize = 15;
+	string? _totalImages;
+	private int _pageCount;
 
-    private MudExpansionPanel _expansionPanels;
+	private MudExpansionPanel _expansionPanels;
 
-    public bool SearchType { get; set; } = true;
-    IReadOnlyList<IBrowserFile>? QueryImages { get; set; } = new List<IBrowserFile>();
+	public bool SearchType { get; set; } = true;
+	IReadOnlyList<IBrowserFile>? QueryImages { get; set; } = new List<IBrowserFile>();
 
-    private ActionType _actionType;
+	private ActionType _actionType;
 
-    #endregion
+	//readonly Func<S3Bucket, string> _selectBucketConverter = x => x.BucketName ?? "";
+	private List<S3Bucket?>? _buckets;
+	private S3Bucket _bucket;
 
-    protected override async Task OnInitializedAsync()
-    {
-        _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
-        _embeddingModelId = "amazon.titan-embed-image-v1";
-        _indexName = "my-images-index";
+	#endregion
 
-        _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
-        if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
+	protected override async Task OnInitializedAsync()
+	{
+		_textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+		_embeddingModelId = "amazon.titan-embed-image-v1";
+		_indexName = "my-images-index";
 
-        _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
-            .CollectionSummaries
-            .ToList();
+		_uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
+		if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
-        var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
-        var options = new OpenSearchVectorStoreOptions
-            {
-                Region = regionEndpoint,
-                IndexName = _indexName,
-                Dimensions = Dimensions,
-                CollectionArn = _collections[0]?.Arn,
-            };
+		_collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+			.CollectionSummaries
+			.ToList();
 
-        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+		_buckets = (await new AmazonS3Client().ListBucketsAsync()).Buckets.ToList();
 
-        await GetAll();
+		var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
+		var options = new OpenSearchVectorStoreOptions
+			{
+				Region = regionEndpoint,
+				IndexName = _indexName,
+				Dimensions = Dimensions,
+				CollectionArn = _collections[0]?.Arn,
+			};
 
-        await base.OnInitializedAsync();
-        StateHasChanged();
-    }
+		_openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-    private async Task OnSubmit(EditContext context)
-    {
-        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+		await GetAll();
 
-        await InvokeAsync(() =>
-        {
-            _status = Status.Adding;
-            StateHasChanged();
-        });
+		await base.OnInitializedAsync();
+		StateHasChanged();
+	}
 
-        await _openSearchVectorStore!.AddImageDocumentsAsync(_inputFiles, _savedBytesList).ConfigureAwait(false);
+	private async Task OnSubmit(EditContext context)
+	{
+		await InvokeAsync(() =>
+		{
+			_status = Status.Adding;
+			StateHasChanged();
+		});
 
-        await InvokeAsync(() =>
-        {
-            _expansionPanels.Collapse();
-            _ = Clear();
-            _ = GetAll();
-            _status = Status.Default;
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
+		await _openSearchVectorStore!.AddImageDocumentsAsync(_inputFiles, _savedBytesList).ConfigureAwait(false);
 
-    private async Task OnSearch(EditContext context)
-    {
-        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+		await InvokeAsync(() =>
+		{
+			_expansionPanels.Collapse();
+			_ = Clear();
+			_ = GetAll();
+			_status = Status.Default;
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
 
-        await InvokeAsync(() =>
-        {
-            _status = Status.Thinking;
-            StateHasChanged();
-        });
+	private async Task OnS3Submit(EditContext context)
+	{
+		await InvokeAsync(() =>
+		{
+			_status = Status.Adding;
+			StateHasChanged();
+		});
 
-        _searchResults = await _openSearchVectorStore!.QueryImageDocumentsAsync(_inputFiles, _savedBytesList).ConfigureAwait(false);
+		await InvokeAsync(() =>
+		{
+			_expansionPanels.Collapse();
+			_ = Clear();
+			_ = GetAll();
+			_status = Status.Default;
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
 
-        await InvokeAsync(() =>
-        {
-            _expansionPanels.Expand();
+	private async Task OnSearch(EditContext context)
+	{
+		await InvokeAsync(() =>
+		{
+			_status = Status.Thinking;
+			StateHasChanged();
+		});
 
-            _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+		_searchResults = await _openSearchVectorStore!.QueryImageDocumentsAsync(_inputFiles, _savedBytesList).ConfigureAwait(false);
 
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
+		await InvokeAsync(() =>
+		{
+			_expansionPanels.Expand();
 
-    private async Task<IEnumerable<string>?> Search(string question)
-    {
-        if (string.IsNullOrEmpty(question))
-            return null;
+			_status = Status.Default;
+			JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
 
-        _status = Status.Thinking;
-        StateHasChanged();
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
 
-        var embeddingModel = new EmbeddingModel(BedrockRuntimeClient, _embeddingModelId);
-        var questionEmbeddingsResponse = await embeddingModel.CreateEmbeddingsAsync(question)!;
-        var embedding = questionEmbeddingsResponse?["embedding"]?.AsArray();
-        var f = new float[Dimensions];
-        for (var i = 0; i < embedding!.Count; i++)
-        {
-            f[i] = (float)embedding[i]?.AsValue()!;
-        }
+	private async Task<IEnumerable<string>?> Search(string question)
+	{
+		if (string.IsNullOrEmpty(question))
+			return null;
 
-        _searchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+		_status = Status.Thinking;
+		StateHasChanged();
 
-        await InvokeAsync(() =>
-        {
-            _expansionPanels.Expand();
+		var embeddingModel = new EmbeddingModel(BedrockRuntimeClient, _embeddingModelId);
+		var questionEmbeddingsResponse = await embeddingModel.CreateEmbeddingsAsync(question)!;
+		var embedding = questionEmbeddingsResponse?["embedding"]?.AsArray();
+		var f = new float[Dimensions];
+		for (var i = 0; i < embedding!.Count; i++)
+		{
+			f[i] = (float)embedding[i]?.AsValue()!;
+		}
 
-            _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+		_searchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
 
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
+		await InvokeAsync(() =>
+		{
+			_expansionPanels.Expand();
 
-        return null;
-    }
+			_status = Status.Default;
+			JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
 
-    #region Utility Methods
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
 
-    private async Task GetAll()
-    {
-        (_searchResults, var totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
-        _totalImages = $"{totalHits.ToString()} # of Images";
-        _pageCount = (int)(totalHits / _pageSize);
-    }
+		return null;
+	}
 
-    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
-    {
-        _inputFiles.Clear();
-        _imageDataUrls.Clear();
-        _savedBytesList.Clear();
+	#region Utility Methods
 
-        const long maxFileSize = 1024L * 1024L * 1024L * 2L;
+	private async Task GetAll()
+	{
+		(_searchResults, var totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+		_totalImages = $"{totalHits.ToString()} # of Images";
+		_pageCount = (int)(totalHits / _pageSize);
+	}
 
-        foreach (var inputFile in e.GetMultipleFiles())
-        {
-            var targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
-            var file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 600, int.MaxValue);
+	private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+	{
+		_inputFiles.Clear();
+		_imageDataUrls.Clear();
+		_savedBytesList.Clear();
 
-            await using var outputStream = File.Create(targetFile);
-            await file.OpenReadStream(maxFileSize).CopyToAsync(outputStream);
-            outputStream.Close();
+		const long maxFileSize = 1024L * 1024L * 1024L * 2L;
 
-            var bytes = await File.ReadAllBytesAsync(targetFile);
-            _savedBytesList.Add(bytes);
-            var base64String = Convert.ToBase64String(bytes);
+		foreach (var inputFile in e.GetMultipleFiles())
+		{
+			var targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
+			var file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 600, int.MaxValue);
 
-            _imageDataUrls.Add($"data:image/png;base64,{base64String}");
+			await using var outputStream = File.Create(targetFile);
+			await file.OpenReadStream(maxFileSize).CopyToAsync(outputStream);
+			outputStream.Close();
 
-            _inputFiles.Add(inputFile.Name, targetFile);
-        }
-    }
+			var bytes = await File.ReadAllBytesAsync(targetFile);
+			_savedBytesList.Add(bytes);
+			var base64String = Convert.ToBase64String(bytes);
 
-    private async Task Clear()
-    {
-        _inputFiles.Clear();
-        _imageDataUrls.Clear();
-        _savedBytesList.Clear();
-        await _chatMessageHistory.Clear();
-        await Task.Delay(100);
-    }
+			_imageDataUrls.Add($"data:image/png;base64,{base64String}");
 
-    private async Task Submit(MouseEventArgs e)
-    {
-        _inputFiles = new();
-    }
+			_inputFiles.Add(inputFile.Name, targetFile);
+		}
+	}
 
-    private async Task PageChanged(int i)
-    {
-        (_searchResults, var totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: i)!;
-        _totalImages = $"{totalHits.ToString()} # of Images";
-        _pageCount = (int)(totalHits / _pageSize + 1);
-    }
+	private async Task Clear()
+	{
+		_inputFiles.Clear();
+		_imageDataUrls.Clear();
+		_savedBytesList.Clear();
+		await _chatMessageHistory.Clear();
+		await Task.Delay(100);
+	}
 
-    #endregion
+	private async Task Submit(MouseEventArgs e)
+	{
+		_inputFiles = new();
+	}
+
+	private async Task PageChanged(int i)
+	{
+		(_searchResults, var totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: i)!;
+		_totalImages = $"{totalHits.ToString()} # of Images";
+		_pageCount = (int)(totalHits / _pageSize + 1);
+	}
+
+	#endregion
 }

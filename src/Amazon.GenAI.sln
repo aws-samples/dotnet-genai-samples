@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.DataSyncLambda
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.KbLambda", "Amazon.GenAI.KbLambda\src\Amazon.GenAI.KbLambda\Amazon.GenAI.KbLambda.csproj", "{F7B005CD-EB79-4CDE-B20A-342D6668212C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shareholder-Letters", "Shareholder-Letters", "{9A916789-3720-47CD-BFF5-E50CFD32DD01}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

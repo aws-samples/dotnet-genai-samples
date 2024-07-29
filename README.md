@@ -14,7 +14,6 @@ Run Blazor app
 ## Getting Started
 Clone the repository.
 Navigate to the desired sample directory.
-Set up a Python virtual environment and install the required dependencies.
 Configure the necessary environment variables (e.g., AWS credentials, database connections, etc.).
 Run the Blazor App.
 Detailed instructions for each sample are provided in their respective directories.

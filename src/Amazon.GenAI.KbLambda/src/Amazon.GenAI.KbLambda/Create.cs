@@ -59,22 +59,22 @@ public class Create : LambdaBaseFunction
                     {
                         Context?.Logger.LogLine($"  -- in ACTIVE Collection Status");
 
-                        await StoreParameters(
+                        await SmsParameters.StoreParameter(
                                 name: $"{namePrefix}-{nameSuffix}/collectionId",
                                 value: collection.Id!
                             );
 
-                        await StoreParameters(
+                        await SmsParameters.StoreParameter(
                             name: $"{namePrefix}-{nameSuffix}/collectionArn",
                             value: collection.Arn!
                         );
 
-                        await StoreParameters(
+                        await SmsParameters.StoreParameter(
                             name: $"{namePrefix}-{nameSuffix}/collectionName",
                             value: collection.Name!
                         );
 
-                        await StoreParameters(
+                        await SmsParameters.StoreParameter(
                             name: $"{namePrefix}-{nameSuffix}/collectionEndpoint",
                             value: collection.CollectionEndpoint!
                         );
@@ -115,7 +115,7 @@ public class Create : LambdaBaseFunction
 
             Context?.Logger.LogLine($"   -- host: {host}");
 
-            var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+            var connection = new AwsSigV4HttpConnection(service: AwsSigV4HttpConnection.OpenSearchServerlessService);
             var config = new ConnectionSettings(endpoint, connection);
             var client = new OpenSearchClient(config);
 
@@ -132,23 +132,10 @@ public class Create : LambdaBaseFunction
                                 .Parameters(p => p.Parameter("ef_construction", 512))
                                 .Parameters(p => p.Parameter("m", 12))
                                 .Engine("faiss"))
-                            .Dimension(1536)
+                            .Dimension(1024)
                         )
                     )
                 ))!);
-
-            //var createIndexResponse = client?.Indices.Create($"{namePrefix}-{nameSuffix}", c => c
-            //    .Settings(x => x
-            //        .Setting("index.knn", true)
-            //        .Setting("index.knn.space_type", "cosinesimil")
-            //    )
-            //    .Map<VectorRecord>(m => m
-            //        .Properties(p => p
-            //            .Keyword(k => k.Name(n => n.Id))
-            //            .Text(t => t.Name(n => n.Text))
-            //            .KnnVector(d => d.Name(n => n.Vector).Dimension(1536).Similarity("cosine"))
-            //        )
-            //    ));
 
             Console.WriteLine($"createIndexResponse.Acknowledged: {createIndexResponse.Acknowledged}");
         }
@@ -220,12 +207,12 @@ public class Create : LambdaBaseFunction
 
             Context?.Logger.LogLine("   ---- KnowledgeBase created");
 
-            await StoreParameters(
+            await SmsParameters.StoreParameter(
                 name: $"{namePrefix}-{nameSuffix}/knowledgeBaseId",
                 value: response.KnowledgeBase.KnowledgeBaseId!
             );
 
-            await StoreParameters(
+            await SmsParameters.StoreParameter(
                 name: $"{namePrefix}-{nameSuffix}/knowledgeBaseArn",
                 value: response.KnowledgeBase.KnowledgeBaseArn!
             );
@@ -275,7 +262,7 @@ public class Create : LambdaBaseFunction
 
             Context?.Logger.LogLine("   ---- DataSource created");
 
-            await StoreParameters(
+            await SmsParameters.StoreParameter(
                 name: $"{namePrefix}-{nameSuffix}/dataSourceId",
                 value: response.DataSource.DataSourceId!
             );
@@ -285,31 +272,6 @@ public class Create : LambdaBaseFunction
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw;
-        }
-    }
-
-    private static async Task<string> StoreParameters(string name, string value)
-    {
-        try
-        {
-            var client = new AmazonSimpleSystemsManagementClient();
-
-            var request = new PutParameterRequest()
-            {
-                Name = "/" + name,
-                Value = value,
-                Type = ParameterType.String,
-                Overwrite = true,
-                Description = ""
-            };
-            var response = await client.PutParameterAsync(request);
-
-            return response.Tier;
-        }
-        catch (Exception e)
-        {
-            Context?.Logger.LogLine(e.Message);
             throw;
         }
     }
@@ -488,4 +450,52 @@ public class Create : LambdaBaseFunction
             throw;
         }
     }
+}
+
+public class Sms: LambdaBaseFunction
+{
+
+    private static async Task<string> StoreParameters(string name, string value)
+    {
+        try
+        {
+            var client = new AmazonSimpleSystemsManagementClient();
+
+            var request = new PutParameterRequest()
+            {
+                Name = "/" + name,
+                Value = value,
+                Type = ParameterType.String,
+                Overwrite = true,
+                Description = ""
+            };
+            var response = await client.PutParameterAsync(request);
+
+            return response.Tier;
+        }
+        catch (Exception e)
+        {
+            Context?.Logger.LogLine(e.Message);
+            throw;
+        }
+    }
+
+    private static async Task<Parameter> ReadParameters(string name)
+    {
+        try
+        {
+            var client = new AmazonSimpleSystemsManagementClient();
+
+            var request = new GetParameterRequest { Name = "/" + name };
+            var response = await client.GetParameterAsync(request);
+
+            return response.Parameter;
+        }
+        catch (Exception e)
+        {
+            Context?.Logger.LogLine(e.Message);
+            throw;
+        }
+    }
+
 }

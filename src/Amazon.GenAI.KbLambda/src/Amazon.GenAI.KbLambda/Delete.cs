@@ -67,7 +67,7 @@ public class Delete : LambdaBaseFunction
         {
             var client = new AmazonOpenSearchServerlessClient();
 
-            var collectionId = await LambdaParameters.GetParameter(name: $"/{namePrefix}-{nameSuffix}/collectionId");
+            var collectionId = await SmsParameters.GetParameter(name: $"/{namePrefix}-{nameSuffix}/collectionId");
             var request = new DeleteCollectionRequest
             {
                 Id = collectionId
@@ -90,7 +90,7 @@ public class Delete : LambdaBaseFunction
         {
             var client = new AmazonBedrockAgentClient();
 
-            var knowledgeBaseId = await LambdaParameters.GetParameter(name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseId");
+            var knowledgeBaseId = await SmsParameters.GetParameter(name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseId");
             var request = new DeleteKnowledgeBaseRequest
             {
                 KnowledgeBaseId = knowledgeBaseId

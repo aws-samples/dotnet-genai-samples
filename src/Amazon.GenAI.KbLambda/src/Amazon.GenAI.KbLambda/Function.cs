@@ -88,20 +88,20 @@ public class Function
                         nameSuffix: nameSuffix
                     );
 
-                    //var knowledgeBase = await Create.KnowledgeBase(
-                    //    knowledgeBaseRoleArn: knowledgeBaseRoleArn,
-                    //    namePrefix: namePrefix,
-                    //    nameSuffix: nameSuffix,
-                    //    knowledgeBaseEmbeddingModelArn: knowledgeBaseEmbeddingModelArn,
-                    //    collectionArn: collection.Arn!
-                    //);
+                    var knowledgeBase = await Create.KnowledgeBase(
+                        knowledgeBaseRoleArn: knowledgeBaseRoleArn,
+                        namePrefix: namePrefix,
+                        nameSuffix: nameSuffix,
+                        knowledgeBaseEmbeddingModelArn: knowledgeBaseEmbeddingModelArn,
+                        collectionArn: collection.Arn!
+                    );
 
-                    //var dataSource = await Create.DataSource(
-                    //    knowledgeBaseBucketArn: knowledgeBaseBucketArn,
-                    //    knowledgeBaseId: knowledgeBase?.KnowledgeBase?.KnowledgeBaseId!,
-                    //    namePrefix: namePrefix,
-                    //    nameSuffix: nameSuffix
-                    //);
+                    var dataSource = await Create.DataSource(
+                        knowledgeBaseBucketArn: knowledgeBaseBucketArn,
+                        knowledgeBaseId: knowledgeBase?.KnowledgeBase?.KnowledgeBaseId!,
+                        namePrefix: namePrefix,
+                        nameSuffix: nameSuffix
+                    );
 
                     //await StartDataSync(knowledgeBase, dataSource);
 
@@ -167,25 +167,25 @@ public class Function
                         nameSuffix: nameSuffix,
                         namePrefix: namePrefix
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/collectionArn"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/collectionEndpoint"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/collectionId"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/collectionName"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/dataSourceId"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseArn"
                     );
-                    await LambdaParameters.DeleteParameter(
+                    await SmsParameters.DeleteParameter(
                         name: $"/{namePrefix}-{nameSuffix}/knowledgeBaseId"
                     );
 

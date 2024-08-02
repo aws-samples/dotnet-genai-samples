@@ -20,7 +20,7 @@ public class KbProvider
         var provider = new Provider(kbCustomResourceStack, providerName, new ProviderProps
         {
             OnEventHandler = kbCustomResourceLambda,
-            LogRetention = RetentionDays.THREE_DAYS,
+            LogRetention = RetentionDays.ONE_DAY,
         });
 
         return provider;

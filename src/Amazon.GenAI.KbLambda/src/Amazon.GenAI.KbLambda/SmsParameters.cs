@@ -3,7 +3,7 @@ using Amazon.SimpleSystemsManagement.Model;
 
 namespace Amazon.GenAI.KbLambda;
 
-public class LambdaParameters : LambdaBaseFunction
+public class SmsParameters : LambdaBaseFunction
 {
     public static async Task<string?> GetParameter(string name)
     {
@@ -37,6 +37,31 @@ public class LambdaParameters : LambdaBaseFunction
         catch (Exception e)
         {
             Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public static async Task<string> StoreParameter(string name, string value)
+    {
+        try
+        {
+            var client = new AmazonSimpleSystemsManagementClient();
+
+            var request = new PutParameterRequest()
+            {
+                Name = "/" + name,
+                Value = value,
+                Type = ParameterType.String,
+                Overwrite = true,
+                Description = ""
+            };
+            var response = await client.PutParameterAsync(request);
+
+            return response.Tier;
+        }
+        catch (Exception e)
+        {
+            Context?.Logger.LogLine(e.Message);
             throw;
         }
     }

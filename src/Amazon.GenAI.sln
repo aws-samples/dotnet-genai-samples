@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.DataSyncLambda
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.KbLambda", "Amazon.GenAI.KbLambda\src\Amazon.GenAI.KbLambda\Amazon.GenAI.KbLambda.csproj", "{F7B005CD-EB79-4CDE-B20A-342D6668212C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amazon.GenAI.ImageIngestionLambda", "Amazon.GenAI.ImageIngestionLambda\src\Amazon.GenAI.ImageIngestionLambda.csproj", "{D6405172-FF87-42E7-9C1C-DE51D6DC86B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6405172-FF87-42E7-9C1C-DE51D6DC86B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6405172-FF87-42E7-9C1C-DE51D6DC86B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6405172-FF87-42E7-9C1C-DE51D6DC86B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6405172-FF87-42E7-9C1C-DE51D6DC86B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shareholder-Letters", "Shar
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ShareholderLetters", "ShareholderLetters", "{932EABA6-97B9-4EF5-992C-CEFB3768D013}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amazon.GenAI.ImageIngestion", "Amazon.GenAI.ImageIngestion\src\Amazon.GenAI.ImageIngestion\Amazon.GenAI.ImageIngestion.csproj", "{3AFC9B64-8A1A-4B42-B896-6BAAA31C825D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,10 @@ Global
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AFC9B64-8A1A-4B42-B896-6BAAA31C825D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AFC9B64-8A1A-4B42-B896-6BAAA31C825D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AFC9B64-8A1A-4B42-B896-6BAAA31C825D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AFC9B64-8A1A-4B42-B896-6BAAA31C825D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -25,13 +25,23 @@ internal sealed class Program
         var env = MakeEnv();
 
         var appStackProp = new AppStackProps();
+        appStackProp.NameSuffix = "test";
 
-        var kbCustomResourceName = $"{appStackProp.NamePrefix}-cr-{appStackProp.NameSuffix}";
+        var embeddingModelArn = $"arn:aws:bedrock:{env.Region}::foundation-model/amazon.titan-embed-text-v2:0";
+
+        var kbCustomResourceName = $"{appStackProp.NamePrefix}-{appStackProp.NameSuffix}";
         var kbCustomResourceStack = new KbCustomResourceStack(app, kbCustomResourceName, new KbCustomResourceStackProps
         {
             Env = env,
             AppProps = appStackProp,
-            KnowledgeBaseEmbeddingModelArn = Constants.EmbeddingModelArn
+            KnowledgeBaseEmbeddingModelArn = embeddingModelArn
+        });
+
+        var imageIngestionName = $"{appStackProp.NamePrefix}-image-ingestion-{appStackProp.NameSuffix}";
+        var imageIngestionStack = new ImageIngestionStack(app, imageIngestionName, new ImageIngestionStackProps
+        {
+            Env = env,
+            AppProps = appStackProp,
         });
 
         app.Synth();

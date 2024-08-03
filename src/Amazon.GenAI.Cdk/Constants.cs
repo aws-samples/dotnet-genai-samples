@@ -6,7 +6,6 @@ namespace Amazon.GenAI.Cdk;
 internal static class Constants
 {
 	internal static readonly string AppName = "dotnet-genai";
-	internal static readonly string EmbeddingModelArn = "arn:aws:bedrock:us-west-2::foundation-model/amazon.titan-embed-text-v2:0";
 	internal static readonly string ShareHolderLettersFolder = @"./share-holder-letters";
 
     public static string ToCurrentDateTime()

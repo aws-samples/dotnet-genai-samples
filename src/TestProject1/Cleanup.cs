@@ -4,6 +4,8 @@ using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
+using Amazon.IdentityManagement;
+using Amazon.IdentityManagement.Model;
 using Amazon.OpenSearchServerless;
 using Amazon.OpenSearchServerless.Model;
 using Amazon.SimpleSystemsManagement;
@@ -203,4 +205,43 @@ public class Cleanup
             throw;
         }
     }
+
+    //[Test]
+    //public async Task DeleteRoles()
+    //{
+    //    try
+    //    {
+    //        var client = new AmazonIdentityManagementServiceClient();
+
+    //        //var listRequest = new ListAttachedRolePoliciesRequest{RoleName = "dotnet-genai-test-CustomS3AutoDeleteObjectsCustomRe-k8jc7sQ8NLKJ" };
+    //        //var listResponse = await client.ListAttachedRolePoliciesAsync(listRequest); 
+    //        //var summaries = listResponse.AttachedPolicies.ToList();
+
+    //        var listRolesRequest = new ListRolesRequest() { MaxItems = 300 };
+    //        var listRolesResponse = await client.ListRolesAsync(listRolesRequest);
+    //        var summaries = listRolesResponse.Roles.Where(x => x.RoleName.StartsWith("dotnet-genai")).ToList();
+    //        Console.WriteLine($"Count: {summaries.Count}");
+
+    //        foreach (Role? summary in summaries)
+    //        {
+    //            var listAttachedRolePoliciesRequest = new ListAttachedRolePoliciesRequest { RoleName = summary.RoleName };
+    //            var listAttachedRolePoliciesResponse = await client.ListAttachedRolePoliciesAsync(listAttachedRolePoliciesRequest);
+
+    //            foreach (AttachedPolicyType? policyType in listAttachedRolePoliciesResponse.AttachedPolicies)
+    //            {
+    //                Console.WriteLine(policyType.PolicyName);
+    //                var deletePolicyRequest = new DeletePolicyRequest{PolicyArn = policyType.PolicyArn};
+    //               // await client.DeletePolicyAsync(deletePolicyRequest);
+    //            }
+
+    //            var deleteRequest = new DeleteRoleRequest { RoleName = summary.RoleName };
+    //            await client.delero(deleteRequest);
+    //        }
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Console.WriteLine(e);
+    //        throw;
+    //    }
+    //}
 }

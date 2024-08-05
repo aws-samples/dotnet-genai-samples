@@ -1,27 +1,30 @@
 ﻿using System.Collections.Generic;
+using Amazon.CDK;
+using Amazon.CDK.AWS.DynamoDB;
+using Amazon.CDK.AWS.Events.Targets;
+using Amazon.CDK.AWS.Events;
+using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.Lambda;
+using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.StepFunctions;
+using Amazon.CDK.AWS.StepFunctions.Tasks;
+using Constructs;
 
 namespace Amazon.GenAI.Cdk;
-
-using CDK;
-using CDK.AWS.Lambda;
-using CDK.AWS.Lambda.EventSources;
-using CDK.AWS.S3;
-using CDK.AWS.StepFunctions;
-using CDK.AWS.StepFunctions.Tasks;
-using Constructs;
 
 public class ImageIngestionStack : Stack
 {
     public ImageIngestionStack(Construct scope, string id, ImageIngestionStackProps props = null) : base(scope, id, props)
     {
-        // Create S3 buckets
+        // Define S3 buckets
         var sourceBucketName = $"{props?.AppProps.NamePrefix}-source-{props.AppProps.NameSuffix}";
         var sourceBucket = new Bucket(this, sourceBucketName, new BucketProps
         {
             BucketName = sourceBucketName,
             Versioned = true,
             RemovalPolicy = RemovalPolicy.DESTROY,
-            AutoDeleteObjects = true
+            AutoDeleteObjects = true,
+            EventBridgeEnabled = true
         });
 
         var destinationBucketName = $"{props.AppProps.NamePrefix}-destination-{props.AppProps.NameSuffix}";
@@ -33,242 +36,235 @@ public class ImageIngestionStack : Stack
             AutoDeleteObjects = true
         });
 
-        // Create S3 event handler Lambda function without the state machine ARN
-        var s3EventHandlerFunctionName = $"{props.AppProps.NamePrefix}-s3-event-{props.AppProps.NameSuffix}";
-        var s3EventFunctionHandler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.S3TriggerFunction::FunctionHandler";
-        var s3EventHandlerFunction = new Function(this, s3EventHandlerFunctionName, new FunctionProps
+        // Define Lambda functions
+        var imageResizerFunctionName = $"{props?.AppProps.NamePrefix}-image-resizer-function-{props?.AppProps.NameSuffix}";
+        var imageResizerFunction = new Function(this, imageResizerFunctionName, new FunctionProps
         {
-            FunctionName = s3EventHandlerFunctionName,
-            Runtime = Runtime.DOTNET_6,
-            Handler = s3EventFunctionHandler,
-            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net6.0"),
-            Timeout = Duration.Seconds(30),
-            MemorySize = 512
+            FunctionName = imageResizerFunctionName,
+            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.ImageResizer::FunctionHandler",
+            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+            Timeout = Duration.Minutes(5),
+            MemorySize = 1024,
+            Environment = new Dictionary<string, string>
+            {
+                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+            },
+            Role = new Role(this, $"{imageResizerFunctionName}-role", new RoleProps
+            {
+                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+                ManagedPolicies = new IManagedPolicy[]
+                {
+                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+                    ManagedPolicy.FromAwsManagedPolicyName("AmazonS3FullAccess")
+                }
+            })
         });
 
-        // Add S3 event source to S3EventHandlerFunction
-        s3EventHandlerFunction.AddEventSource(new S3EventSource(sourceBucket, new S3EventSourceProps
+        var getImageInferenceFunctionName = $"{props?.AppProps.NamePrefix}-get-image-inference-function-{props?.AppProps.NameSuffix}";
+        var getImageInferenceFunction = new Function(this, getImageInferenceFunctionName, new FunctionProps
         {
-            Events = new[] { EventType.OBJECT_CREATED }
+            FunctionName = getImageInferenceFunctionName,
+            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.GetImageInference::FunctionHandler",
+            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+            Timeout = Duration.Minutes(5),
+            MemorySize = 1024,
+            Environment = new Dictionary<string, string>
+            {
+                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+            },
+            Role = new Role(this, $"{getImageInferenceFunctionName}-role", new RoleProps
+            {
+                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+                ManagedPolicies = new IManagedPolicy[]
+                {
+                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+                    ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                }
+            })
+        });
+        getImageInferenceFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "bedrock:InvokeModel" },
+            Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
         }));
 
-        //// Create image ingestion Lambda function
-        //var imageIngestionFunctionName = $"{props.AppProps.NamePrefix}-image-ingestion-handler-{props.AppProps.NameSuffix}";
-        //var imageIngestionFunctionHandler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageResizer::FunctionHandler";
-        //var imageIngestionFunction = new Function(this, imageIngestionFunctionName, new FunctionProps
-        //{
-        //    FunctionName = imageIngestionFunctionName,
-        //    Runtime = Runtime.DOTNET_8,
-        //    Handler = imageIngestionFunctionHandler,
-        //    Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion"),
-        //    Timeout = Duration.Minutes(5),
-        //    MemorySize = 1024,
-        //    Environment = new Dictionary<string, string>
-        //    {
-        //        { "destinationBucketName", destinationBucket.BucketName }
-        //    }
-        //});
+        var getImageEmbeddingsFunctionName = $"{props?.AppProps.NamePrefix}-get-image-embeddings-function-{props?.AppProps.NameSuffix}";
+        var getImageEmbeddingsFunction = new Function(this, getImageEmbeddingsFunctionName, new FunctionProps
+        {
+            FunctionName = getImageEmbeddingsFunctionName,
+            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.GetImageEmbeddings::FunctionHandler",
+            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+            Timeout = Duration.Minutes(5),
+            MemorySize = 1024,
+            Environment = new Dictionary<string, string>
+            {
+                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+            },
+            Role = new Role(this, $"{getImageEmbeddingsFunctionName}-role", new RoleProps
+            {
+                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+                ManagedPolicies = new IManagedPolicy[]
+                {
+                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+                    ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                }
+            })
+        });
+        getImageEmbeddingsFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "bedrock:InvokeModel" },
+            Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
+        }));
 
-        //// Grant permissions
-        //sourceBucket.GrantRead(imageIngestionFunction);
-        //destinationBucket.GrantWrite(imageIngestionFunction);
+        var addToOpenSearchFunctionName = $"{props?.AppProps.NamePrefix}-add-to-opensearch-function-{props?.AppProps.NameSuffix}";
+        var addToOpenSearchFunction = new Function(this, addToOpenSearchFunctionName, new FunctionProps
+        {
+            FunctionName = addToOpenSearchFunctionName,
+            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.AddToOpenSearch::FunctionHandler",
+            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+            Timeout = Duration.Minutes(5),
+            MemorySize = 1024,
+            Environment = new Dictionary<string, string>
+            {
+                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+            },
+            Role = new Role(this, $"{addToOpenSearchFunctionName}-role", new RoleProps
+            {
+                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+                ManagedPolicies = new IManagedPolicy[]
+                {
+                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+                }
+            })
+        });
+        getImageEmbeddingsFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "bedrock:InvokeModel" },
+            Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
+        }));
 
-        //// Create Step Functions state machine
-        //var mapStateName = $"{props.AppProps.NamePrefix}-map-state-{props.AppProps.NameSuffix}";
-        //var mapState = new Map(this, mapStateName, new MapProps
-        //{
-        //    MaxConcurrency = 10,
-        //    ItemsPath = JsonPath.StringAt("$.s3EventRecords")
-        //});
+        // Define DynamoDB table
+        var tableName = $"{props?.AppProps.NamePrefix}-results-table-{props?.AppProps.NameSuffix}";
+        var table = new Table(this, tableName, new TableProps
+        {
+            TableName = tableName,
+            PartitionKey = new Attribute { Name = "key", Type = AttributeType.STRING },
+            BillingMode = BillingMode.PAY_PER_REQUEST
+        });
 
-        //var imageIngestTaskName = $"{props.AppProps.NamePrefix}-image-ingestion-task-{props.AppProps.NameSuffix}";
-        //var imageIngestTask = new LambdaInvoke(this, imageIngestTaskName, new LambdaInvokeProps
-        //{
-        //    LambdaFunction = imageIngestionFunction,
-        //    PayloadResponseOnly = true,
-        //    Payload = TaskInput.FromObject(new Dictionary<string, object>
-        //    {
-        //        { "bucket", JsonPath.StringAt("$.bucket") },
-        //        { "key", JsonPath.StringAt("$.key") }
-        //    })
-        //});
+        // Define Step Functions tasks
+        var filterS3Json = new Pass(this, "FilterS3Json", new PassProps
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                ["bucketName.$"] = "$.detail.bucket.name",
+                ["key.$"] = "$.detail.object.key",
+            }
+        });
 
-        //mapState.Iterator(imageIngestTask);
+        var invokeImageResizer = new LambdaInvoke(this, "ImageResizer", new LambdaInvokeProps
+        {
+            LambdaFunction = imageResizerFunction,
+            OutputPath = "$.Payload",
+        });
 
-        //var stateMachine = new StateMachine(this, stateMachineName, new StateMachineProps
-        //{
-        //    Definition = mapState
-        //});
+        var invokeGetImageInference = new LambdaInvoke(this, "GetImageInference", new LambdaInvokeProps
+        {
+            LambdaFunction = getImageInferenceFunction,
+        });
 
-        // Grant Step Functions permission to invoke Lambda
-        //    stateMachine.GrantTaskResponse(imageIngestionFunction);
+        var invokeGetImageEmbeddings = new LambdaInvoke(this, "GetImageEmbeddings", new LambdaInvokeProps
+        {
+            LambdaFunction = getImageEmbeddingsFunction,
+            InputPath = "$.Payload"
+        });
 
+        var transformResults = new Pass(this, "TransformInferenceEmbeddingsResults", new PassProps
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                ["key.$"] = "$.Payload.key",
+                ["inference.$"] = "$.Payload.inference",
+              //  ["embeddings.$"] = "$.Payload.embeddings"
+            }
+        });
 
+        var putItem = new DynamoPutItem(this, "PutItem", new DynamoPutItemProps
+        {
+            Table = table,
+            Item = new Dictionary<string, DynamoAttributeValue>
+            {
+                ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
+                ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
+                ["inference"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.inference")),
+            },
+            ResultSelector = new Dictionary<string, object>
+            {
+                ["key"] = JsonPath.StringAt("$$.Execution.Input.detail.object.key"),
+                ["inference"] = JsonPath.StringAt("$.inference"),
+                //  ["embeddings"] = JsonPath.StringAt("$.embeddings"),
+            },
+            //ResultPath = "$"
+        });
 
-        //// Create the state machine
-        //var stateMachineName = $"{props.AppProps.NamePrefix}-image-ingestion-state-machine-{props.AppProps.NameSuffix}";
-        //var stateMachine = new StateMachine(this, stateMachineName, new StateMachineProps
-        //{
-        //    StateMachineName = stateMachineName,
-        //    Definition = mapState
-        //});
+        var invokeAddToOpenSearch = new LambdaInvoke(this, "AddToOpenSearch", new LambdaInvokeProps
+        {
+            LambdaFunction = addToOpenSearchFunction,
+           // InputPath = "$",
+            //ResultSelector = new Dictionary<string, object>
+            //{
+            //    ["result.$"] = "$.Payload",
+            //    ["key.$"] = "$.key",
+            //    ["inference.$"] = "$.inference"
+            //}
+        });
 
-        //// Add the state machine ARN as an environment variable after creating the state machine
-        //s3EventHandlerFunction.AddEnvironment("stateMachineArn", stateMachine.StateMachineArn);
+        var success = new Succeed(this, "Success");
 
+        // Define the state machine
+        var definition = filterS3Json
+            .Next(invokeImageResizer)
+            .Next(invokeGetImageInference)
+            .Next(invokeGetImageEmbeddings)
+            .Next(transformResults)
+            .Next(putItem)
+            .Next(invokeAddToOpenSearch)
+            .Next(success);
 
+        var stateMachineName = $"{props?.AppProps.NamePrefix}-image-ingestion-workflow-{props?.AppProps.NameSuffix}";
+        var stateMachine = new StateMachine(this, stateMachineName, new StateMachineProps
+        {
+            StateMachineName = stateMachineName,
+            Definition = definition
+        });
 
-        //// Grant S3EventHandlerFunction permission to start Step Functions execution
-        //stateMachine.GrantStartExecution(s3EventHandlerFunction);
+        // Create EventBridge rule
+        var ruleName = $"{props?.AppProps.NamePrefix}-s3-object-created-rule-{props?.AppProps.NameSuffix}";
+        var rule = new Rule(this, ruleName, new RuleProps
+        {
+            RuleName = ruleName,
+            EventPattern = new EventPattern
+            {
+                Source = new[] { "aws.s3" },
+                DetailType = new[] { "Object Created" },
+                Detail = new Dictionary<string, object>
+                {
+                    ["bucket"] = new Dictionary<string, object>
+                    {
+                        ["name"] = new[] { sourceBucket.BucketName }
+                    }
+                }
+            }
+        });
 
-        //// Output the bucket names and state machine ARN
-        //new CfnOutput(this, "SourceBucketName", new CfnOutputProps { Value = sourceBucket.BucketName });
-        //new CfnOutput(this, "DestinationBucketName", new CfnOutputProps { Value = destinationBucket.BucketName });
-        ////  new CfnOutput(this, "StateMachineArn", new CfnOutputProps { Value = stateMachine.StateMachineArn });
+        // Add the Step Function as a target for the EventBridge rule
+        rule.AddTarget(new SfnStateMachine(stateMachine));
+
+        // Grant the EventBridge rule permission to start the Step Function execution
+        stateMachine.GrantStartExecution(new ServicePrincipal("events.amazonaws.com"));
     }
 }
-
-
-
-//public class ImageIngestionStack : Stack
-//{
-//    public ImageIngestionStack(Construct scope, string id, ImageIngestionStackProps props = null) : base(scope, id, props)
-//    {
-//        //// Create S3 buckets
-//        //var sourceBucketName = $"{props?.AppProps.NamePrefix}-source-bucket-{props?.AppProps.NameSuffix}";
-//        //var sourceBucket = new Bucket(this, sourceBucketName, new BucketProps
-//        //{
-//        //    BucketName = sourceBucketName,
-//        //    Versioned = true,
-//        //    RemovalPolicy = RemovalPolicy.DESTROY,
-//        //    AutoDeleteObjects = true
-//        //});
-
-//        //var destinationBucketName = $"{props?.AppProps.NamePrefix}-destination-bucket-{props?.AppProps.NameSuffix}";
-//        //var destinationBucket = new Bucket(this, destinationBucketName, new BucketProps
-//        //{
-//        //    BucketName = destinationBucketName,
-//        //    Versioned = true,
-//        //    RemovalPolicy = RemovalPolicy.DESTROY,
-//        //    AutoDeleteObjects = true
-//        //});
-
-//        //// Create Lambda function for image resizing
-//        //var resizeFunctionName = $"{props?.AppProps.NamePrefix}-resize-function-{props?.AppProps.NameSuffix}";
-//        //var resizeFunction = new Function(this, resizeFunctionName, new FunctionProps
-//        //{
-//        //    FunctionName = resizeFunctionName,
-//        //    Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
-//        //    Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.ImageResizer::FunctionHandler",
-//        //    Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion"),
-//        //    Timeout = Duration.Minutes(5),
-//        //    MemorySize = 1024,
-//        //    Environment = new Dictionary<string, string>
-//        //    {
-//        //        { "DESTINATION_BUCKET", destinationBucket.BucketName }
-//        //    }
-//        //});
-
-//        //// Grant Lambda permissions
-//        //sourceBucket.GrantRead(resizeFunction);
-//        //destinationBucket.GrantWrite(resizeFunction);
-
-//        //// Define Step Function tasks
-//        //var resizeTaskName = $"{props?.AppProps.NamePrefix}-resize-task-{props?.AppProps.NameSuffix}";
-//        //var resizeTask = new LambdaInvoke(this, resizeTaskName, new LambdaInvokeProps
-//        //{
-//        //    StateName = resizeTaskName,
-//        //    LambdaFunction = resizeFunction,
-//        //    PayloadResponseOnly = true
-//        //});
-
-//        //var startExecutionTaskName = $"{props?.AppProps.NamePrefix}-start-execution-{props?.AppProps.NameSuffix}";
-//        //var startExecution = new Pass(this, startExecutionTaskName, new PassProps
-//        //{
-//        //    StateName = startExecutionTaskName,
-//        //    Result = Result.FromObject(new Dictionary<string, object>
-//        //    {
-//        //        { "message", "Starting image processing" }
-//        //    }),
-//        //    ResultPath = "$.startInfo"
-//        //});
-
-//        //var endExecutionTaskName = $"{props?.AppProps.NamePrefix}-end-execution-{props?.AppProps.NameSuffix}";
-//        //var processingComplete = new Pass(this, endExecutionTaskName, new PassProps
-//        //{
-//        //    StateName = endExecutionTaskName,
-//        //    Result = Result.FromObject(new Dictionary<string, object>
-//        //    {
-//        //        { "message", "Image processing completed" }
-//        //    }),
-//        //    ResultPath = "$.completeInfo"
-//        //});
-
-//        //// Create Step Functions state machine
-//        //var mapState = new Map(this, "MapState", new MapProps
-//        //{
-//        //    MaxConcurrency = 10,
-//        //    ItemsPath = JsonPath.StringAt("$.s3EventRecords")
-//        //});
-
-//        //var resizeTask = new LambdaInvoke(this, "ResizeTask", new LambdaInvokeProps
-//        //{
-//        //    LambdaFunction = imageResizerFunction,
-//        //    PayloadResponseOnly = true,
-//        //    Payload = TaskInput.FromObject(new Dictionary<string, object>
-//        //    {
-//        //        { "bucket", JsonPath.StringAt("$.bucket") },
-//        //        { "key", JsonPath.StringAt("$.key") }
-//        //    })
-//        //});
-
-//        //mapState.Iterator(resizeTask);
-
-//        //var stateMachine = new StateMachine(this, "ImageResizerStateMachine", new StateMachineProps
-//        //{
-//        //    Definition = mapState
-//        //});
-
-//        // Grant Step Functions permission to invoke Lambda
-//        // stateMachine.GrantTaskResponse(resizeFunction);
-
-
-//        //// Chain the tasks
-//        //var definition = DefinitionBody.FromChainable(
-//        //    startExecution
-//        //        .Next(resizeTask)
-//        //        .Next(processingComplete)
-//        //);
-
-//        //// Create the State Machine
-//        //var stateMachineName = $"{props?.AppProps.NamePrefix}-image-ingestion-state-machine-{props?.AppProps.NameSuffix}";
-//        //var stateMachine = new StateMachine(this, stateMachineName, new StateMachineProps
-//        //{
-//        //    StateMachineName = stateMachineName,
-//        //    DefinitionBody = definition,
-//        //    StateMachineType = StateMachineType.EXPRESS
-//        //});
-
-//        //// Grant Step Function permissions to invoke Lambda
-//        //stateMachine.GrantTaskResponse(resizeFunction);
-
-//        //// Create S3 notification to trigger Step Function
-//        //var s3TriggerStepFunctionName = $"{props?.AppProps.NamePrefix}-s3-trigger-step-function-{props?.AppProps.NameSuffix}";
-//        //sourceBucket.AddEventNotification(EventType.OBJECT_CREATED,
-//        //    new LambdaDestination(new Function(this, s3TriggerStepFunctionName, new FunctionProps
-//        //    {
-//        //        FunctionName = s3TriggerStepFunctionName,
-//        //        Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
-//        //        Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.S3TriggerFunction::FunctionHandler",
-//        //        Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion"),
-//        //        Environment = new Dictionary<string, string>
-//        //        {
-//        //            { "STATE_MACHINE_ARN", stateMachine.StateMachineArn },
-//        //        }
-//        //    }))
-//        //);
-
-//        //// Grant permission to trigger Step Function
-//        //stateMachine.GrantStartExecution(new ServicePrincipal("lambda.amazonaws.com"));
-//    }
-//}

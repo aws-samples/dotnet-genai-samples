@@ -24,14 +24,14 @@ public class S3TriggerFunction
     {
         context.Logger.LogInformation($"in S3TriggerFunction");
 
-        //if (s3Event.Records == null || s3Event.Records.Count == 0)
-        //{
-        //    context.Logger.LogWarning("No S3 event records received.");
-        //    return "No S3 event records received.";
-        //}
+        if (s3Event.Records == null || s3Event.Records.Count == 0)
+        {
+            context.Logger.LogWarning("No S3 event records received.");
+            return "No S3 event records received.";
+        }
 
-        //var tasks = s3Event.Records.Select(record => ProcessRecordAsync(record, context));
-      //  await Task.WhenAll(tasks);
+        var tasks = s3Event.Records.Select(record => ProcessRecordAsync(record, context));
+        await Task.WhenAll(tasks);
 
         return "Step Function executions started successfully.";
     }

@@ -30,11 +30,11 @@ public class AddToOpenSearch
         }
         context.Logger.LogInformation($"key: {key}");
 
-        if (!input.TryGetValue("inference", out var inference))
+        if (input.ContainsKey("inference"))
         {
-            throw new ArgumentException("Image inference not provided in the input.");
+            var inference = input["inference"];
+            context.Logger.LogInformation($"inference: {inference}");
         }
-        context.Logger.LogInformation($"inference: {inference}");
 
         //if (bucketName == null && key == null) return null;
 

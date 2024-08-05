@@ -205,7 +205,7 @@ public class ImageIngestionStack : Stack
             ResultSelector = new Dictionary<string, object>
             {
                 ["key"] = JsonPath.StringAt("$$.Execution.Input.detail.object.key"),
-                ["inference"] = JsonPath.StringAt("$.inference"),
+                //["inference"] = JsonPath.StringAt("$.inference"),
                 //  ["embeddings"] = JsonPath.StringAt("$.embeddings"),
             },
             //ResultPath = "$"

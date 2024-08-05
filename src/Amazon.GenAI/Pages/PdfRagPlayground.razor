@@ -1,4 +1,5 @@
-﻿@page "/pdf-rag-playground"
+﻿@*@page "/"*@
+@page "/pdf-rag-playground"
 @using System.Text
 @using Amazon.BedrockRuntime
 @using Amazon.GenAI.Abstractions.Bedrock
@@ -40,30 +41,10 @@
         <MudCardContent>
             <MudGrid>
                 @*TODO 2*@
-                <MudItem xs="9">
-                    Titan Text Embeddings v2 (@_embeddingModelId)
-                </MudItem>
+                
             </MudGrid>
             @*TODO 6*@
-            <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                           @bind-Files="Files"
-                           Accept=".pdf"
-                           OnFilesChanged="OnInputFileChanged"
-                           For="@(() => Files)"
-                           Hidden="false" Clas.s="flex-1"
-                           MaximumFileCount="50"
-                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
-                           @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
-                <ButtonTemplate>
-                    <MudPaper Height="300px" Outlined="true" Class="@_dragClass">
-                        <MudText Typo="Typo.h6">Drag and drop files here or click</MudText>
-                        @foreach (var file in _loadedFiles)
-                        {
-                            <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
-                        }
-                    </MudPaper>
-                </ButtonTemplate>
-            </MudFileUpload>
+            
         </MudCardContent>
         <EditForm Model="@_chatMessageHistory" OnSubmit="OnSubmit">
             <MudCard>
@@ -78,9 +59,7 @@
         <MudCardContent>
             <MudGrid>
                 @*TODO 3*@
-                <MudItem xs="9">
-                    Claude 3 Haiku (@_textModelId)
-                </MudItem>
+                
             </MudGrid>
             <MudTimeline Reverse="true">
                 @foreach (var item in _chatMessageHistory.Messages)
@@ -160,7 +139,7 @@
     Status _status = Status.Default;
 
     // TODO 7
-    private readonly ChatMessageHistory _chatMessageHistory = new();
+
 
     private MudTextField<string>? _promptField;
 
@@ -168,7 +147,7 @@
     private string _dragClass = DefaultDragClass;
 
     // TODO 4
-    private Dictionary<string, string> _loadedFiles = new();
+
 
     string? _uploadDirectory;
 
@@ -177,9 +156,7 @@
     protected override async Task OnInitializedAsync()
     {
         // TODO 1
-        _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-        _embeddingModelId = "amazon.titan-embed-g1-text-02";
-        _indexName = "my-text-index";
+        
 
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
@@ -189,12 +166,12 @@
             .ToList();
 
         var options = new OpenSearchVectorStoreOptions
-            {
-                Region = RegionEndpoint.USWest2,
-                IndexName = _indexName,
-                Dimensions = Dimensions,
-                CollectionArn = _collections[0]?.Arn,
-            };
+        {
+            Region = RegionEndpoint.USWest2,
+            IndexName = _indexName,
+            Dimensions = Dimensions,
+            CollectionArn = _collections[0]?.Arn,
+        };
 
         _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
@@ -224,15 +201,8 @@
     private async Task AddDocuments()
     {
         // TODO 5
-        foreach (var pdfSource in _loadedFiles.Select(file => new PdfPigPdfSource(file.Value)))
-        {
-            var documents = await pdfSource.LoadAsync();
 
-            var pages = await _openSearchVectorStore?.AddTextDocumentsAsync(documents)!;
-            Console.WriteLine("pages: " + pages.Count());
-        }
 
-        _addedDocuments = true;
     }
 
     private async Task OnPromptChanged(string question)
@@ -251,51 +221,16 @@
         StateHasChanged();
 
         // TODO 8
-        await _chatMessageHistory.AddUserMessage(question);
+
 
         // TODO 10
-        var embeddingModel = new EmbeddingModel(BedrockRuntimeClient, _embeddingModelId);
-        var questionEmbeddingsResponse = await embeddingModel.CreateEmbeddingsAsync(question)!;
-        var embedding = questionEmbeddingsResponse?["embedding"]?.AsArray();
-        var f = new float[Dimensions];
-        for (var i = 0; i < embedding!.Count; i++)
-        {
-            f[i] = (float)embedding[i]?.AsValue()!;
-        }
-
-        var searchResponseDocuments = await _openSearchVectorStore?.SimilaritySearchByVectorAsync(f)!;
-        var documents = searchResponseDocuments
-            .Where(vectorRecord => !string.IsNullOrWhiteSpace(vectorRecord.Text))
-            .Select(vectorRecord => new Amazon.GenAI.Abstractions.Document
-                {
-                    PageContent = vectorRecord.Text!,
-                })
-            .ToArray();
-
-        var context = new StringBuilder();
-
-        foreach (var document in documents)
-        {
-            context.AppendLine(document.PageContent);
-        }
-        context.AppendLine(_chatMessageHistory.Messages.AsHistory());
+        
 
         // TODO 11
-        var promptText = $@"Use the following pieces of context to answer the question at the end.
-If the answer is not in context then just say that you don't know, don't try to make up an answer.
-Keep the answer as short as possible.
-
-System:
-{context}
-
-Question: {question}
-Helpful Answer:";
-
-        var textModel = new TextModel(BedrockRuntimeClient, _textModelId);
-        var generatedText = await textModel.GenerateAsync(promptText);
+        
 
         // TODO 9
-        await _chatMessageHistory.AddAiMessage(generatedText!);
+
 
         await InvokeAsync(() =>
         {

@@ -183,21 +183,21 @@
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
-        _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+        _collections = (await new AmazonOpenSearchServerlessClient(RegionEndpoint.USWest2).ListCollectionsAsync(new ListCollectionsRequest()))
             .CollectionSummaries
             .ToList();
 
         var options = new OpenSearchVectorStoreOptions
-            {
-                Region = RegionEndpoint.USWest2,
-                IndexName = _indexName,
-                Dimensions = Dimensions,
-                CollectionArn = _collections[0]?.Arn,
-            };
+        {
+             Region = RegionEndpoint.USWest2,
+             IndexName = _indexName,
+             Dimensions = Dimensions,
+             CollectionArn = _collections[0]?.Arn,
+        };
 
-        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+            _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-        await base.OnInitializedAsync();
+            await base.OnInitializedAsync();
         StateHasChanged();
     }
 

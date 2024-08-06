@@ -39,10 +39,12 @@
     <MudCard>
         <MudCardContent>
             <MudGrid>
+                @*TODO 2*@
                 <MudItem xs="9">
                     Titan Text Embeddings v2 (@_embeddingModelId)
                 </MudItem>
             </MudGrid>
+            @*TODO 6*@
             <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                            @bind-Files="Files"
                            Accept=".pdf"
@@ -75,6 +77,7 @@
     <MudCard>
         <MudCardContent>
             <MudGrid>
+                @*TODO 3*@
                 <MudItem xs="9">
                     Claude 3 Haiku (@_textModelId)
                 </MudItem>
@@ -156,11 +159,14 @@
     }
     Status _status = Status.Default;
 
+    // TODO 7
     private readonly ChatMessageHistory _chatMessageHistory = new();
+
     private MudTextField<string>? _promptField;
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
     private string _dragClass = DefaultDragClass;
+    // TODO 4
     private Dictionary<string, string> _loadedFiles = new();
 
     string? _uploadDirectory;
@@ -169,6 +175,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // TODO 1
         _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
         _embeddingModelId = "amazon.titan-embed-g1-text-02";
         _indexName = "my-text-index";
@@ -176,21 +183,21 @@
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
-        _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+        _collections = (await new AmazonOpenSearchServerlessClient(RegionEndpoint.USWest2).ListCollectionsAsync(new ListCollectionsRequest()))
             .CollectionSummaries
             .ToList();
 
         var options = new OpenSearchVectorStoreOptions
-            {
-                Region = RegionEndpoint.USWest2,
-                IndexName = _indexName,
-                Dimensions = Dimensions,
-                CollectionArn = _collections[0]?.Arn,
-            };
+        {
+             Region = RegionEndpoint.USWest2,
+             IndexName = _indexName,
+             Dimensions = Dimensions,
+             CollectionArn = _collections[0]?.Arn,
+        };
 
-        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+            _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-        await base.OnInitializedAsync();
+            await base.OnInitializedAsync();
         StateHasChanged();
     }
 
@@ -215,6 +222,7 @@
 
     private async Task AddDocuments()
     {
+        // TODO 5
         foreach (var pdfSource in _loadedFiles.Select(file => new PdfPigPdfSource(file.Value)))
         {
             var documents = await pdfSource.LoadAsync();
@@ -241,8 +249,10 @@
         _status = Status.Thinking;
         StateHasChanged();
 
+        // TODO 8
         await _chatMessageHistory.AddUserMessage(question);
 
+        // TODO 10
         var embeddingModel = new EmbeddingModel(BedrockRuntimeClient, _embeddingModelId);
         var questionEmbeddingsResponse = await embeddingModel.CreateEmbeddingsAsync(question)!;
         var embedding = questionEmbeddingsResponse?["embedding"]?.AsArray();
@@ -269,6 +279,7 @@
         }
         context.AppendLine(_chatMessageHistory.Messages.AsHistory());
 
+        // TODO 11
         var promptText = $@"Use the following pieces of context to answer the question at the end.
 If the answer is not in context then just say that you don't know, don't try to make up an answer.
 Keep the answer as short as possible.
@@ -282,6 +293,7 @@ Helpful Answer:";
         var textModel = new TextModel(BedrockRuntimeClient, _textModelId);
         var generatedText = await textModel.GenerateAsync(promptText);
 
+        // TODO 9
         await _chatMessageHistory.AddAiMessage(generatedText!);
 
         await InvokeAsync(() =>

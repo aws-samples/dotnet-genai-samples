@@ -1,4 +1,6 @@
-﻿namespace Amazon.GenAI.Abstractions.OpenSearch;
+﻿using System;
+
+namespace Amazon.GenAI.Abstractions.OpenSearch;
 
 public class OpenSearchVectorStoreOptions
 {
@@ -10,4 +12,4 @@ public class OpenSearchVectorStoreOptions
     //public RegionEndpoint? Region { get; set; } = RegionEndpoint.USEast1;
     public RegionEndpoint? Region { get; set; } = RegionEndpoint.USWest2;
     public string? CollectionArn { get; set; }
-}   
+}

@@ -156,12 +156,12 @@
     protected override async Task OnInitializedAsync()
     {
         // TODO 1
-        
+
 
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
-        _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+        _collections = (await new AmazonOpenSearchServerlessClient(RegionEndpoint.USWest2).ListCollectionsAsync(new ListCollectionsRequest()))
             .CollectionSummaries
             .ToList();
 
@@ -224,10 +224,10 @@
 
 
         // TODO 10
-        
+
 
         // TODO 11
-        
+
 
         // TODO 9
 

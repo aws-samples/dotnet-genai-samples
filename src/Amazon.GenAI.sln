@@ -3,15 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.34607.79
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject1", "TestProject1\TestProject1.csproj", "{C44B91AF-0747-4B85-8EA6-FF5DBFCAA6FE}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI", "Amazon.GenAI\Amazon.GenAI.csproj", "{0456AADF-DDC6-4069-8C91-B1347C02F25B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.Cdk", "Amazon.GenAI.Cdk\Amazon.GenAI.Cdk.csproj", "{F9DD70C3-5C87-4B31-BA95-9D54CCC4C9C8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.DataSyncLambda", "Amazon.GenAI.DataSyncLambda\src\Amazon.GenAI.DataSyncLambda\Amazon.GenAI.DataSyncLambda.csproj", "{FFF3F18F-88AF-49E0-AB6F-C0B50AFFC3CA}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.KbLambda", "Amazon.GenAI.KbLambda\src\Amazon.GenAI.KbLambda\Amazon.GenAI.KbLambda.csproj", "{F7B005CD-EB79-4CDE-B20A-342D6668212C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shareholder-Letters", "Shareholder-Letters", "{9A916789-3720-47CD-BFF5-E50CFD32DD01}"
 EndProject
@@ -23,10 +17,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C44B91AF-0747-4B85-8EA6-FF5DBFCAA6FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C44B91AF-0747-4B85-8EA6-FF5DBFCAA6FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C44B91AF-0747-4B85-8EA6-FF5DBFCAA6FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C44B91AF-0747-4B85-8EA6-FF5DBFCAA6FE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,14 +25,6 @@ Global
 		{F9DD70C3-5C87-4B31-BA95-9D54CCC4C9C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9DD70C3-5C87-4B31-BA95-9D54CCC4C9C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9DD70C3-5C87-4B31-BA95-9D54CCC4C9C8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FFF3F18F-88AF-49E0-AB6F-C0B50AFFC3CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FFF3F18F-88AF-49E0-AB6F-C0B50AFFC3CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FFF3F18F-88AF-49E0-AB6F-C0B50AFFC3CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FFF3F18F-88AF-49E0-AB6F-C0B50AFFC3CA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F7B005CD-EB79-4CDE-B20A-342D6668212C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

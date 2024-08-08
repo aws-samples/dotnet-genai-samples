@@ -2,5 +2,5 @@
 
 public static class Constants
 {
-    public static string? Region { get; set; }
+    public static string? Region { get; set; } = "us-west-2";
 }

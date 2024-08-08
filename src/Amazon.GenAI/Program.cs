@@ -1,14 +1,12 @@
 using Amazon;
 using Amazon.Bedrock;
 using Amazon.BedrockRuntime;
-using Amazon.EC2.Model;
 using Amazon.GenAI;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Amazon.S3;
 using Markdig;
 using Markdown.ColorCode;
-using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,9 +22,6 @@ var pipeline = new MarkdownPipelineBuilder()
 	.Build();
 
 builder.Services.AddSingleton(pipeline);
-
-var appInit = new ApiInitializerService();
-await appInit.InitializeAsync();
 
 var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
 
@@ -74,11 +69,6 @@ else
 			RegionEndpoint = regionEndpoint
 		}));
 }
-//builder.Services.AddSingleton<AmazonBedrockAgentRuntimeClient>(
-//    new AmazonBedrockAgentRuntimeClient()
-//);
-
-//builder.Services.AddSingleton<AmazonBedrockAgentClient>();
 
 #if DEBUG
 builder.Logging.AddDebug();

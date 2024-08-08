@@ -8,9 +8,13 @@
 
   <ItemGroup>
     <Compile Remove="bin\**" />
+    <Compile Remove="Services\**" />
     <Content Remove="bin\**" />
+    <Content Remove="Services\**" />
     <EmbeddedResource Remove="bin\**" />
+    <EmbeddedResource Remove="Services\**" />
     <None Remove="bin\**" />
+    <None Remove="Services\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,16 +33,6 @@
     <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
     <PackageReference Include="PdfPig" Version="0.1.8" />
     <PackageReference Include="System.Memory.Data" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="Pages\DocumentGeneration.razor">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

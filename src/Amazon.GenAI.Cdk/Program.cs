@@ -42,6 +42,7 @@ internal sealed class Program
         {
             Env = env,
             AppProps = appStackProp,
+            KbCustomResourceRole = kbCustomResourceStack.KbCustomResourceRole
         });
 
         app.Synth();

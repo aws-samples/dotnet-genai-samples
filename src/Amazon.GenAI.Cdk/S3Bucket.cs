@@ -21,6 +21,8 @@ public static class S3Bucket
         {
             // !DO NOT USE THESE TWO SETTINGS FOR PRODUCTION DEPLOYMENTS - YOU WILL LOSE DATA
             // WHEN THE STACK IS DELETED!
+            BucketName = bucketName,
+            Versioned = true,
             AutoDeleteObjects = true,
             PublicReadAccess = false,
             RemovalPolicy = RemovalPolicy.DESTROY,

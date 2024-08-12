@@ -19,6 +19,7 @@ public class KbProvider
         var providerName = $"{props.AppProps.NamePrefix}-provider-{props.AppProps.NameSuffix}";
         var provider = new Provider(kbCustomResourceStack, providerName, new ProviderProps
         {
+            ProviderFunctionName = providerName,
             OnEventHandler = kbCustomResourceLambda,
             LogRetention = RetentionDays.THREE_DAYS,
         });

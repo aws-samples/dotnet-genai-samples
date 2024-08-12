@@ -16,6 +16,9 @@ using TestProject1.Abstractions.OpenSearch;
 using Environment = Amazon.CDK.Environment;
 using System.Text.RegularExpressions;
 using Amazon;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Amazon.DynamoDBv2.DocumentModel;
 
 namespace TestProject1;
 
@@ -157,7 +160,7 @@ public class Tests
         };
 
         Console.WriteLine("Creating Index");
-        
+
         Console.WriteLine($"  --- Attempt: {attempt}");
         Console.WriteLine("Please wait 60 secs");
         Thread.Sleep(30000);
@@ -279,11 +282,104 @@ public class Tests
         var response = await client.Indices.ExistsAsync(new IndexExistsRequest(indexName));
     }
 
+    [Test]
+    public async Task DocumentModelDynamoDb()
+    {
+        const string tableName = "dotnet-genai-results-table-test";
+        const string key = "clipart2.png";
+        const string bucketName = "dotnet-genai-destination-test";
+        var client = new AmazonDynamoDBClient();
+
+        Table table = Table.LoadTable(client, tableName);
+
+        Console.WriteLine("\n*** Executing Retrieve ***");
+        // Optional configuration.
+        GetItemOperationConfig config = new GetItemOperationConfig
+        {
+            AttributesToGet = new List<string> { "key", "bucketName", "inference" },
+            ConsistentRead = true
+        };
+
+        var find = new Dictionary<string, DynamoDBEntry>
+        {
+            { "key", key },
+            { "bucketName", bucketName }
+        };
+
+        Document document = await table.GetItemAsync(find, config);
+        Console.WriteLine("Retrieve: Printing Table retrieved...");
+
+        Console.WriteLine(document["key"].ToString());
+        Console.WriteLine(document["bucketName"].ToString());
+        Console.WriteLine(document["inference"].ToString());
+    }
+
+    [Test]
+    public async Task QueryDynamoDb()
+    {
+        const string tableName = "dotnet-genai-results-table-test";
+        const string key = "clipart2.png";
+        const string bucketName = "dotnet-genai-destination-test";
+
+        var dynamoDbClient = new AmazonDynamoDBClient();
+        var items = new List<Dictionary<string, AttributeValue>>();
+
+        // First, describe the table to get its key schema
+        var tableDescription = await dynamoDbClient.DescribeTableAsync(tableName);
+        var keySchema = tableDescription.Table.KeySchema;
+
+        if (keySchema.Count == 0)
+        {
+            throw new Exception("Table has no key schema");
+        }
+
+        var queryRequest = new QueryRequest
+        {
+            TableName = tableName,
+            ExpressionAttributeNames = new Dictionary<string, string>(),
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>()
+        };
+
+        string keyConditionExpression = "";
+
+        foreach (var keyElement in keySchema)
+        {
+            string attrName = keyElement.AttributeName;
+            string placeholderName = $"#attr_{attrName}";
+            string placeholderValue = $":value_{attrName}";
+
+            queryRequest.ExpressionAttributeNames[placeholderName] = attrName;
+
+            if (attrName.ToLower() == "key")
+            {
+                queryRequest.ExpressionAttributeValues[placeholderValue] = new AttributeValue { S = key };
+            }
+            else if (attrName.ToLower() == "bucketname")
+            {
+                queryRequest.ExpressionAttributeValues[placeholderValue] = new AttributeValue { S = bucketName };
+            }
+
+            if (!string.IsNullOrEmpty(keyConditionExpression))
+            {
+                keyConditionExpression += " AND ";
+            }
+            keyConditionExpression += $"{placeholderName} = {placeholderValue}";
+        }
+
+        queryRequest.KeyConditionExpression = keyConditionExpression;
+
+        var response = await dynamoDbClient.QueryAsync(queryRequest);
+        items.AddRange(response.Items);
+
+        Console.WriteLine($"count: {response.Count}");
+        Console.WriteLine($"response: {JsonSerializer.Serialize(response.Items)}");
+    }
+
     public static async Task AccessPolicy(
-    string? namePrefix,
-    string? nameSuffix
-   // string? knowledgeBaseRoleArn
-    )
+        string? namePrefix,
+        string? nameSuffix
+        // string? knowledgeBaseRoleArn
+        )
     {
         Console.WriteLine("Creating Access Policy");
 

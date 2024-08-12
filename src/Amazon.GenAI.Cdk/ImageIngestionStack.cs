@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using Amazon.CDK;
+using Amazon.CDK.AWS.CloudFront;
+using Amazon.CDK.AWS.CloudFront.Origins;
 using Amazon.CDK.AWS.DynamoDB;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.Events;
@@ -9,6 +11,12 @@ using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.StepFunctions;
 using Amazon.CDK.AWS.StepFunctions.Tasks;
 using Constructs;
+using Amazon.CDK.AWS.Logs;
+using Distribution = Amazon.CDK.AWS.CloudFront.Distribution;
+using Function = Amazon.CDK.AWS.Lambda.Function;
+using FunctionProps = Amazon.CDK.AWS.Lambda.FunctionProps;
+using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
+using Parallel = Amazon.CDK.AWS.StepFunctions.Parallel;
 
 namespace Amazon.GenAI.Cdk;
 
@@ -35,6 +43,49 @@ public class ImageIngestionStack : Stack
             RemovalPolicy = RemovalPolicy.DESTROY,
             AutoDeleteObjects = true
         });
+
+        // Create an Origin Access Identity for CloudFront
+        var oaiName = $"{props?.AppProps.NamePrefix}-oai-{props.AppProps.NameSuffix}";
+        var oai = new OriginAccessIdentity(this, oaiName, new OriginAccessIdentityProps
+        {
+            Comment = $"OAI for {destinationBucketName}"
+        });
+
+        // Create a CloudFront distribution
+        var distributionName = $"{props?.AppProps.NamePrefix}-distribution-{props.AppProps.NameSuffix}";
+        var distribution = new Distribution(this, distributionName, new DistributionProps
+        {
+            DefaultBehavior = new BehaviorOptions
+            {
+                Origin = new S3Origin(destinationBucket, new S3OriginProps
+                {
+                    OriginAccessIdentity = oai
+                }),
+                ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                AllowedMethods = AllowedMethods.ALLOW_GET_HEAD,
+                CachedMethods = CachedMethods.CACHE_GET_HEAD
+            },
+            PriceClass = PriceClass.PRICE_CLASS_100, // Use only North America and Europe
+            HttpVersion = HttpVersion.HTTP2,
+            DefaultRootObject = "", // Set this if you have a default page
+            ErrorResponses = new[]
+            {
+                new ErrorResponse
+                {
+                    HttpStatus = 403,
+                    ResponseHttpStatus = 404,
+                    ResponsePagePath = "/404.html", // Create this file in your bucket if you want a custom 404 page
+                    Ttl = Duration.Seconds(300)
+                }
+            }
+        });
+
+        destinationBucket.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "s3:GetBucket*", "s3:GetObject*", "s3:List*" },
+            Resources = new[] { destinationBucket.BucketArn, destinationBucket.ArnForObjects("*") },
+            Principals = new[] { new CanonicalUserPrincipal(oai.CloudFrontOriginAccessIdentityS3CanonicalUserId) }
+        }));
 
         // Define Lambda functions
         var imageResizerFunctionName = $"{props?.AppProps.NamePrefix}-image-resizer-function-{props?.AppProps.NameSuffix}";
@@ -119,6 +170,16 @@ public class ImageIngestionStack : Stack
             Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
         }));
 
+        // Define DynamoDB table
+        var tableName = $"{props?.AppProps.NamePrefix}-results-table-{props?.AppProps.NameSuffix}";
+        var table = new Table(this, tableName, new TableProps
+        {
+            TableName = tableName,
+            PartitionKey = new Attribute { Name = "key", Type = AttributeType.STRING },
+            SortKey = new Attribute { Name = "bucketName", Type = AttributeType.STRING },
+            BillingMode = BillingMode.PAY_PER_REQUEST
+        });
+
         var addToOpenSearchFunctionName = $"{props?.AppProps.NamePrefix}-add-to-opensearch-function-{props?.AppProps.NameSuffix}";
         var addToOpenSearchFunction = new Function(this, addToOpenSearchFunctionName, new FunctionProps
         {
@@ -130,30 +191,12 @@ public class ImageIngestionStack : Stack
             MemorySize = 1024,
             Environment = new Dictionary<string, string>
             {
-                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+                { "DESTINATION_BUCKET", destinationBucket.BucketName },
+                { "NAME_PREFIX", props?.AppProps.NamePrefix },
+                { "NAME_SUFFIX", props?.AppProps.NameSuffix },
+                { "DISTRIBUTION_DOMAIN_NAME", distribution.DistributionDomainName },
             },
-            Role = new Role(this, $"{addToOpenSearchFunctionName}-role", new RoleProps
-            {
-                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
-                ManagedPolicies = new IManagedPolicy[]
-                {
-                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
-                }
-            })
-        });
-        getImageEmbeddingsFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
-        {
-            Actions = new[] { "bedrock:InvokeModel" },
-            Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
-        }));
-
-        // Define DynamoDB table
-        var tableName = $"{props?.AppProps.NamePrefix}-results-table-{props?.AppProps.NameSuffix}";
-        var table = new Table(this, tableName, new TableProps
-        {
-            TableName = tableName,
-            PartitionKey = new Attribute { Name = "key", Type = AttributeType.STRING },
-            BillingMode = BillingMode.PAY_PER_REQUEST
+            Role = props.KbCustomResourceRole
         });
 
         // Define Step Functions tasks
@@ -189,11 +232,11 @@ public class ImageIngestionStack : Stack
             {
                 ["key.$"] = "$.Payload.key",
                 ["inference.$"] = "$.Payload.inference",
-              //  ["embeddings.$"] = "$.Payload.embeddings"
+                ["embeddings.$"] = "$.Payload.embeddings"
             }
         });
 
-        var putItem = new DynamoPutItem(this, "PutItem", new DynamoPutItemProps
+        var putItemTask = new DynamoPutItem(this, "PutItem", new DynamoPutItemProps
         {
             Table = table,
             Item = new Dictionary<string, DynamoAttributeValue>
@@ -201,26 +244,27 @@ public class ImageIngestionStack : Stack
                 ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
                 ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
                 ["inference"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.inference")),
-            },
-            ResultSelector = new Dictionary<string, object>
-            {
-                ["key"] = JsonPath.StringAt("$$.Execution.Input.detail.object.key"),
-                //["inference"] = JsonPath.StringAt("$.inference"),
-                //  ["embeddings"] = JsonPath.StringAt("$.embeddings"),
-            },
-            //ResultPath = "$"
+            }
         });
+
+        var passTask = new Pass(this, "Pass", new PassProps
+        {
+            Parameters = new Dictionary<string, object>
+            {
+                ["key.$"] = "$.key",
+                ["inferenece.$"] = "$.inference",
+                ["embeddings.$"] = "States.JsonToString($.embeddings)"
+            }
+        });
+
+        var parallel = new Parallel(this, "Parallel");
+        parallel.Branch(putItemTask);
+        parallel.Branch(passTask);
 
         var invokeAddToOpenSearch = new LambdaInvoke(this, "AddToOpenSearch", new LambdaInvokeProps
         {
             LambdaFunction = addToOpenSearchFunction,
-           // InputPath = "$",
-            //ResultSelector = new Dictionary<string, object>
-            //{
-            //    ["result.$"] = "$.Payload",
-            //    ["key.$"] = "$.key",
-            //    ["inference.$"] = "$.inference"
-            //}
+            InputPath = "$[1]"
         });
 
         var success = new Succeed(this, "Success");
@@ -231,15 +275,85 @@ public class ImageIngestionStack : Stack
             .Next(invokeGetImageInference)
             .Next(invokeGetImageEmbeddings)
             .Next(transformResults)
-            .Next(putItem)
+            .Next(parallel)
             .Next(invokeAddToOpenSearch)
             .Next(success);
+
+        var logGroupName = $"{props?.AppProps.NamePrefix}-add-to-opensearch-log-group-{props?.AppProps.NameSuffix}";
+        var logGroup = new LogGroup(this, logGroupName, new LogGroupProps
+        {
+            LogGroupName = $"/aws/lambda/{props?.AppProps.NamePrefix}-add-to-opensearch-function-{props?.AppProps.NameSuffix}",
+            Retention = RetentionDays.ONE_DAY,
+            RemovalPolicy = RemovalPolicy.DESTROY
+        });
 
         var stateMachineName = $"{props?.AppProps.NamePrefix}-image-ingestion-workflow-{props?.AppProps.NameSuffix}";
         var stateMachine = new StateMachine(this, stateMachineName, new StateMachineProps
         {
+            StateMachineType = StateMachineType.EXPRESS,
             StateMachineName = stateMachineName,
-            Definition = definition
+            Definition = definition,
+            Logs = new LogOptions { IncludeExecutionData = true, Level = LogLevel.ALL, Destination = logGroup }
+        });
+
+        // New Lambda function for listing and filtering S3 objects
+        var listAndFilterS3ObjectsFunctionName = $"{props?.AppProps.NamePrefix}-list-and-filter-s3-objects-{props?.AppProps.NameSuffix}";
+        var listAndFilterS3ObjectsFunction = new Function(this, listAndFilterS3ObjectsFunctionName, new FunctionProps
+        {
+            FunctionName = listAndFilterS3ObjectsFunctionName,
+            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.ListAndFilterS3Objects::FunctionHandler",
+            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+            Timeout = Duration.Minutes(15),
+            MemorySize = 1024,
+            Environment = new Dictionary<string, string>
+            {
+                { "STATE_MACHINE_ARN", stateMachine.StateMachineArn },
+                { "DYNAMODB_TABLE_NAME", table.TableName }
+            },
+            Role = new Role(this, $"{listAndFilterS3ObjectsFunctionName}-role", new RoleProps
+            {
+                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+                ManagedPolicies = new IManagedPolicy[]
+                {
+                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+                    ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                },
+                InlinePolicies = new Dictionary<string, PolicyDocument>
+                {
+                    ["StartStepFunctionExecution"] = new PolicyDocument(new PolicyDocumentProps
+                    {
+                        Statements = new[]
+                        {
+                            new PolicyStatement(new PolicyStatementProps
+                            {
+                                Effect = Effect.ALLOW,
+                                Actions = new[] { "states:StartExecution" },
+                                Resources = new[] { stateMachine.StateMachineArn }
+                            })
+                        }
+                    }),
+                    ["s3-dynamo-policy"] = new PolicyDocument(new PolicyDocumentProps
+                    {
+                        Statements = new[]
+                        {
+                            new PolicyStatement(new PolicyStatementProps
+                            {
+                                Effect = Effect.ALLOW,
+                                Resources = new [] { "*" },
+                                Actions = new []
+                                {
+                                    "dynamodb:GetItem",
+                                    "dynamodb:Scan",
+                                    "dynamodb:Query",
+                                    "dynamodb:BatchGetItem",
+                                    "dynamodb:DescribeTable",
+                                }
+                            }),
+                        }
+                    })
+                }
+            })
         });
 
         // Create EventBridge rule
@@ -261,10 +375,26 @@ public class ImageIngestionStack : Stack
             }
         });
 
+        // Create EventBridge rule for processing existing S3 bucket
+        var processExistingBucketRuleName = $"{props?.AppProps.NamePrefix}-process-existing-bucket-rule-{props?.AppProps.NameSuffix}";
+        var processExistingBucketRule = new Rule(this, processExistingBucketRuleName, new RuleProps
+        {
+            RuleName = processExistingBucketRuleName,
+            EventPattern = new EventPattern
+            {
+                Source = new[] { "com.dotnet-genai.imageingestion" },
+                DetailType = new[] { "ProcessExistingBucket" }
+            }
+        });
+
+        // Add the new Lambda function as a target for the process existing bucket rule
+        processExistingBucketRule.AddTarget(new LambdaFunction(listAndFilterS3ObjectsFunction));
+
         // Add the Step Function as a target for the EventBridge rule
         rule.AddTarget(new SfnStateMachine(stateMachine));
 
         // Grant the EventBridge rule permission to start the Step Function execution
         stateMachine.GrantStartExecution(new ServicePrincipal("events.amazonaws.com"));
+        listAndFilterS3ObjectsFunction.GrantInvoke(new ServicePrincipal("events.amazonaws.com"));
     }
 }

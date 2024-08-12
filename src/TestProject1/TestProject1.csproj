@@ -16,6 +16,7 @@
     <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.401.2" />
     <PackageReference Include="AWSSDK.CloudFormation" Version="3.7.400.2" />
     <PackageReference Include="AWSSDK.CloudWatch" Version="3.7.401" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.400.4" />
     <PackageReference Include="AWSSDK.IdentityManagement" Version="3.7.401" />
     <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.400.2" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.400.2" />

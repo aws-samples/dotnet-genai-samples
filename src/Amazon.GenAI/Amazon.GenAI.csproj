@@ -19,6 +19,7 @@
     <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.400.2" />
     <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.401.2" />
     <PackageReference Include="AWSSDK.EC2" Version="3.7.401.2" />
+    <PackageReference Include="AWSSDK.EventBridge" Version="3.7.401.2" />
     <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.400.2" />
     <PackageReference Include="AWSSDK.OpenSearchService" Version="3.7.400.2" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.400.2" />

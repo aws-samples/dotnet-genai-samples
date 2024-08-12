@@ -17,6 +17,7 @@ public class KbCustomResourceStack : Stack
 {
     public CustomResource KbCustomResource { get; init; }
     public Bucket Bucket { get; init; }
+    public Role KbCustomResourceRole { get; set; }
 
     internal KbCustomResourceStack(Construct scope, string id, KbCustomResourceStackProps props = null) : base(scope, id, props)
     {
@@ -26,6 +27,7 @@ public class KbCustomResourceStack : Stack
 
         props!.IdentityArn = identity.Arn;
         props.KbCustomResourceRole = CreateKnowledgeBaseCustomResourceRole(this, props);
+        KbCustomResourceRole = props.KbCustomResourceRole;
         props.KbRole = CreateKnowledgeBaseServiceRole(this, props);
         props.DataSyncLambdaRole = CreateDataSyncLambdaRole(this, props);
 
@@ -51,6 +53,7 @@ public class KbCustomResourceStack : Stack
         var roleName = $"{props.AppProps.NamePrefix}-service-role-{props.AppProps.NameSuffix}";
         var role = new Role(kbSecurity, roleName, new RoleProps
         {
+            RoleName = roleName,
             AssumedBy = new CompositePrincipal(
                 new ServicePrincipal("bedrock.amazonaws.com"),
                 new ServicePrincipal("lambda.amazonaws.com"),
@@ -150,6 +153,7 @@ public class KbCustomResourceStack : Stack
         var kbCustomResourceRoleName = $"{props.AppProps.NamePrefix}-cr-role-{props.AppProps.NameSuffix}";
         var kbCustomResourceRole = new Role(kbSecurity, kbCustomResourceRoleName, new RoleProps
         {
+            RoleName = kbCustomResourceRoleName,
             AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
             InlinePolicies = new Dictionary<string, PolicyDocument>
             {
@@ -211,6 +215,27 @@ public class KbCustomResourceStack : Stack
                                 {
                                     "aoss:*",
                                     "iam:CreateServiceLinkedRole"
+                                }
+                            }),
+                        },
+                    })
+                },
+                {
+                    "dynamo-policy",
+                    new PolicyDocument(new PolicyDocumentProps
+                    {
+                        Statements = new []
+                        {
+                            new PolicyStatement(new PolicyStatementProps
+                            {
+                                Effect = Effect.ALLOW,
+                                Resources = new [] { "*" },
+                                Actions = new []
+                                {
+                                    "dynamodb:GetItem",
+                                    "dynamodb:Scan",
+                                    "dynamodb:Query",
+                                    "dynamodb:BatchGetItem"
                                 }
                             }),
                         },

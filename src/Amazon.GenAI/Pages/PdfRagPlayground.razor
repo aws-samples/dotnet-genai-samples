@@ -1,4 +1,5 @@
-﻿@page "/pdf-rag-playground"
+﻿@page "/"
+@page "/pdf-rag-playground"
 @using System.Text
 @using Amazon.BedrockRuntime
 @using Amazon.GenAI.Abstractions.Bedrock
@@ -189,15 +190,15 @@
 
         var options = new OpenSearchVectorStoreOptions
         {
-             Region = RegionEndpoint.USWest2,
-             IndexName = _indexName,
-             Dimensions = Dimensions,
-             CollectionArn = _collections[0]?.Arn,
+            Region = RegionEndpoint.USWest2,
+            IndexName = _indexName,
+            Dimensions = Dimensions,
+            CollectionArn = _collections[0]?.Arn,
         };
 
-            _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-            await base.OnInitializedAsync();
+        await base.OnInitializedAsync();
         StateHasChanged();
     }
 
@@ -266,9 +267,9 @@
         var documents = searchResponseDocuments
             .Where(vectorRecord => !string.IsNullOrWhiteSpace(vectorRecord.Text))
             .Select(vectorRecord => new Amazon.GenAI.Abstractions.Document
-                {
-                    PageContent = vectorRecord.Text!,
-                })
+            {
+                PageContent = vectorRecord.Text!,
+            })
             .ToArray();
 
         var context = new StringBuilder();

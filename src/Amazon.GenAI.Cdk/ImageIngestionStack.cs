@@ -171,7 +171,7 @@ public class ImageIngestionStack : Stack
         }));
 
         // Define DynamoDB table
-        var tableName = $"{props?.AppProps.NamePrefix}-results-table-{props?.AppProps.NameSuffix}";
+        var tableName = $"{props?.AppProps.NamePrefix}-dynamo-table-{props?.AppProps.NameSuffix}";
         var table = new Table(this, tableName, new TableProps
         {
             TableName = tableName,
@@ -308,7 +308,8 @@ public class ImageIngestionStack : Stack
             MemorySize = 1024,
             Environment = new Dictionary<string, string>
             {
-                { "STATE_MACHINE_ARN", stateMachine.StateMachineArn },
+				{ "DESTINATION_BUCKET", destinationBucket.BucketName },
+				{ "STATE_MACHINE_ARN", stateMachine.StateMachineArn },
                 { "DYNAMODB_TABLE_NAME", table.TableName }
             },
             Role = new Role(this, $"{listAndFilterS3ObjectsFunctionName}-role", new RoleProps

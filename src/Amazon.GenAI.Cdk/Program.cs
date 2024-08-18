@@ -4,56 +4,56 @@ namespace Amazon.GenAI.Cdk;
 
 internal sealed class Program
 {
-    // The target account and region can be controlled by hardcoding them in this class
-    // (recommended for production workloads) or using --profile on the CDK CLI.
-    //
-    // Hardcode the account and region by passing them as parameters to the MakeEnv() 
-    // method, e.g. MakeEnv("8373873873", "us-west-2")
-    //
-    // Specify the account and region from the CDK CLI by specifying a profile to use, 
-    // e.g. cdk deploy --profile "USWest2Profile"
-    //
-    // If the account and region are not hardcoded and a profile is not specified on the CLI
-    // the CDK will use the account and region of the default profile.
-    // 
-    // For more information refer to https://docs.aws.amazon.com/cdk/v2/guide/environments.html
+	// The target account and region can be controlled by hardcoding them in this class
+	// (recommended for production workloads) or using --profile on the CDK CLI.
+	//
+	// Hardcode the account and region by passing them as parameters to the MakeEnv() 
+	// method, e.g. MakeEnv("8373873873", "us-west-2")
+	//
+	// Specify the account and region from the CDK CLI by specifying a profile to use, 
+	// e.g. cdk deploy --profile "USWest2Profile"
+	//
+	// If the account and region are not hardcoded and a profile is not specified on the CLI
+	// the CDK will use the account and region of the default profile.
+	// 
+	// For more information refer to https://docs.aws.amazon.com/cdk/v2/guide/environments.html
 
-    public static void Main()
-    {
-        var app = new App();
+	public static void Main()
+	{
+		var app = new App();
 
-        var env = MakeEnv();
+		var env = MakeEnv();
 
-        var appStackProp = new AppStackProps();
-        appStackProp.NameSuffix = "test";
+		var appStackProp = new AppStackProps();
+		appStackProp.NameSuffix = env.Account;
 
-        var embeddingModelArn = $"arn:aws:bedrock:{env.Region}::foundation-model/amazon.titan-embed-text-v2:0";
+		var embeddingModelArn = $"arn:aws:bedrock:{env.Region}::foundation-model/amazon.titan-embed-text-v2:0";
 
-        var kbCustomResourceName = $"{appStackProp.NamePrefix}-{appStackProp.NameSuffix}";
-        var kbCustomResourceStack = new KbCustomResourceStack(app, kbCustomResourceName, new KbCustomResourceStackProps
-        {
-            Env = env,
-            AppProps = appStackProp,
-            KnowledgeBaseEmbeddingModelArn = embeddingModelArn
-        });
+		var kbCustomResourceName = $"{appStackProp.NamePrefix}-{appStackProp.NameSuffix}";
+		var kbCustomResourceStack = new KbCustomResourceStack(app, kbCustomResourceName, new KbCustomResourceStackProps
+		{
+			Env = env,
+			AppProps = appStackProp,
+			KnowledgeBaseEmbeddingModelArn = embeddingModelArn
+		});
 
-        var imageIngestionName = $"{appStackProp.NamePrefix}-image-ingestion-{appStackProp.NameSuffix}";
-        var imageIngestionStack = new ImageIngestionStack(app, imageIngestionName, new ImageIngestionStackProps
-        {
-            Env = env,
-            AppProps = appStackProp,
-            KbCustomResourceRole = kbCustomResourceStack.KbCustomResourceRole
-        });
+		var imageIngestionName = $"{appStackProp.NamePrefix}-image-ingestion-{appStackProp.NameSuffix}";
+		var imageIngestionStack = new ImageIngestionStack(app, imageIngestionName, new ImageIngestionStackProps
+		{
+			Env = env,
+			AppProps = appStackProp,
+			KbCustomResourceRole = kbCustomResourceStack.KbCustomResourceRole
+		});
 
-        app.Synth();
-    }
+		app.Synth();
+	}
 
-    private static Environment MakeEnv(string account = null, string region = null)
-    {
-        return new Environment
-        {
-            Account = account ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
-            Region = region ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION")
-        };
-    }
+	private static Environment MakeEnv(string account = null, string region = null)
+	{
+		return new Environment
+		{
+			Account = account ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
+			Region = region ?? System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION")
+		};
+	}
 }

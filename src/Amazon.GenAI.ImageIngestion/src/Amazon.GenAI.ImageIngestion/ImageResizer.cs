@@ -50,29 +50,25 @@ public class ImageResizer
                 await response.ResponseStream.CopyToAsync(imageStream);
                 imageStream.Position = 0;
 
-                using (var image = await Image.LoadAsync(imageStream))
-                {
-                    // Resize the image
-                    image.Mutate(x => x.Resize(TargetWidth, 0)); // 0 height to maintain aspect ratio
+				using var image = await Image.LoadAsync(imageStream);
+				// Resize the image
+				image.Mutate(x => x.Resize(TargetWidth, 0)); // 0 height to maintain aspect ratio
 
-                    // Save the resized image to a new stream
-                    using (var outputStream = new MemoryStream())
-                    {
-                        await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat!);
-                        outputStream.Position = 0;
+				// Save the resized image to a new stream
+				using var outputStream = new MemoryStream();
+				await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat!);
+				outputStream.Position = 0;
 
-                        // Upload the resized image to the destination bucket
-                        var putRequest = new PutObjectRequest
-                        {
-                            BucketName = _destinationBucket,
-                            Key = key,
-                            InputStream = outputStream,
-                            ContentType = response.Headers.ContentType
-                        };
+				// Upload the resized image to the destination bucket
+				var putRequest = new PutObjectRequest
+				{
+					BucketName = _destinationBucket,
+					Key = key,
+					InputStream = outputStream,
+					ContentType = response.Headers.ContentType
+				};
 
-                        await _s3Client.PutObjectAsync(putRequest);
-                    }
-                }
+				var putObjectResponse = await _s3Client.PutObjectAsync(putRequest);
             }
 
             context.Logger.LogInformation($"Successfully resized {key} and uploaded to {_destinationBucket}");

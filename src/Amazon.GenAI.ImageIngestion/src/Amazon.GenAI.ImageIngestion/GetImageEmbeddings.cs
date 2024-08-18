@@ -10,8 +10,7 @@ namespace Amazon.GenAI.ImageIngestion;
 public class GetImageEmbeddings
 {
     private readonly IAmazonS3 _s3Client = new AmazonS3Client();
-    private readonly IAmazonBedrockRuntime _bedrockClient = new AmazonBedrockRuntimeClient();
-    private readonly string _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
+    private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
 
 
     public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)

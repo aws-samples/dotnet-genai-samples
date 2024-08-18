@@ -271,7 +271,28 @@ public class Tests
         }
     }
 
-    [TestCase("6o64y4qxwb2k8vcyusp8", "dotnet-genai-20240707022407")]
+	[Test]
+	public async Task DeleteIndex()
+	{
+		try
+		{
+            var endpoint = new Uri("https://p13bjd14b8l75s8d4ujg.us-east-1.aoss.amazonaws.com");
+            var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
+			var config = new ConnectionSettings(endpoint, connection);
+			var client = new OpenSearchClient(config);
+
+            var response = client.Indices.Delete(Indices.All);
+            Console.WriteLine(response.IsValid);
+            Console.WriteLine(response.DebugInformation);
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e);
+			throw;
+		}
+	}
+
+	[TestCase("p13bjd14b8l75s8d4ujg", "my-images-index")]
     public async Task DoesIndexExist(string uniqueIdentifier, string indexName)
     {
         var endpoint = new Uri($"https://{uniqueIdentifier}.us-east-1.aoss.amazonaws.com");
@@ -280,14 +301,15 @@ public class Tests
         var client = new OpenSearchClient(config);
 
         var response = await client.Indices.ExistsAsync(new IndexExistsRequest(indexName));
+        Console.Write(response.Exists);
     }
 
     [Test]
     public async Task DocumentModelDynamoDb()
     {
-        const string tableName = "dotnet-genai-results-table-test";
-        const string key = "clipart2.png";
-        const string bucketName = "dotnet-genai-destination-test";
+        const string tableName = "dotnet-genai-results-table-539821354996";
+        const string key = "20240325_1008522.jpg";
+        const string bucketName = "dotnet-genai-destination-539821354996";
         var client = new AmazonDynamoDBClient();
 
         Table table = Table.LoadTable(client, tableName);

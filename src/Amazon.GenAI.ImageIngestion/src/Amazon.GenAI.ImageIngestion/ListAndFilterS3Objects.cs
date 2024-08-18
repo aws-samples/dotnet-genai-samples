@@ -1,128 +1,121 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Amazon.Lambda.Core;
-using Amazon.S3;
 using Amazon.Lambda.CloudWatchEvents;
-using Amazon.S3.Model;
 using Amazon.StepFunctions;
 using Amazon.StepFunctions.Model;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.GenAI.ImageIngestion.Abstractions;
+using Amazon.S3;
+using Amazon.S3.Model;
+using S3Object = Amazon.GenAI.ImageIngestion.Abstractions.S3Object;
 
 namespace Amazon.GenAI.ImageIngestion;
 
 public class ListAndFilterS3Objects
 {
-    private readonly IAmazonS3 _s3Client = new AmazonS3Client();
-    private readonly string? _stateMachineArn = Environment.GetEnvironmentVariable("STATE_MACHINE_ARN");
-    private readonly string? _tableName = Environment.GetEnvironmentVariable("DYNAMODB_TABLE_NAME");
-    private readonly IAmazonStepFunctions _stepFunctionsClient = new AmazonStepFunctionsClient();
-    private readonly AmazonDynamoDBClient _dynamoDbClient = new AmazonDynamoDBClient();
+	private readonly string? _stateMachineArn = Environment.GetEnvironmentVariable("STATE_MACHINE_ARN");
+	private readonly string? _tableName = Environment.GetEnvironmentVariable("DYNAMODB_TABLE_NAME");
+	private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
+	private readonly IAmazonStepFunctions _stepFunctionsClient = new AmazonStepFunctionsClient();
+	private readonly AmazonDynamoDBClient _dynamoDbClient = new();
+	private readonly AmazonS3Client _s3Client = new();
+	private ILambdaContext? _context;
 
-    public async Task FunctionHandler(CloudWatchEvent<ProcessExistingBucketDetail> @event, ILambdaContext context)
-    {
-        context.Logger.LogInformation($"###  in ListAndFilterS3Objects ------------");
+	public async Task FunctionHandler(CloudWatchEvent<S3Detail> input, ILambdaContext context)
+	{
+		_context = context;
 
-        var bucketName = @event.Detail.BucketName;
-        var request = new ListObjectsV2Request
-        {
-            BucketName = bucketName
-        };
+		_context.Logger.LogInformation($"####  in ListAndFilterS3Objects ------------");
 
-        context.Logger.LogInformation($"got bucketName: {bucketName}");
+		_context.Logger.LogInformation($"input.Detail.BucketName: {input.Detail?.BucketName}");
+		_context.Logger.LogInformation($"_destinationBucket: {_destinationBucket}");
 
-        try
-        {
-            do
-            {
-                var response = await _s3Client.ListObjectsV2Async(request);
+		string? bucketName = input.Detail?.BucketName ?? _destinationBucket;
+		_context.Logger.LogInformation($"bucketName: {bucketName}");
 
-                context.Logger.LogInformation($"got files: {response.S3Objects.Count}");
+		var key = input.Detail?.Object?.Key;
+		_context.Logger.LogInformation($"key: {key}");
 
-                foreach (var s3Object in response.S3Objects)
-                {
-                    var exists = await DoesKeyExistInTable(s3Object.Key, bucketName);
+		try
+		{
+			if (key != null && (key.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+								key.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+			{
+				var exists = await DoesKeyExistInTable(key, bucketName);
+				if (exists == false)
+				{
+					_context.Logger.LogError($" --- starting State Machine");
+					await StartStateMachineExecution(bucketName, key);
+				}
+			}
+			else
+			{
+				var request = new ListObjectsV2Request { BucketName = bucketName };
+				var response = await _s3Client.ListObjectsV2Async(request);
 
-                    if (exists == false && (s3Object.Key.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                               s3Object.Key.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
-                    {
-                        await StartStateMachineExecution(bucketName, s3Object.Key);
-                    }
-                }
+				do
+				{
+					foreach (var item in response.S3Objects)
+					{
+						if (item.Key.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+						    item.Key.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+						    item.Key.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+						{
+							var exists = await DoesKeyExistInTable(item.Key, _destinationBucket);
+							if (exists) continue;
 
-                request.ContinuationToken = response.NextContinuationToken;
-            } while (!string.IsNullOrEmpty(request.ContinuationToken));
-        }
-        catch (Exception e)
-        {
-            context.Logger.LogError($"Error getting inference: {e.Message}");
-            throw;
-        }
-    }
+							_context.Logger.LogError($" --- starting State Machine");
+							await StartStateMachineExecution(bucketName, item.Key);
+						}
+					}
 
-    private async Task<bool> DoesKeyExistInTable(string key, string bucketName)
-    {
-        var table = Table.LoadTable(_dynamoDbClient, _tableName);
+					request.ContinuationToken = response.NextContinuationToken;
+				} while (!string.IsNullOrEmpty(request.ContinuationToken));
+			}
+		}
+		catch (Exception e)
+		{
+			_context.Logger.LogError($"Error getting inference: {e.Message}");
+			throw;
+		}
+	}
 
-        var find = new Dictionary<string, DynamoDBEntry>
-        {
-            { "key", key },
-            { "bucketName", bucketName }
-        };
+	private async Task<bool> DoesKeyExistInTable(string? key, string? bucketName)
+	{
+		_context?.Logger.LogInformation($"searching for... {key} / {bucketName}");
 
-        var document = await table.GetItemAsync(find);
+		var table = Table.LoadTable(_dynamoDbClient, _tableName);
 
-        return document != null;
-    }
+		var find = new Dictionary<string, DynamoDBEntry>
+		{
+			{ "key", key },
+			{ "bucketName", bucketName }
+		};
 
-    private async Task StartStateMachineExecution(string bucketName, string key)
-    {
-        var input = new StateMachineStartObj
-        {
-            Detail = new StateMachineDetail
-            {
-                Bucket = new StateMachineBucket { Name = bucketName },
-                Object = new StateMachineObject { Key = key }
-            },
-        };
+		var document = await table.GetItemAsync(find);
+		_context?.Logger.LogInformation($"document found: {document != null}");
 
-        var request = new StartExecutionRequest
-        {
-            StateMachineArn = _stateMachineArn,
-            Input = JsonSerializer.Serialize(input)
-        };
+		return document != null;
+	}
 
-        await _stepFunctionsClient.StartExecutionAsync(request);
-    }
-}
+	private async Task StartStateMachineExecution(string? bucketName, string key)
+	{
+		var input = new S3Object
+		{
+			Detail = new S3Detail
+			{
+				Bucket = new S3DetailBucket { Name = bucketName },
+				Object = new S3DetailObject { Key = key }
+			},
+		};
 
-public class ProcessExistingBucketDetail(string bucketName)
-{
-    public string BucketName { get; set; } = bucketName;
-}
+		var request = new StartExecutionRequest
+		{
+			StateMachineArn = _stateMachineArn,
+			Input = JsonSerializer.Serialize(input)
+		};
 
-public class StateMachineStartObj
-{
-    [JsonPropertyName("detail")]
-    public StateMachineDetail Detail { get; set; } = new();
-}
-
-public class StateMachineDetail
-{
-    [JsonPropertyName("bucket")]
-    public StateMachineBucket Bucket { get; set; } = new();
-    [JsonPropertyName("object")]
-    public StateMachineObject Object { get; set; } = new();
-}
-
-public class StateMachineBucket
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; }
-}
-
-public class StateMachineObject
-{
-    [JsonPropertyName("key")]
-    public string Key { get; set; }
+		await _stepFunctionsClient.StartExecutionAsync(request);
+	}
 }

@@ -17,7 +17,7 @@
 	<ItemGroup>
 		<!-- CDK Construct Library dependencies -->
 		<PackageReference Include="Amazon.CDK.Lib" Version="2.151.0" />
-		<PackageReference Include="AWSSDK.SecurityToken" Version="3.7.400.2" />
+		<PackageReference Include="AWSSDK.SecurityToken" Version="3.7.400.4" />
 		<PackageReference Include="Constructs" Version="10.3.0" />
 
 		<PackageReference Include="Amazon.Jsii.Analyzers" Version="1.102.0" PrivateAssets="all" />

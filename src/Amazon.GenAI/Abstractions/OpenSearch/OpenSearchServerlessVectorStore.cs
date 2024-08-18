@@ -4,6 +4,7 @@ using Amazon.GenAI.Abstractions.Bedrock;
 using Amazon.GenAI.Abstractions.Splitter;
 using OpenSearch.Net.Auth.AwsSigV4;
 using System.Text.RegularExpressions;
+using Amazon.S3;
 
 namespace Amazon.GenAI.Abstractions.OpenSearch;
 
@@ -152,7 +153,7 @@ public class OpenSearchServerlessVectorStore
         return bulkResponse.IsValid;
     }
 
-    public async Task<List<VectorSearchResponse>> QueryImageDocumentsAsync(
+	public async Task<List<VectorSearchResponse>> QueryImageDocumentsAsync(
         Dictionary<string, string> files,
         List<byte[]> cachedImages,
         int chuckSize = 10_000,
@@ -352,4 +353,20 @@ public class OpenSearchServerlessVectorStore
             Text = hit.Source.Text
         }).ToList(), searchResponse.Total);
     }
+
+    public async Task DeleteIndex(string? indexName)
+    {
+		var deleteIndexResponse = await _client.Indices.DeleteAsync(indexName);
+
+		// Check if the deletion was successful
+		if (deleteIndexResponse.IsValid)
+		{
+			Console.WriteLine($"Index '{indexName}' was successfully deleted.");
+		}
+		else
+		{
+			Console.WriteLine($"Failed to delete index '{indexName}'. Error: {deleteIndexResponse.DebugInformation}");
+			throw new Exception(deleteIndexResponse.DebugInformation);
+		}
+	}
 }

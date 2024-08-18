@@ -361,6 +361,7 @@ public class Create : LambdaBaseFunction
                             { "aoss:DescribeIndex" },
                             { "aoss:UpdateIndex" },
                             { "aoss:CreateIndex" },
+                            { "aoss:DeleteIndex" },
                             { "aoss:ReadDocument" },
                             { "aoss:WriteDocument" }
                         }

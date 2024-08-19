@@ -13,7 +13,7 @@
         <MudCardContent>
             <MudGrid>
                 <MudItem xs="9">
-                    Amazon Titan Image Generator G1 (amazon.titan-image-generator-v1)
+                    Amazon Titan Image Generator G1 (amazon.titan-image-generator-v2)
                 </MudItem>
             </MudGrid>
         </MudCardContent>
@@ -64,7 +64,7 @@
 
     private async Task OnSubmit()
     {
-        var modelId = "amazon.titan-image-generator-v1";
+        var modelId = "amazon.titan-image-generator-v2:0";
         _listBase64Images.Clear();
         _isThinking = true;
         StateHasChanged();

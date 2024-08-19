@@ -17,11 +17,8 @@
 @using Amazon.S3
 @using Amazon.EventBridge
 @using Amazon.EventBridge.Model
-@inject MarkdownPipeline Pipeline
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject IJSRuntime JsRuntime
-@inject ISnackbar Snackbar
-@inject AmazonS3Client S3Client
 
 <MudText Typo="Typo.h4">Image Search Playground</MudText>
 <MudStack Style="width: 100%">
@@ -46,7 +43,7 @@
 
 	<MudRadioGroup @bind-Value="_actionType">
 		<MudRadio Value="ActionType.Searching" Color="Color.Primary">Search</MudRadio>
-		<MudRadio Value="ActionType.Adding" Color="Color.Secondary">Add Images</MudRadio>
+		<MudRadio Value="ActionType.Adding" Color="Color.Secondary">Add Images from My Computer</MudRadio>
 		<MudRadio Value="ActionType.S3Adding" Color="Color.Secondary">Add Images from S3</MudRadio>
 	</MudRadioGroup>
 
@@ -156,7 +153,7 @@
 						@foreach (var item in _buckets)
 						{
 							_bucket ??= item;
-							<MudSelectItem Value="@item">@item.BucketName</MudSelectItem>
+							<MudSelectItem Value="@item">@item?.BucketName</MudSelectItem>
 						}
 					}
 				</MudSelect>
@@ -189,7 +186,7 @@
 	private const int Dimensions = 1024;
 
 	private string? _uploadDirectory;
-	IReadOnlyList<IBrowserFile>? Files { get; set; } = new List<IBrowserFile>();
+	IReadOnlyList<IBrowserFile>? Files { get; } = new List<IBrowserFile>();
 	private readonly List<string> _imageDataUrls = new();
 
 	private string? _textModelId;
@@ -211,7 +208,7 @@
 	private MudExpansionPanel? _expansionPanels;
 
 	public bool SearchType { get; set; } = true;
-	IReadOnlyList<IBrowserFile>? QueryImages { get; set; } = new List<IBrowserFile>();
+	IReadOnlyList<IBrowserFile>? QueryImages { get; } = new List<IBrowserFile>();
 
 	private ActionType _actionType;
 
@@ -262,28 +259,21 @@
 		{
 			_status = Status.Adding;
 
-			try
-			{
-				if (bucket == null) return;
+			if (bucket == null) return;
 
-				foreach (var path in _inputFiles.Select(file => file.Value))
+			foreach (var path in _inputFiles.Select(file => file.Value))
+			{
+				var transferUtility = new TransferUtility(client);
+
+				var transferUtilityUploadRequest = new TransferUtilityUploadRequest
 				{
-					var transferUtility = new TransferUtility(client);
+					BucketName = bucket?.BucketName,
+					Key = Path.GetFileName(path),
+					FilePath = path,
+					ContentType = "text/plain"
+				};
 
-					var transferUtilityUploadRequest = new TransferUtilityUploadRequest
-						{
-							BucketName = bucket?.BucketName,
-							Key = Path.GetFileName(path),
-							FilePath = path,
-							ContentType = "text/plain"
-						};
-
-					transferUtility.UploadAsync(transferUtilityUploadRequest);
-				}
-			}
-			catch (Exception)
-			{
-				throw;
+				transferUtility.UploadAsync(transferUtilityUploadRequest);
 			}
 
 			StateHasChanged();
@@ -310,18 +300,18 @@
 
 			var request = new PutEventsRequest
 				{
-					Entries = new List<PutEventsRequestEntry>
+					Entries =
+					[
+						new()
 						{
-					new PutEventsRequestEntry
-					{
-						Source = $"com.{NamePrefix}.imageingestion",
-						DetailType = "ProcessExistingBucket",
-						Detail = JsonSerializer.Serialize(new
-						{
-							bucketName = _bucket?.BucketName
-						})
-					}
+							Source = $"com.{NamePrefix}.imageingestion",
+							DetailType = "ProcessExistingBucket",
+							Detail = JsonSerializer.Serialize(new
+							{
+								bucketName = _bucket?.BucketName
+							})
 						}
+					]
 				};
 
 			Task<PutEventsResponse>? response = client.PutEventsAsync(request);
@@ -367,7 +357,7 @@
 		await _openSearchVectorStore?.DeleteIndex(_indexName)!;
 
 		const string nameSuffix = "test";
-		var tableName = $"{NamePrefix}-dynamo-table-{nameSuffix}";
+		const string tableName = $"{NamePrefix}-dynamo-table-{nameSuffix}";
 		await DeleteAllItemsInTable(tableName);
 	}
 
@@ -468,37 +458,44 @@
 
 		try
 		{
-			// First, we need to get the table's key schema
-			var tableDescription = await client.DescribeTableAsync(tableName);
-			var keySchema = tableDescription.Table.KeySchema;
+			var list = (await client.ListTablesAsync()).TableNames.Where(x => x.StartsWith(NamePrefix)).ToList();
 
-			// Scan the table to get all items
-			var scanRequest = new ScanRequest
-				{
-					TableName = tableName
-				};
-
-			var scanResponse = await client.ScanAsync(scanRequest);
-
-			// Delete each item
-			foreach (var item in scanResponse.Items)
+			foreach (var name in list)
 			{
-				var key = new Dictionary<string, AttributeValue>();
-				foreach (var schemaElement in keySchema)
-				{
-					key[schemaElement.AttributeName] = item[schemaElement.AttributeName];
-				}
+				Console.WriteLine($"Processing table: {name}");
+				// First, we need to get the table's key schema
+				var tableDescription = await client.DescribeTableAsync(name);
+				var keySchema = tableDescription.Table.KeySchema;
 
-				var deleteRequest = new DeleteItemRequest
+				// Scan the table to get all items
+				var scanRequest = new ScanRequest
+				{
+					TableName = name
+				};
+				var scanResponse = await client.ScanAsync(scanRequest);
+
+				// Delete each item
+				foreach (var item in scanResponse.Items)
+				{
+					var key = new Dictionary<string, AttributeValue>();
+					foreach (var schemaElement in keySchema)
 					{
-						TableName = tableName,
+						key[schemaElement.AttributeName] = item[schemaElement.AttributeName];
+					}
+
+					var deleteRequest = new DeleteItemRequest
+					{
+						TableName = name,
 						Key = key
 					};
 
-				var deleteItemResponse = await client.DeleteItemAsync(deleteRequest);
-				if (deleteItemResponse.HttpStatusCode == HttpStatusCode.OK)
-				{
-					Console.WriteLine($"Deleted item of count: {item.Count} successfully.");
+					var deleteItemResponse = await client.DeleteItemAsync(deleteRequest);
+					Console.WriteLine($"deleteItemResponse.HttpStatusCode: {deleteItemResponse.HttpStatusCode}");
+
+					if (deleteItemResponse.HttpStatusCode == HttpStatusCode.OK)
+					{
+						Console.WriteLine($"Deleted item of count: {item.Count} successfully.");
+					}
 				}
 			}
 		}

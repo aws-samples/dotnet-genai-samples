@@ -252,7 +252,7 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.key",
-                ["inferenece.$"] = "$.inference",
+                ["inference.$"] = "$.inference",
                 ["embeddings.$"] = "States.JsonToString($.embeddings)"
             }
         });

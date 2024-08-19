@@ -7,14 +7,14 @@
         {
             @foreach (var result in SearchResults!)
             {
-                Uri uri = new Uri($"http://{result.Path}");
-                string path = Uri.UnescapeDataString(uri.PathAndQuery);
+                var uri = new Uri($"http://{result.Path}");
+                var path = Uri.UnescapeDataString(uri.PathAndQuery);
 
                 // Get the last segment of the path (everything after the last '/')
-                string fileName = Path.GetFileName(path);
+                var fileName = Path.GetFileName(path);
 
                 // Remove query string if present
-                int queryIndex = fileName.IndexOf('?');
+                var queryIndex = fileName.IndexOf('?');
                 if (queryIndex != -1)
                 {
                     fileName = fileName.Substring(0, queryIndex);

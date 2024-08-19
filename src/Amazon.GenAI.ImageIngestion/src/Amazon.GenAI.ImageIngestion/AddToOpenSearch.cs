@@ -98,7 +98,10 @@ public class AddToOpenSearch
         }
     }
 
-    private static string? GetInputValues(Dictionary<string, string> input, ILambdaContext context, out string inference,
+    private static string? GetInputValues(
+	    Dictionary<string, string> input, 
+	    ILambdaContext context, 
+	    out string inference,
         out float[] embeddings)
     {
         if (!input.TryGetValue("key", out var key))

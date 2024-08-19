@@ -333,8 +333,7 @@ public class OpenSearchServerlessVectorStore
         {
             From = (pageNumber - 1) * pageSize,
             Size = pageSize,
-            Query = new MatchAllQuery(),
-
+            Query = new MatchAllQuery()
         };
 
         var searchResponse = await _client.SearchAsync<VectorRecord>(searchRequest).ConfigureAwait(false);
@@ -358,7 +357,6 @@ public class OpenSearchServerlessVectorStore
     {
 		var deleteIndexResponse = await _client.Indices.DeleteAsync(indexName);
 
-		// Check if the deletion was successful
 		if (deleteIndexResponse.IsValid)
 		{
 			Console.WriteLine($"Index '{indexName}' was successfully deleted.");

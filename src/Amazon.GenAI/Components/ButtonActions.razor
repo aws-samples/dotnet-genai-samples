@@ -1,0 +1,43 @@
+﻿@using Amazon.GenAI.Models
+
+@if (Status != Status.Default)
+{
+    <MudCardContent>
+        <MudCardActions>
+            <MudButton Class="ml-auto" Disabled="@(Status > Status.Default)" Variant="Variant.Filled"
+                       Color="Color.Primary" OnClick="OnClickCallback">
+                @switch (Status)
+                {
+                    case Status.Thinking:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Thinking...</MudText>
+                        break;
+
+                    case Status.Indexing:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Indexing Database...</MudText>
+                        break;
+
+                    case Status.Adding:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Adding Documents...</MudText>
+                        break;
+
+                    case Status.Default:
+                    default:
+                        <MudIcon Class="ms-n1" Icon="@Icons.Material.Filled.Forward" Size="Size.Small"></MudIcon>
+                        <MudText Class="ms-2">Query</MudText>
+                        break;
+                }
+            </MudButton>
+        </MudCardActions>
+    </MudCardContent>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Status Status { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClickCallback { get; set; }
+}

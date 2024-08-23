@@ -1,0 +1,197 @@
+﻿@page "/Modified"
+@using Amazon.BedrockAgent
+@using Amazon.BedrockAgent.Model
+@using Amazon.BedrockAgentRuntime
+@using Amazon.BedrockAgentRuntime.Model
+@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Abstractions.Message
+@using Markdig
+@inject MarkdownPipeline Pipeline
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+
+<MudStack Style="width: 100%">
+    <MudCard>
+        <MudCardContent>
+            <div>
+                <MudText Typo="Typo.h4">Knowledge base Playground</MudText>
+                <MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
+                           Label="Select Knowledgebase"
+                           Variant="Variant.Outlined">
+                    @if (_knowledgeBases != null)
+                    {
+                        @foreach (var item in _knowledgeBases)
+                        {
+                            _knowledgeBase ??= item;
+                            <MudSelectItem Value="@item" />
+                        }
+                    }
+                </MudSelect>
+                <div>
+                    Text Model: <strong>Claude 3 Haiku (@_textModelId)</strong>
+                </div>
+                <div>@_knowledgeBase?.Description</div>
+            </div>
+            <br />
+            <MudTimeline Reverse="true">
+                @foreach (var item in _chatMessageHistory.Messages)
+                {
+                    var label = item.Role == MessageRole.Human ? "Message KnowledgeBase" : "Message KnowledgeBase";
+                    <MudTimelineItem>
+                        <MudField Label="@label" Class="white-space-pre-line">
+                            @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
+                        </MudField>
+                    </MudTimelineItem>
+                }
+                <MudTimelineItem>
+                    <MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
+                </MudTimelineItem>
+            </MudTimeline>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Class="ml-auto" Disabled="@(_status > Status.Default)" Variant="Variant.Filled" Color="Color.Primary" OnClick="Reset">
+                @switch (_status)
+                {
+                    case Status.Thinking:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Thinking...</MudText>
+                        break;
+
+                    case Status.Indexing:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Indexing Database...</MudText>
+                        break;
+
+                    case Status.Adding:
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Adding Documents...</MudText>
+                        break;
+
+                    case Status.Default:
+                    default:
+                        <MudIcon Class="ms-n1" Icon="@Icons.Material.Filled.Replay" Size="Size.Small"></MudIcon>
+                        <MudText Class="ms-2">Reset</MudText>
+                        break;
+                }
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudStack>
+
+@code {
+
+    #region Variables
+
+    AmazonBedrockAgentRuntimeClient? _agentClient;
+
+    private string? _textModelId;
+
+    enum Status
+    {
+        Default,
+        Thinking,
+        Indexing,
+        Adding
+    }
+    Status _status = Status.Default;
+
+    private readonly ChatMessageHistory _chatMessageHistory = new();
+    private MudTextField<string>? _promptField;
+
+    private KnowledgeBaseSummary? _knowledgeBase;
+    private List<KnowledgeBaseSummary?> _knowledgeBases;
+    readonly Func<KnowledgeBaseSummary, string> _selectConverter = kb => string.Concat(kb?.Name, " , (", kb?.KnowledgeBaseId, ")");
+
+    #endregion
+
+    protected override async Task OnInitializedAsync()
+    {
+        _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+
+        _agentClient = new AmazonBedrockAgentRuntimeClient();
+
+        var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
+        _knowledgeBases = (await new AmazonBedrockAgentClient().ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+            .OrderBy(x => x.UpdatedAt)
+            .Where(x => x.Status.Equals("Active"))
+            .ToList();
+
+        await base.OnInitializedAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnSubmit(EditContext context)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+    }
+
+    private async Task OnPromptChanged(string question)
+    {
+        if (string.IsNullOrEmpty(question))
+            return;
+
+        _status = Status.Thinking;
+        StateHasChanged();
+
+        await _chatMessageHistory.AddUserMessage(question);
+
+        var request = new RetrieveAndGenerateRequest
+            {
+                Input = new RetrieveAndGenerateInput { Text = question },
+                RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+                {
+                    Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+                    KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+                    {
+                        KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+                        ModelArn = _textModelId,
+                        RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+                        {
+                            VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+                            {
+                                OverrideSearchType = "HYBRID",
+                                // Filter = new RetrievalFilter
+                                // {
+                                //     Equals = new FilterAttribute
+                                //     {
+                                //         Key = "year",
+                                //         Value = new Document(2020)
+                                //     }
+                                // }
+                            }
+                        }
+                    }
+                }
+            };
+        var result = await _agentClient!.RetrieveAndGenerateAsync(request);
+
+        await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+
+        await InvokeAsync(() =>
+        {
+            _promptField?.SetText("");
+            _status = Status.Default;
+            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    #region Utility Methods
+
+    private async Task Clear()
+    {
+        await _chatMessageHistory.Clear();
+        await _promptField?.SetText("")!;
+        await Task.Delay(100);
+    }
+
+    private async Task Reset(MouseEventArgs e)
+    {
+        await _promptField?.SetText("")!;
+        await _chatMessageHistory.Clear();
+    }
+
+    #endregion
+}

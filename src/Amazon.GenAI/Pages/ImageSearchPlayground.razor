@@ -80,7 +80,7 @@
 							  Width="200">
 				</ImageListing>
 
-				<EditForm Model="@_chatMessageHistory" OnSubmit="OnSearch">
+				<EditForm Model="@_chatMessageHistory" OnSubmit="OnImageSearch">
 					<MudCard>
 						<MudCardActions>
 							<MudButton ButtonType="ButtonType.Submit" Disabled="@(!_inputFiles.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Search</MudButton>
@@ -330,7 +330,7 @@
 		});
 	}
 
-	private async Task OnSearch(EditContext context)
+	private async Task OnImageSearch(EditContext context)
 	{
 		await InvokeAsync(() =>
 		{

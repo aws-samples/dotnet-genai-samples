@@ -44,7 +44,7 @@ public class GetImageEmbeddings
             var content = inference.Trim();
             var chunkSize = 4000;
             var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
-            var splitText = textSplitter.SplitText(content);
+            var splitText = textSplitter.SplitText("     ");
             var embeddings = new List<float[]>(capacity: splitText.Count);
 
             var embeddingModelId = "amazon.titan-embed-image-v1";

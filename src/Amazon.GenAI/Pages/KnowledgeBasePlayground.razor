@@ -1,4 +1,5 @@
 ﻿@page "/knowledgeBase"
+@using System.ComponentModel.DataAnnotations
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
@@ -8,6 +9,8 @@
 @using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
+@using Amazon.Runtime.Documents
+@using Amazon.Runtime.Internal
 @using Markdig
 @inject MarkdownPipeline Pipeline
 @inject IJSRuntime JsRuntime
@@ -18,7 +21,7 @@
 		<MudCardContent>
 			<div>
 				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
-				<MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
+				@* 	<MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
 						   Label="Select Knowledgebase"
 						   Variant="Variant.Outlined">
 					@foreach (var item in _knowledgeBases!)
@@ -26,7 +29,8 @@
 						_knowledgeBase ??= item;
 						<MudSelectItem Value="@item" />
 					}
-				</MudSelect>
+				</MudSelect> *@
+				<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated"></KnowledgeBaseFilter>
 			</div>
 			<br />
 			<MudTimeline Reverse="true">
@@ -60,6 +64,8 @@
 	private readonly Func<KnowledgeBaseSummary, string> _selectConverter = kb => string.Concat(kb?.Name, " , (", kb?.KnowledgeBaseId, ")");
 	readonly AmazonBedrockAgentRuntimeClient? _agentClient = new();
 
+	AutoConstructedList<RetrievalFilter> _filters = new();
+
 	protected override async Task OnInitializedAsync()
 	{
 		var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
@@ -67,6 +73,7 @@
 			.OrderBy(x => x.UpdatedAt)
 			.Where(x => x.Status.Equals("Active"))
 			.ToList();
+		_knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith("dotnet-genai"));
 
 		await base.OnInitializedAsync();
 		StateHasChanged();
@@ -92,6 +99,7 @@
 		// Add the user's question to the chat message history
 		await _chatMessageHistory.AddUserMessage(question);
 
+
 		// Create a new RetrieveAndGenerateRequest object with the user's question as input
 		var request = new RetrieveAndGenerateRequest
 			{
@@ -113,14 +121,10 @@
 								// Set the search type to "HYBRID"
 								OverrideSearchType = "HYBRID",
 								// Uncomment and configure the Filter property to apply additional filters
-								// Filter = new RetrievalFilter
-								// {
-								//     Equals = new FilterAttribute
-								//     {
-								//         Key = "year",
-								//         Value = new Document(2020)
-								//     }
-								// }
+								Filter = new RetrievalFilter
+								{
+									AndAll = _filters
+								}
 							}
 						}
 					}
@@ -147,5 +151,13 @@
 			StateHasChanged();
 			return Task.CompletedTask;
 		});
+	}
+
+	private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter> filters)
+	{
+		_filters = filters;
+
+		Console.WriteLine($"filters count: {filters.Count}");
+		return Task.CompletedTask;
 	}
 }

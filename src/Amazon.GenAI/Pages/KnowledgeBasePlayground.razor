@@ -1,15 +1,12 @@
 ﻿@page "/knowledgeBase"
-@using System.ComponentModel.DataAnnotations
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
-@using Amazon.GenAI.Abstractions.Bedrock
 @using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
-@using Amazon.Runtime.Documents
 @using Amazon.Runtime.Internal
 @using Markdig
 @inject MarkdownPipeline Pipeline
@@ -61,7 +58,6 @@
 
 	private KnowledgeBaseSummary? _knowledgeBase;
 	private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
-	private readonly Func<KnowledgeBaseSummary, string> _selectConverter = kb => string.Concat(kb?.Name, " , (", kb?.KnowledgeBaseId, ")");
 	readonly AmazonBedrockAgentRuntimeClient? _agentClient = new();
 
 	AutoConstructedList<RetrievalFilter> _filters = new();

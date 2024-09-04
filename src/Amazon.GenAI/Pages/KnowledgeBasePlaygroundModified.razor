@@ -99,7 +99,7 @@
     private MudTextField<string>? _promptField;
 
     private KnowledgeBaseSummary? _knowledgeBase;
-    private List<KnowledgeBaseSummary?> _knowledgeBases;
+    private List<KnowledgeBaseSummary?>? _knowledgeBases;
     readonly Func<KnowledgeBaseSummary, string> _selectConverter = kb => string.Concat(kb?.Name, " , (", kb?.KnowledgeBaseId, ")");
 
     #endregion

@@ -71,7 +71,7 @@
 	protected override async Task OnInitializedAsync()
 	{
 		var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
-		
+
 		_knowledgeBases = (await agentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
 			.OrderBy(x => x.UpdatedAt)
 			.Where(x => x.Status.Equals("Active"))
@@ -141,11 +141,23 @@
 
 		// Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
 		var result = await agentRuntimeclient!.RetrieveAndGenerateAsync(request);
-		
-	//	var result = await _agentClient!.RetrieveAndGenerateAsync(request);
+
+		//	var result = await _agentClient!.RetrieveAndGenerateAsync(request);
 
 		// Add the response from the service to the chat message history
 		await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+
+		HashSet<RetrievedReference> uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
+		Dictionary<string, Amazon.Runtime.Documents.Document> uniqueSets = new Dictionary<string, Document>();
+
+		foreach (RetrievedReference retrievedReference in uniqueSet)
+		{
+			foreach (var r in retrievedReference.Metadata)
+			{
+				uniqueSets.Add(r.Key, r.Value);
+			}
+		}
+
 
 		// Invoke the following code on the UI thread
 		await InvokeAsync(() =>

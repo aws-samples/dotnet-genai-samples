@@ -1,8 +1,10 @@
 ﻿@page "/knowledgeBase"
+@using System.Collections.Immutable
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
+@using Amazon.GenAI.Abstractions
 @using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
@@ -14,146 +16,165 @@
 
 
 <MudStack Style="width: 100%">
-	<MudCard>
-		<MudCardContent>
-			<div>
-				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
-				@* 	<MudSelect T="KnowledgeBaseSummary" @bind-Value="_knowledgeBase" ToStringFunc="@_selectConverter" Required="true"
-						   Label="Select Knowledgebase"
-						   Variant="Variant.Outlined">
-					@foreach (var item in _knowledgeBases!)
-					{
-						_knowledgeBase ??= item;
-						<MudSelectItem Value="@item" />
-					}
-				</MudSelect> *@
-				<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated"></KnowledgeBaseFilter>
-			</div>
-			<br />
-			<MudTimeline Reverse="true">
-				@foreach (var item in _chatMessageHistory.Messages)
-				{
-					var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
-					<MudTimelineItem>
-						<MudField Label="@label" Class="white-space-pre-line">
-							@((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
-						</MudField>
-					</MudTimelineItem>
-				}
-				<MudTimelineItem>
-					<MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
-				</MudTimelineItem>
-			</MudTimeline>
-		</MudCardContent>
-		<Progress Status="_status" OnClickCallback="Submit"></Progress>
-	</MudCard>
+    <MudCard>
+        <MudCardContent>
+            <div>
+                <MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
+                <KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
+            </div>
+            <br />
+            <MudTimeline Reverse="true">
+                @foreach (var item in _chatMessageHistory.Messages)
+                {
+                    var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
+                    <MudTimelineItem>
+                        <MudField Label="@label" Class="white-space-pre-line">
+                            @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
+                        </MudField>
+                    </MudTimelineItem>
+                }
+                <MudTimelineItem>
+                    <MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
+                </MudTimelineItem>
+            </MudTimeline>
+        </MudCardContent>
+        <Progress Status="_status" OnClickCallback="Submit"></Progress>
+    </MudCard>
 </MudStack>
 
 @code {
 
-	private readonly string? _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-	private readonly ChatMessageHistory _chatMessageHistory = new();
-	private MudTextField<string>? _promptField;
-	Status _status = Status.Default;
+    private readonly string? _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+    private readonly ChatMessageHistory _chatMessageHistory = new();
+    private MudTextField<string>? _promptField;
+    Status _status = Status.Default;
 
-	private KnowledgeBaseSummary? _knowledgeBase;
-	private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
-	readonly AmazonBedrockAgentRuntimeClient? _agentClient = new();
+    private KnowledgeBaseSummary? _knowledgeBase;
+    private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
+    private readonly AmazonBedrockAgentRuntimeClient? _agentClient = new();
 
-	AutoConstructedList<RetrievalFilter> _filters = new();
+    AutoConstructedList<RetrievalFilter>? _filters;
 
-	protected override async Task OnInitializedAsync()
-	{
-		var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
-		_knowledgeBases = (await new AmazonBedrockAgentClient().ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
-			.OrderBy(x => x.UpdatedAt)
-			.Where(x => x.Status.Equals("Active"))
-			.ToList();
-		_knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith("dotnet-genai"));
+    private HashSet<string> _countries = new();
+    private HashSet<string> _cities = new();
 
-		await base.OnInitializedAsync();
-		StateHasChanged();
-	}
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var s3Wrapper = new S3Wrapper();
+            var attributes = await s3Wrapper.GetMetaDataFromS3("dotnet-rag-datasource", "Fictitious Hotels", ".json");
+            foreach (var item in attributes)
+            {
+                foreach (var dict in item)
+                {
+                    if (dict.Key == "country") _countries.Add(dict.Value);
+                    if (dict.Key == "city") _cities.Add(dict.Value);
+                }
+            }
+            _countries = _countries.OrderBy(x => x).ToHashSet();
+            _cities = _cities.OrderBy(x => x).ToHashSet();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
 
-	protected Task Submit()
-	{
-		return Task.CompletedTask;
-	}
+        var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
+        _knowledgeBases = (await new AmazonBedrockAgentClient().ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+            .OrderBy(x => x.UpdatedAt)
+            .Where(x => x.Status.Equals("Active"))
+            .ToList();
+        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith("dotnet-genai"));
 
-	// This method is called when the user enters a new prompt or question
-	private async Task OnPromptChanged(string question)
-	{
-		// Check if the question is null or empty, and return if it is
-		if (string.IsNullOrEmpty(question))
-			return;
+        await base.OnInitializedAsync();
+        StateHasChanged();
+    }
 
-		// Set the status to "Thinking" to indicate that the application is processing the question
-		_status = Status.Thinking;
-		// Trigger a UI update to reflect the new status
-		StateHasChanged();
+    protected Task Submit()
+    {
+        return Task.CompletedTask;
+    }
 
-		// Add the user's question to the chat message history
-		await _chatMessageHistory.AddUserMessage(question);
+    // This method is called when the user enters a new prompt or question
+    private async Task OnPromptChanged(string question)
+    {
+        // Check if the question is null or empty, and return if it is
+        if (string.IsNullOrEmpty(question))
+            return;
+
+        // Set the status to "Thinking" to indicate that the application is processing the question
+        _status = Status.Thinking;
+        // Trigger a UI update to reflect the new status
+        StateHasChanged();
+
+        // Add the user's question to the chat message history
+        await _chatMessageHistory.AddUserMessage(question);
 
 
-		// Create a new RetrieveAndGenerateRequest object with the user's question as input
-		var request = new RetrieveAndGenerateRequest
-			{
-				Input = new RetrieveAndGenerateInput { Text = question },
-				RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
-				{
-					// Set the type of the request to "KNOWLEDGE_BASE"
-					Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-					KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-					{
-						// Set the knowledge base ID to the ID of the selected knowledge base
-						KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-						// Set the model ARN to the ID of the text model
-						ModelArn = _textModelId,
-						RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-						{
-							VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-							{
-								// Set the search type to "HYBRID"
-								OverrideSearchType = "HYBRID",
-								// Uncomment and configure the Filter property to apply additional filters
-								Filter = new RetrievalFilter
-								{
-									AndAll = _filters
-								}
-							}
-						}
-					}
-				}
-			};
+        // Create a new RetrieveAndGenerateRequest object with the user's question as input
+        var request = new RetrieveAndGenerateRequest
+            {
+                Input = new RetrieveAndGenerateInput { Text = question },
+                RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+                {
+                    // Set the type of the request to "KNOWLEDGE_BASE"
+                    Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+                    KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+                    {
+                        // Set the knowledge base ID to the ID of the selected knowledge base
+                        KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+                        // Set the model ARN to the ID of the text model
+                        ModelArn = _textModelId,
+                        RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+                        {
+                            VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+                            {
+                                // Set the search type to "HYBRID"
+                                OverrideSearchType = "HYBRID",
+                            }
+                        }
+                    }
+                }
+            };
 
-		// Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
-		var result = await _agentClient!.RetrieveAndGenerateAsync(request);
+        if(_filters is not null)
+        {
+            request
+                .RetrieveAndGenerateConfiguration
+                .KnowledgeBaseConfiguration
+                .RetrievalConfiguration
+                .VectorSearchConfiguration
+                .Filter = new RetrievalFilter { AndAll = _filters };
+        }
 
-		// Add the response from the service to the chat message history
-		await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+        // Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
+        var result = await _agentClient!.RetrieveAndGenerateAsync(request);
 
-		// Invoke the following code on the UI thread
-		await InvokeAsync(() =>
-		{
-			// Clear the prompt field
-			_promptField?.SetText("");
-			// Set the status back to "Default"
-			_status = Status.Default;
-			// Scroll to the prompt field in the UI
-			JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+        // Add the response from the service to the chat message history
+        await _chatMessageHistory.AddAiMessage(result.Output.Text!);
 
-			// Trigger a UI update to reflect the changes
-			StateHasChanged();
-			return Task.CompletedTask;
-		});
-	}
+        // Invoke the following code on the UI thread
+        await InvokeAsync(() =>
+        {
+            // Clear the prompt field
+            _promptField?.SetText("");
+            // Set the status back to "Default"
+            _status = Status.Default;
+            // Scroll to the prompt field in the UI
+            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
 
-	private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter> filters)
-	{
-		_filters = filters;
+            // Trigger a UI update to reflect the changes
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
 
-		Console.WriteLine($"filters count: {filters.Count}");
-		return Task.CompletedTask;
-	}
+    private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
+    {
+        _filters = filters!.Count == 0 ? null : filters;
+
+        Console.WriteLine($"filters count: {filters.Count}");
+        return Task.CompletedTask;
+    }
 }

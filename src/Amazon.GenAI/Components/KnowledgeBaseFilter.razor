@@ -1,131 +1,119 @@
 ﻿@using Amazon.BedrockAgentRuntime.Model
 @using Amazon.Runtime.Internal
-@inject IJSRuntime JsRuntime
 
-<MudExpansionPanels>
-	<MudExpansionPanel Text="Filters" Expanded="false">
-		Metadata search helps you improve response accuracy and relevancy. Add filters and then run a query to search with metadata.
-						
-		<MudSimpleTable Class="mud-elevation-0" Style="overflow-x: auto;">
-			<tbody>
-			<tr>
-				<td>
-					<MudTextField @bind-Value="_newFilterKey" Label="Key" Variant="Variant.Filled"></MudTextField>
-				</td>
-				<td>
-					<MudTextField @bind-Value="_newFilterValue" Label="Value" Variant="Variant.Filled"></MudTextField>
-				</td>
-				<td>
-					<button class="btn btn-primary" @onclick="AddFilter">Add Filter</button>
-				</td>
-			</tr>
-							
-			@foreach (var filter in _filters)
-			{
-				<tr>
-					<td>
-						<MudTextField @bind-Value="filter.Key" Label="Key" Variant="Variant.Filled"></MudTextField>
-					</td>
-					<td>
-						<MudTextField @bind-Value="filter.Value" Label="Value" Variant="Variant.Filled"></MudTextField>
-					</td>
-					<td>
-						<div>
-							<button class="btn btn-sm btn-info" @onclick="() => EditFilter(filter)">Update</button>
-							<button class="btn btn-sm btn-danger" @onclick="() => DeleteFilter(filter)">Delete</button>
-						</div>
-					</td>
-				</tr>
-			}
+<MudSelect T="string" Required="true" MultiSelection="true"
+           SelectedValuesChanged="OnSelectedCountriesChanged"
+           Label="Select Country"
+           Variant="Variant.Outlined">
+    @if (Countries != null)
+    {
+        @foreach (var item in Countries)
+        {
+            <MudSelectItem Value="@item" />
+        }
+    }
+</MudSelect>
 
-			</tbody>
-		</MudSimpleTable>
-	</MudExpansionPanel>
-</MudExpansionPanels>
+<MudSelect T="string" Required="true" MultiSelection="true"
+           SelectedValuesChanged="OnSelectedCitiesChanged"
+           Label="Select City"
+           Variant="Variant.Outlined">
+    @if (Cities != null)
+    {
+        @foreach (var item in Cities)
+        {
+            <MudSelectItem Value="@item" />
+        }
+    }
+</MudSelect>
 
 
 @code {
+    [Parameter] public HashSet<string>? Countries { get; set; }
+    [Parameter] public HashSet<string>? Cities { get; set; }
 
-	[Parameter] public EventCallback<AutoConstructedList<RetrievalFilter>> OnFilterUpdated { get; set; }
+    [Parameter] public EventCallback<AutoConstructedList<RetrievalFilter>> OnFilterUpdated { get; set; }
 
-	AutoConstructedList<RetrievalFilter> _kbFilters = new();
+    private HashSet<string> SelectedCountries { get; set; } = new();
+    private HashSet<string> SelectedCities { get; set; } = new();
 
-    public class FilterItem
+    AutoConstructedList<RetrievalFilter> _kbFilters = new();
+
+    private void OnSelectedCountriesChanged(IEnumerable<string> values)
     {
-	    public Guid Id { get; set; } = Guid.NewGuid();
-	    public string? Key { get; set; }
-	    public string? Value { get; set; }
+        _kbFilters.Clear();
+        SelectedCountries.Clear();
+
+        foreach (var item in values)
+        {
+            SelectedCountries.Add(item);
+
+            var retrievalFilter = new RetrievalFilter
+                {
+                    Equals = new FilterAttribute
+                    {
+                        Key = "Country",
+                        Value = item
+                    }
+                };
+
+            _kbFilters.Add(retrievalFilter);
+        }
+
+        foreach (var item in SelectedCities)
+        {
+            var retrievalFilter = new RetrievalFilter
+                {
+                    Equals = new FilterAttribute
+                    {
+                        Key = "City",
+                        Value = item
+                    }
+                };
+
+            _kbFilters.Add(retrievalFilter);
+        }
+
+        var task = OnFilterUpdated.InvokeAsync(_kbFilters);
+        task.Wait();
     }
 
-    private readonly List<FilterItem> _filters = [];
-    private string _newFilterKey = "";
-    private string _newFilterValue = "";
-
-    private async Task AddFilter()
+    private void OnSelectedCitiesChanged(IEnumerable<string> values)
     {
-	    if (!string.IsNullOrWhiteSpace(_newFilterKey) && !string.IsNullOrEmpty(_newFilterValue))
-	    {
-		    _filters.Add(new FilterItem { Key = _newFilterKey, Value = _newFilterValue });
-		    _newFilterKey = "";
-		    _newFilterValue = "";
+        _kbFilters.Clear();
+        SelectedCities.Clear();
 
-		    UpdateFilters();
-		    await OnFilterUpdated.InvokeAsync(_kbFilters);
-	    }
-    }
+        foreach (var item in values)
+        {
+            SelectedCities.Add(item);
 
-    private async Task UpdateFilter(FilterItem filter)
-    {
-	    var index = _filters.FindIndex(t => t.Id == filter.Id);
-	    if (index != -1)
-	    {
-		    _filters[index] = filter;
+            var retrievalFilter = new RetrievalFilter
+            {
+                Equals = new FilterAttribute
+                {
+                    Key = "City",
+                    Value = item
+                }
+            };
 
-		    UpdateFilters();
-		    await OnFilterUpdated.InvokeAsync(_kbFilters);
-	    }
-    }
+            _kbFilters.Add(retrievalFilter);
+        }
 
-    private async Task EditFilter(FilterItem filter)
-    {
-	    var key = await JsRuntime.InvokeAsync<string>("prompt", "Edit filter:", filter.Key);
-	    if (!string.IsNullOrWhiteSpace(key))
-	    {
-		    filter.Key = key;
-		    await UpdateFilter(filter);
-	    }
+        foreach (var item in SelectedCountries)
+        {
+            var retrievalFilter = new RetrievalFilter
+            {
+                Equals = new FilterAttribute
+                {
+                    Key = "Country",
+                    Value = item
+                }
+            };
 
-	    var value = await JsRuntime.InvokeAsync<string>("prompt", "Edit filter:", filter.Value);
-	    if (!string.IsNullOrWhiteSpace(value))
-	    {
-		    filter.Value = value;
-		   await UpdateFilter(filter);
-	    }
-    }
+            _kbFilters.Add(retrievalFilter);
+        }
 
-    private async Task DeleteFilter(FilterItem filter)
-    {
-	    _filters.Remove(filter);
-	    UpdateFilters();
-	    await OnFilterUpdated.InvokeAsync(_kbFilters);
-    }
-
-    private void UpdateFilters()
-    {
-		_kbFilters.Clear();
-
-	    foreach (var item in _filters)
-	    {
-		    var retrievalFilter = new RetrievalFilter 
-		    { 
-			    Equals = new FilterAttribute
-			    {
-				    Key = item.Key,
-				    Value = item.Value
-			    }
-		    };
-
-		    _kbFilters.Add(retrievalFilter);
-	    }
+        var task = OnFilterUpdated.InvokeAsync(_kbFilters);
+        task.Wait();
     }
 }

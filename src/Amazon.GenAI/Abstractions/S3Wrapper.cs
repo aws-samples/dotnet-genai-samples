@@ -8,17 +8,12 @@ public class S3Wrapper
 {
     private readonly IAmazonS3 _s3Client;
 
-    public S3Wrapper()
+    public S3Wrapper(IAmazonS3 s3Client)
     {
-        _s3Client = new AmazonS3Client();
+        _s3Client = s3Client;
     }
 
-    public S3Wrapper(RegionEndpoint region)
-    {
-        _s3Client = new AmazonS3Client(region);
-    }
-
-    public async Task<List<Dictionary<string, string>>> GetMetaDataFromS3(string bucketName, string prefix, string fileExtension)
+    public async Task<List<Dictionary<string, string>>> GetMetaDataFromS3(string? bucketName, string? prefix, string? fileExtension)
     {
         var result = new List<Dictionary<string, string>>();
 
@@ -34,7 +29,7 @@ public class S3Wrapper
 
             foreach (var entry in response.S3Objects)
             {
-                if (!entry.Key.EndsWith(fileExtension, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!entry.Key.EndsWith(fileExtension!, StringComparison.OrdinalIgnoreCase)) continue;
 
                 var metadata = await DownloadAndProcessFileAsync(bucketName, entry.Key);
                 if (metadata != null)
@@ -49,7 +44,7 @@ public class S3Wrapper
         return result;
     }
 
-    private async Task<Dictionary<string, string?>?> DownloadAndProcessFileAsync(string bucketName, string key)
+    private async Task<Dictionary<string, string?>?> DownloadAndProcessFileAsync(string? bucketName, string key)
     {
         var request = new GetObjectRequest
         {

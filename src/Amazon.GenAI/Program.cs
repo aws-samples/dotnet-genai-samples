@@ -29,13 +29,10 @@ internal class Program
 
 		builder.Services.AddSingleton(pipeline);
 
-
-
-		AWSCredentials awsCredentials;
-		var chain = new CredentialProfileStoreChain();
+        var chain = new CredentialProfileStoreChain();
         var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
 
-        if (chain.TryGetAWSCredentials("KBUser", out awsCredentials))
+        if (chain.TryGetAWSCredentials("KBUser", out var awsCredentials))
 		{
 			var client = new AmazonBedrockClient(awsCredentials);
 			//var regionEndpoint = awsCredentials.GetCredentials().Token;
@@ -76,6 +73,7 @@ internal class Program
 			{
 			//	RegionEndpoint = regionEndpoint
 			}));
+
 			builder.Services.AddSingleton(
 				new AmazonBedrockClient(new AmazonBedrockConfig()
 				{
@@ -87,7 +85,19 @@ internal class Program
 				{
 					//RegionEndpoint = regionEndpoint
 				}));
-		}
+
+            builder.Services.AddSingleton(
+                new AmazonBedrockAgentClient(awsCredentials, new AmazonBedrockAgentConfig()
+                {
+                    //RegionEndpoint = regionEndpoint
+                }));
+
+            builder.Services.AddSingleton(
+                new AmazonBedrockAgentRuntimeClient(new AmazonBedrockAgentRuntimeConfig
+                {
+                   // RegionEndpoint = regionEndpoint
+                }));
+        }
 
 #if DEBUG
 		builder.Logging.AddDebug();

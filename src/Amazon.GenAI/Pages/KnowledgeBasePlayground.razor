@@ -1,5 +1,4 @@
 ﻿@page "/knowledgeBase"
-@using System.Collections.Immutable
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
@@ -10,9 +9,13 @@
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
 @using Amazon.Runtime.Internal
+@using Amazon.S3
 @using Markdig
 @inject MarkdownPipeline Pipeline
 @inject IJSRuntime JsRuntime
+@inject AmazonBedrockAgentClient AgentClient;
+@inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
+@inject AmazonS3Client AmazonS3Client;
 
 
 <MudStack Style="width: 100%">
@@ -44,14 +47,18 @@
 
 @code {
 
-    private readonly string? _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+    private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+
+    private const string BucketName = "dotnet-rag-datasource";
+    private const string DocumentPrefix = "Fictitious Hotels";
+    private const string MetadataExtension = ".json";
+
     private readonly ChatMessageHistory _chatMessageHistory = new();
     private MudTextField<string>? _promptField;
     Status _status = Status.Default;
 
     private KnowledgeBaseSummary? _knowledgeBase;
     private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
-    private readonly AmazonBedrockAgentRuntimeClient? _agentClient = new();
 
     AutoConstructedList<RetrievalFilter>? _filters;
 
@@ -62,8 +69,8 @@
     {
         try
         {
-            var s3Wrapper = new S3Wrapper();
-            var attributes = await s3Wrapper.GetMetaDataFromS3("dotnet-rag-datasource", "Fictitious Hotels", ".json");
+            var s3Wrapper = new S3Wrapper(AmazonS3Client);
+            var attributes = await s3Wrapper.GetMetaDataFromS3(BucketName, DocumentPrefix, MetadataExtension);
             foreach (var item in attributes)
             {
                 foreach (var dict in item)
@@ -81,10 +88,12 @@
         }
 
         var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
-        _knowledgeBases = (await new AmazonBedrockAgentClient().ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+
+        _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
             .OrderBy(x => x.UpdatedAt)
             .Where(x => x.Status.Equals("Active"))
             .ToList();
+
         _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith("dotnet-genai"));
 
         await base.OnInitializedAsync();
@@ -111,7 +120,6 @@
         // Add the user's question to the chat message history
         await _chatMessageHistory.AddUserMessage(question);
 
-
         // Create a new RetrieveAndGenerateRequest object with the user's question as input
         var request = new RetrieveAndGenerateRequest
             {
@@ -125,7 +133,7 @@
                         // Set the knowledge base ID to the ID of the selected knowledge base
                         KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
                         // Set the model ARN to the ID of the text model
-                        ModelArn = _textModelId,
+                        ModelArn = TextModelId,
                         RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
                         {
                             VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
@@ -138,7 +146,7 @@
                 }
             };
 
-        if(_filters is not null)
+        if (_filters is not null)
         {
             request
                 .RetrieveAndGenerateConfiguration
@@ -148,8 +156,23 @@
                 .Filter = new RetrievalFilter { AndAll = _filters };
         }
 
+
         // Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
-        var result = await _agentClient!.RetrieveAndGenerateAsync(request);
+        var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
+
+        // Add the response from the service to the chat message history
+        await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+
+        var uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
+        var uniqueSets = new Dictionary<string, Runtime.Documents.Document>();
+
+        foreach (var retrievedReference in uniqueSet)
+        {
+            foreach (var r in retrievedReference.Metadata)
+            {
+                uniqueSets.Add(r.Key, r.Value);
+            }
+        }
 
         // Add the response from the service to the chat message history
         await _chatMessageHistory.AddAiMessage(result.Output.Text!);
@@ -173,8 +196,6 @@
     private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
     {
         _filters = filters!.Count == 0 ? null : filters;
-
-        Console.WriteLine($"filters count: {filters.Count}");
         return Task.CompletedTask;
     }
 }

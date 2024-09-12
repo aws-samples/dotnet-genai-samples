@@ -18,10 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="D:\Users\abhtia\Desktop\KnowledgeBasePlayground.razor" Link="KnowledgeBasePlayground.razor" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AWSSDK.Bedrock" Version="3.7.303.2" />
     <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.311.2" />
     <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.309.2" />

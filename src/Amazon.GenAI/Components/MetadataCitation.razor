@@ -1,0 +1,132 @@
+﻿@* @using Amazon.BedrockAgentRuntime.Model
+@using Amazon.Runtime.Internal
+@inject IJSRuntime JsRuntime
+
+<MudExpansionPanels>
+	<MudExpansionPanel Text="Filters" Expanded="false">
+		Metadata search helps you improve response accuracy and relevancy. Add filters and then run a query to search with metadata.
+						
+		<MudSimpleTable Class="mud-elevation-0" Style="overflow-x: auto;">
+			<tbody>
+			<tr>
+				<td>
+					<MudTextField @bind-Value="_newFilterKey" Label="Key" Variant="Variant.Filled"></MudTextField>
+				</td>
+				<td>
+					<MudTextField @bind-Value="_newFilterValue" Label="Value" Variant="Variant.Filled"></MudTextField>
+				</td>
+				<td>
+					<button class="btn btn-primary" @onclick="AddFilter">Add Filter</button>
+				</td>
+			</tr>
+							
+			@foreach (var filter in _filters)
+			{
+				<tr>
+					<td>
+						<MudTextField @bind-Value="filter.Key" Label="Key" Variant="Variant.Filled"></MudTextField>
+					</td>
+					<td>
+						<MudTextField @bind-Value="filter.Value" Label="Value" Variant="Variant.Filled"></MudTextField>
+					</td>
+					<td>
+						<div>
+							<button class="btn btn-sm btn-info" @onclick="() => EditFilter(filter)">Edit</button>
+							<button class="btn btn-sm btn-danger" @onclick="() => DeleteFilter(filter)">Delete</button>
+						</div>
+					</td>
+				</tr>
+			}
+
+			</tbody>
+		</MudSimpleTable>
+	</MudExpansionPanel>
+</MudExpansionPanels>
+
+
+@code {
+
+	[Parameter] public EventCallback<AutoConstructedList<RetrievalFilter>> OnFilterUpdated { get; set; }
+
+	AutoConstructedList<RetrievalFilter> _kbFilters = new();
+
+    public class FilterItem
+    {
+	    public Guid Id { get; set; } = Guid.NewGuid();
+	    public string? Key { get; set; }
+	    public string? Value { get; set; }
+    }
+
+	private readonly List<RetrievedReference> _filters = [];
+    private string _newFilterKey = "";
+    private string _newFilterValue = "";
+
+    private async Task AddFilter()
+    {
+	    if (!string.IsNullOrWhiteSpace(_newFilterKey) && !string.IsNullOrEmpty(_newFilterValue))
+	    {
+			_filters.Add(new RetrievedReference { Key = _newFilterKey, Value = _newFilterValue });
+		    _newFilterKey = "";
+		    _newFilterValue = "";
+
+		    UpdateFilters();
+		    await OnFilterUpdated.InvokeAsync(_kbFilters);
+	    }
+    }
+
+    private async Task UpdateFilter(FilterItem filter)
+    {
+	    var index = _filters.FindIndex(t => t.Id == filter.Id);
+	    if (index != -1)
+	    {
+		    _filters[index] = filter;
+
+		    UpdateFilters();
+		    await OnFilterUpdated.InvokeAsync(_kbFilters);
+	    }
+    }
+
+    private async Task EditFilter(FilterItem filter)
+    {
+	    var key = await JsRuntime.InvokeAsync<string>("prompt", "Edit filter:", filter.Key);
+	    if (!string.IsNullOrWhiteSpace(key))
+	    {
+		    filter.Key = key;
+		    await UpdateFilter(filter);
+	    }
+
+	    var value = await JsRuntime.InvokeAsync<string>("prompt", "Edit filter:", filter.Value);
+	    if (!string.IsNullOrWhiteSpace(value))
+	    {
+		    filter.Value = value;
+		   await UpdateFilter(filter);
+	    }
+    }
+
+    private async Task DeleteFilter(FilterItem filter)
+    {
+	    _filters.Remove(filter);
+	    UpdateFilters();
+	    await OnFilterUpdated.InvokeAsync(_kbFilters);
+    }
+
+    private void UpdateFilters()
+    {
+		_kbFilters.Clear();
+
+	    foreach (var item in _filters)
+	    {
+		    var retrievalFilter = new RetrievalFilter 
+		    { 
+			    Equals = new FilterAttribute
+			    {
+				    Key = item.Key,
+				    Value = item.Value
+			    }
+		    };
+
+		    _kbFilters.Add(retrievalFilter);
+	    }
+    }
+}
+ *@

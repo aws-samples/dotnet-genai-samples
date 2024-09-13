@@ -1,11 +1,7 @@
-using Amazon;
 using Amazon.Bedrock;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgentRuntime;
 using Amazon.BedrockRuntime;
-using Amazon.GenAI;
-using Amazon.Runtime;
-using Amazon.Runtime.CredentialManagement;
 using Amazon.S3;
 using Markdig;
 using Markdown.ColorCode;
@@ -35,48 +31,6 @@ internal class Program
         builder.Services.AddSingleton(new AmazonBedrockAgentRuntimeClient());
         builder.Services.AddSingleton(new AmazonS3Client());
 
-        ////      var chain = new CredentialProfileStoreChain();
-        ////      if (chain.TryGetAWSCredentials("default", out var awsCredentials))
-        ////{
-        ////	builder.Services.AddSingleton(new AmazonBedrockClient(awsCredentials, new AmazonBedrockConfig()));
-        ////	builder.Services.AddSingleton(new AmazonBedrockRuntimeClient(awsCredentials, new AmazonBedrockRuntimeConfig()));
-        ////	builder.Services.AddSingleton(new AmazonBedrockAgentClient(awsCredentials, new AmazonBedrockAgentConfig()));
-        ////	builder.Services.AddSingleton(new AmazonBedrockAgentRuntimeClient(awsCredentials, new AmazonBedrockAgentRuntimeConfig()));
-        ////          builder.Services.AddSingleton(new AmazonS3Client(new AmazonS3Config()));
-        ////      }
-        ////      else
-        ////{
-        ////	builder.Services.AddSingleton(
-        ////	new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()
-        ////	{
-        ////	//	RegionEndpoint = regionEndpoint
-        ////	}));
-
-        ////	builder.Services.AddSingleton(
-        ////		new AmazonBedrockClient(new AmazonBedrockConfig()
-        ////		{
-        ////		//	RegionEndpoint = regionEndpoint
-        ////		}));
-
-        ////	builder.Services.AddSingleton(
-        ////		new AmazonS3Client(new AmazonS3Config
-        ////		{
-        ////			//RegionEndpoint = regionEndpoint
-        ////		}));
-
-        ////          builder.Services.AddSingleton(
-        ////              new AmazonBedrockAgentClient(awsCredentials, new AmazonBedrockAgentConfig()
-        ////              {
-        ////                  //RegionEndpoint = regionEndpoint
-        ////              }));
-
-        ////          builder.Services.AddSingleton(
-        ////              new AmazonBedrockAgentRuntimeClient(new AmazonBedrockAgentRuntimeConfig
-        ////              {
-        ////                 // RegionEndpoint = regionEndpoint
-        ////              }));
-        //      }
-
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
@@ -102,10 +56,4 @@ internal class Program
 
 		app.Run();
 	}
-}
-
-public class AwsEnvironment
-{
-    public string? Account { get; set; }
-    public string? Region { get; set; }
 }

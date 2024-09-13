@@ -1,41 +1,37 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Octank Hotel App</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
+	<div class="container-fluid">
+		<a class="navbar-brand" href="">Octank Hotel Chat App</a>
+		<button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+	</div>
 </div>
 
 <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-
-       
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Bedrock">
-                <span class="oi oi-chat" aria-hidden="true"></span> Chat Playground
-            </NavLink>
-        </div>
-       
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="knowledgeBase">
-                <span class="oi oi-document" aria-hidden="true"></span> Knowledgebase Playground
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-        <img src="AWSLogo.png" class="img-fluid" />
-        </div>
-    </nav>
+	<nav class="flex-column">
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="Bedrock">
+				<span class="oi oi-chat" aria-hidden="true"></span> Chat Playground
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="knowledgeBase">
+				<span class="oi oi-document" aria-hidden="true"></span> Knowledgebase Playground
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<img src="AWSLogo.png" class="img-fluid" />
+		</div>
+	</nav>
 </div>
 
 @code {
-    private bool _collapseNavMenu = true;
+	private bool _collapseNavMenu = true;
 
-    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+	private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
 
-    private void ToggleNavMenu()
-    {
-        _collapseNavMenu = !_collapseNavMenu;
-    }
+	private void ToggleNavMenu()
+	{
+		_collapseNavMenu = !_collapseNavMenu;
+	}
 }

@@ -22,7 +22,7 @@
 	<MudCard>
 		<MudCardContent>
 			<div>
-				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
+				<MudText Typo="Typo.h4">Contact Center</MudText>
 				<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
 			</div>
 			<br />
@@ -47,8 +47,7 @@
 
 @code {
 
-	private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-
+	private const string TextModelId = "anthropic.claude-3-sonnet-20240229-v1:0";
 	private const string BucketName = "dotnet-rag-datasource";
 	private const string DocumentPrefix = "fictitious";
 	private const string MetadataExtension = ".json";

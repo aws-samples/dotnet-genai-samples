@@ -20,7 +20,7 @@
 	<MudCard>
 		<MudCardContent>
 			<div>
-				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
+				<MudText Typo="Typo.h4">Contact Center</MudText>
 			</div>
 			<br />
 			<MudTimeline Reverse="true">
@@ -44,7 +44,7 @@
 
 @code {
 
-	private readonly string? _textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+	private readonly string? _textModelId = "anthropic.claude-3-sonnet-20240229-v1:0";
 	private readonly ChatMessageHistory _chatMessageHistory = new();
 	private MudTextField<string>? _promptField;
 	Status _status = Status.Default;

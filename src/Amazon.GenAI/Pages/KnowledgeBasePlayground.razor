@@ -19,212 +19,192 @@
 
 
 <MudStack Style="width: 100%">
-    <MudCard>
-        <MudCardContent>
-            <div>
-                <MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
-                <KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
-            </div>
-            <br />
-            <MudTimeline Reverse="true">
-                @foreach (var item in _chatMessageHistory.Messages)
-                {
-                    var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
-                    <MudTimelineItem>
-                        <MudField Label="@label" Class="white-space-pre-line">
-                            @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
-                        </MudField>
-                    </MudTimelineItem>
-                }
-                <MudTimelineItem>
-                    <MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
-                </MudTimelineItem>
-            </MudTimeline>
-        </MudCardContent>
-        <Progress Status="_status" OnClickCallback="Submit"></Progress>
-    </MudCard>
+	<MudCard>
+		<MudCardContent>
+			<div>
+				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
+				<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
+			</div>
+			<br />
+			<MudTimeline Reverse="true">
+				@foreach (var item in _chatMessageHistory.Messages)
+				{
+					var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
+					<MudTimelineItem>
+						<MudField Label="@label" Class="white-space-pre-line">
+							@((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
+						</MudField>
+					</MudTimelineItem>
+				}
+				<MudTimelineItem>
+					<MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
+				</MudTimelineItem>
+			</MudTimeline>
+		</MudCardContent>
+		<Progress Status="_status" OnClickCallback="Submit"></Progress>
+	</MudCard>
 </MudStack>
 
 @code {
 
-    private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+	private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
 
-    private const string BucketName = "dotnet-rag-datasource";
-    private const string DocumentPrefix = "Fictitious Hotels";
-    private const string MetadataExtension = ".json";
+	private const string BucketName = "dotnet-rag-datasource";
+	private const string DocumentPrefix = "fictitious";
+	private const string MetadataExtension = ".json";
 
-    private readonly ChatMessageHistory _chatMessageHistory = new();
-    private MudTextField<string>? _promptField;
-    Status _status = Status.Default;
+	private readonly ChatMessageHistory _chatMessageHistory = new();
+	private MudTextField<string>? _promptField;
+	Status _status = Status.Default;
 
-    private KnowledgeBaseSummary? _knowledgeBase;
-    private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
+	private KnowledgeBaseSummary? _knowledgeBase;
+	private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
 
-    AutoConstructedList<RetrievalFilter>? _filters;
+	AutoConstructedList<RetrievalFilter>? _filters;
 
-    private HashSet<string> _countries = new();
-    private HashSet<string> _cities = new();
+	private HashSet<string> _countries = new();
+	private HashSet<string> _cities = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var s3Wrapper = new S3Wrapper(AmazonS3Client);
-            var attributes = await s3Wrapper.GetMetaDataFromS3(BucketName, DocumentPrefix, MetadataExtension);
-            foreach (var item in attributes)
-            {
-                foreach (var dict in item)
-                {
-                    if (dict.Key == "country") _countries.Add(dict.Value);
-                    if (dict.Key == "city") _cities.Add(dict.Value);
-                }
-            }
-            _countries = _countries.OrderBy(x => x).ToHashSet();
-            _cities = _cities.OrderBy(x => x).ToHashSet();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
+	protected override async Task OnInitializedAsync()
+	{
+		await UpdateDropDowns();
 
-        var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
+		var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
 
-        _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
-            .OrderBy(x => x.UpdatedAt)
-            .Where(x => x.Status.Equals("Active"))
-            .ToList();
+		_knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+			.OrderBy(x => x.UpdatedAt)
+			.Where(x => x.Status.Equals("Active"))
+			.ToList();
 
-        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith("dotnet-genai"));
+		_knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
 
-        await base.OnInitializedAsync();
-        StateHasChanged();
-    }
+		await base.OnInitializedAsync();
+		StateHasChanged();
+	}
 
-    protected Task Submit()
-    {
-        return Task.CompletedTask;
-    }
+	protected Task Submit()
+	{
+		return Task.CompletedTask;
+	}
 
-    // This method is called when the user enters a new prompt or question
-    private async Task OnPromptChanged(string question)
-    {
-        // Check if the question is null or empty, and return if it is
-        if (string.IsNullOrEmpty(question))
-            return;
+	// This method is called when the user enters a new prompt or question
+	private async Task OnPromptChanged(string question)
+	{
+		// Check if the question is null or empty, and return if it is
+		if (string.IsNullOrEmpty(question))
+			return;
 
-        // Set the status to "Thinking" to indicate that the application is processing the question
-        _status = Status.Thinking;
-        // Trigger a UI update to reflect the new status
-        StateHasChanged();
+		// Set the status to "Thinking" to indicate that the application is processing the question
+		_status = Status.Thinking;
+		// Trigger a UI update to reflect the new status
+		StateHasChanged();
 
-        // Add the user's question to the chat message history
-        await _chatMessageHistory.AddUserMessage(question);
+		// Add the user's question to the chat message history
+		await _chatMessageHistory.AddUserMessage(question);
 
-        // Create a new RetrieveAndGenerateRequest object with the user's question as input
-        // var request = new RetrieveAndGenerateRequest
-        //     {
-        //         Input = new RetrieveAndGenerateInput { Text = question },
-        //         RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
-        //         {
-        //             // Set the type of the request to "KNOWLEDGE_BASE"
-        //             Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-        //             KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-        //             {
-        //                 // Set the knowledge base ID to the ID of the selected knowledge base
-        //                 KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-        //                 // Set the model ARN to the ID of the text model
-        //                 ModelArn = TextModelId,
-        //                 RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-        //                 {
-        //                     VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-        //                     {
-        //                         // Set the search type to "HYBRID"
-        //                         OverrideSearchType = "HYBRID",
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     };
+		try
+		{
+			var request = new RetrieveAndGenerateRequest
+				{
+					Input = new RetrieveAndGenerateInput { Text = question },
+					RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+					{
+						Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+						KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+						{
+							KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+							ModelArn = TextModelId,
+							RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+							{
+								VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+								{
+									OverrideSearchType = "HYBRID"
+								}
+							}
+						}
+					}
+				};
 
+			if (_filters is not null)
+			{
+				request
+					.RetrieveAndGenerateConfiguration
+					.KnowledgeBaseConfiguration
+					.RetrievalConfiguration
+					.VectorSearchConfiguration
+					.Filter = new RetrievalFilter { OrAll = _filters };
+			}
 
-        var request = new RetrieveAndGenerateRequest
-        {
-            Input = new RetrieveAndGenerateInput { Text = question },
-            RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
-            {
-                Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-                KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-                {
-                    KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-                    ModelArn = TextModelId,
-                    // RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-                    // {
-                    //     VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-                    //     {
-                    //         OverrideSearchType = "HYBRID",
-                    //         // Filter = new RetrievalFilter
-                    //         // {
-                    //         //     Equals = new FilterAttribute
-                    //         //     {
-                    //         //         Key = "year",
-                    //         //         Value = new Document(2020)
-                    //         //     }
-                    //         // }
-                    //     }
-                    // }
-                }
-            }
-        };
+			var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
-        if (_filters is not null)
-        {
-            request
-                .RetrieveAndGenerateConfiguration
-                .KnowledgeBaseConfiguration
-                .RetrievalConfiguration
-                .VectorSearchConfiguration
-                .Filter = new RetrievalFilter { AndAll = _filters };
-        }
+			await _chatMessageHistory.AddAiMessage(result.Output.Text!);
 
-        // Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
-        var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
+			var uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
+			var uniqueSets = new Dictionary<string, Runtime.Documents.Document>();
 
-        // Add the response from the service to the chat message history
-        await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+			foreach (var retrievedReference in uniqueSet)
+			{
+				foreach (var r in retrievedReference.Metadata)
+				{
+					uniqueSets.Add(r.Key, r.Value);
+				}
+			}
 
-        var uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
-        var uniqueSets = new Dictionary<string, Runtime.Documents.Document>();
+			await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+		}
+		catch (AmazonBedrockAgentRuntimeException ex)
+		{
+			Console.WriteLine($"AWS Error: {ex.Message}");
+			throw;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"General Error: {ex.Message}");
+			throw;
+		}
 
-        foreach (var retrievedReference in uniqueSet)
-        {
-            foreach (var r in retrievedReference.Metadata)
-            {
-                uniqueSets.Add(r.Key, r.Value);
-            }
-        }
+		// Invoke the following code on the UI thread
+		await InvokeAsync(() =>
+		{
+			// Clear the prompt field
+			_promptField?.SetText("");
+			// Set the status back to "Default"
+			_status = Status.Default;
+			// Scroll to the prompt field in the UI
+			JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
 
-        // Add the response from the service to the chat message history
-        await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+			// Trigger a UI update to reflect the changes
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
 
-        // Invoke the following code on the UI thread
-        await InvokeAsync(() =>
-        {
-            // Clear the prompt field
-            _promptField?.SetText("");
-            // Set the status back to "Default"
-            _status = Status.Default;
-            // Scroll to the prompt field in the UI
-            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+	private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
+	{
+		_filters = filters!.Count == 0 ? null : filters;
+		return Task.CompletedTask;
+	}
 
-            // Trigger a UI update to reflect the changes
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
-
-    private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
-    {
-        _filters = filters.Count == 0 ? null : filters;
-        return Task.CompletedTask;
-    }
+	private async Task UpdateDropDowns()
+	{
+		try
+		{
+			var s3Wrapper = new S3Wrapper(AmazonS3Client);
+			var attributes = await s3Wrapper.GetMetaDataFromS3(BucketName, DocumentPrefix, MetadataExtension);
+			foreach (var item in attributes)
+			{
+				foreach (var dict in item)
+				{
+					if (dict.Key.Equals("country", StringComparison.OrdinalIgnoreCase)) _countries.Add(dict.Value);
+					if (dict.Key.Equals("city", StringComparison.OrdinalIgnoreCase)) _cities.Add(dict.Value);
+				}
+			}
+			_countries = _countries.OrderBy(x => x).ToHashSet();
+			_cities = _cities.OrderBy(x => x).ToHashSet();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"An error occurred: {ex.Message}");
+		}
+	}
 }

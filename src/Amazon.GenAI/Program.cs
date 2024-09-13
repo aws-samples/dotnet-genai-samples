@@ -29,11 +29,11 @@ internal class Program
 
 		builder.Services.AddSingleton(pipeline);
 
-        builder.Services.AddSingleton(new AmazonBedrockClient(new AmazonBedrockConfig()));
-        builder.Services.AddSingleton(new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig()));
-        builder.Services.AddSingleton(new AmazonBedrockAgentClient(new AmazonBedrockAgentConfig()));
-        builder.Services.AddSingleton(new AmazonBedrockAgentRuntimeClient(new AmazonBedrockAgentRuntimeConfig()));
-        builder.Services.AddSingleton(new AmazonS3Client(new AmazonS3Config()));
+        builder.Services.AddSingleton(new AmazonBedrockClient());
+        builder.Services.AddSingleton(new AmazonBedrockRuntimeClient());
+        builder.Services.AddSingleton(new AmazonBedrockAgentClient());
+        builder.Services.AddSingleton(new AmazonBedrockAgentRuntimeClient());
+        builder.Services.AddSingleton(new AmazonS3Client());
 
         ////      var chain = new CredentialProfileStoreChain();
         ////      if (chain.TryGetAWSCredentials("default", out var awsCredentials))

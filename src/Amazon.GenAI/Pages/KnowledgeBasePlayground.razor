@@ -121,30 +121,60 @@
         await _chatMessageHistory.AddUserMessage(question);
 
         // Create a new RetrieveAndGenerateRequest object with the user's question as input
+        // var request = new RetrieveAndGenerateRequest
+        //     {
+        //         Input = new RetrieveAndGenerateInput { Text = question },
+        //         RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+        //         {
+        //             // Set the type of the request to "KNOWLEDGE_BASE"
+        //             Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+        //             KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+        //             {
+        //                 // Set the knowledge base ID to the ID of the selected knowledge base
+        //                 KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+        //                 // Set the model ARN to the ID of the text model
+        //                 ModelArn = TextModelId,
+        //                 RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+        //                 {
+        //                     VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+        //                     {
+        //                         // Set the search type to "HYBRID"
+        //                         OverrideSearchType = "HYBRID",
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     };
+
+
         var request = new RetrieveAndGenerateRequest
+        {
+            Input = new RetrieveAndGenerateInput { Text = question },
+            RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
             {
-                Input = new RetrieveAndGenerateInput { Text = question },
-                RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+                Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+                KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
                 {
-                    // Set the type of the request to "KNOWLEDGE_BASE"
-                    Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-                    KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-                    {
-                        // Set the knowledge base ID to the ID of the selected knowledge base
-                        KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-                        // Set the model ARN to the ID of the text model
-                        ModelArn = TextModelId,
-                        RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-                        {
-                            VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-                            {
-                                // Set the search type to "HYBRID"
-                                OverrideSearchType = "HYBRID",
-                            }
-                        }
-                    }
+                    KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+                    ModelArn = TextModelId,
+                    // RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+                    // {
+                    //     VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+                    //     {
+                    //         OverrideSearchType = "HYBRID",
+                    //         // Filter = new RetrievalFilter
+                    //         // {
+                    //         //     Equals = new FilterAttribute
+                    //         //     {
+                    //         //         Key = "year",
+                    //         //         Value = new Document(2020)
+                    //         //     }
+                    //         // }
+                    //     }
+                    // }
                 }
-            };
+            }
+        };
 
         if (_filters is not null)
         {
@@ -155,7 +185,6 @@
                 .VectorSearchConfiguration
                 .Filter = new RetrievalFilter { AndAll = _filters };
         }
-
 
         // Send the RetrieveAndGenerateRequest to the Amazon Bedrock service and get the response
         var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
@@ -195,7 +224,7 @@
 
     private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
     {
-        _filters = filters!.Count == 0 ? null : filters;
+        _filters = filters.Count == 0 ? null : filters;
         return Task.CompletedTask;
     }
 }

@@ -7,10 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI", "Amazon.GenA
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.Cdk", "Amazon.GenAI.Cdk\Amazon.GenAI.Cdk.csproj", "{F9DD70C3-5C87-4B31-BA95-9D54CCC4C9C8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shareholder-Letters", "Shareholder-Letters", "{9A916789-3720-47CD-BFF5-E50CFD32DD01}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ShareholderLetters", "ShareholderLetters", "{932EABA6-97B9-4EF5-992C-CEFB3768D013}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -15,254 +15,169 @@
 @inject IJSRuntime JsRuntime
 @inject AmazonBedrockAgentClient AgentClient;
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
-@inject AmazonS3Client AmazonS3Client;
-
 
 <style>
-    body, html {
-        height: 100%;
-    }
+	.chat-container {
+		height: calc(100% - 56px);
+		overflow-y: auto;
+	}
 
-    .chat-container {
-        height: calc(100% - 56px);
-        overflow-y: auto;
-    }
+	.chat-messages {
+		min-height: 100%;
+		padding-bottom: 60px;
+	}
 
-    .chat-messages {
-        min-height: 100%;
-        padding-bottom: 60px;
-    }
-
-    .input-group {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        padding: 10px;
-        background-color: #F8F9FA;
-    }
+	.input-group {
+		position: fixed;
+		bottom: 0;
+		width: 70%;
+		padding: 10px;
+	}
 </style>
 
-
-
 <div class="container-fluid h-100 d-flex flex-column">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mt-3 mb-3">Octank Contact Center</h1>
-        </div>
-    </div>
-    <div class="row flex-grow-1">
-        <div class="col-12 chat-container">
-            <div class="chat-messages" id="chatMessages">
-                @foreach (var item in _chatMessageHistory.Messages)
-                {
-                    modCounter++;
+	<div class="row">
+		<div class="col-12">
+			<h1 class="mt-3 mb-3">Octank Contact Center</h1>
+		</div>
+	</div>
+	<div class="row flex-grow-1">
+		<div class="col-12 chat-container">
+			<div class="chat-messages" id="chatMessages">
+				@foreach (var item in _chatMessageHistory.Messages)
+				{
+					modCounter++;
 
+					var label = item.Role == MessageRole.Human ? "Human " : "Assistant";
+					<MudField Label="@label">
+						@((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
+					</MudField>
 
-                    var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
+					if (modCounter % 2 == 0)
+					{
+						<br />
+						<br />
+					}
+				}
 
-                    <MudField Label="@label" Class="white-space-pre-line">
-                        @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
-                    </MudField>
-                    if (modCounter % 2 == 0)
-                    {
-                        <br />
-                        <br />
-                    }
-
-                }
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-12">
-            <div class="input-group">
-                <form method="post" @onsubmit="OnPromptChanged">
-                    <input type="text" class="form-control" placeholder="Type your message..." id="userInput" @bind-value=@_promptField />
-                    @*    <MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human - Message Octank Hotel App"></MudTextField> *@
-                    <button class="btn btn-primary" type="submit">Send</button>
-                </form>
-            </div>
-        </div>
-    </div>
+				<Progress Status="_status" OnClickCallback="OnPromptChanged"></Progress>
+			</div>
+		</div>
+	</div>
+	<form id="chat" method="post" @onsubmit="OnPromptChanged">
+		<div class="row">
+			<div class="col-7">
+				<div class="input-group">
+					<input type="text" class="form-control" placeholder="Type your message..." @bind-value=@_promptField />
+					<button class="btn btn-primary" type="submit">Send</button>
+				</div>
+			</div>
+		</div>
+	</form>
 </div>
-
-
-
-
-
-
-
-@* </MudCardContent> *@
-<Progress Status="_status" OnClickCallback="Submit"></Progress>
 
 
 @code {
 
-    private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-    private int modCounter = 0;
-    private const string BucketName = "dotnet-rag-datasource";
-    private const string DocumentPrefix = "knowledge";
-    private const string MetadataExtension = ".json";
+	private int modCounter = 0;
 
-    private readonly ChatMessageHistory _chatMessageHistory = new();
-    private string _promptField;
-    Status _status = Status.Default;
+	private const string TextModelId = "anthropic.claude-3-sonnet-20240229-v1:0";
+	private const string BucketName = "dotnet-rag-datasource";
+	private const string DocumentPrefix = "fict";
+	private const string MetadataExtension = ".json";
 
-    private KnowledgeBaseSummary? _knowledgeBase;
-    private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
+	private readonly ChatMessageHistory _chatMessageHistory = new();
+	public required string _promptField;
+	Status _status = Status.Default;
 
-    AutoConstructedList<RetrievalFilter>? _filters;
+	private KnowledgeBaseSummary? _knowledgeBase;
+	private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
 
-    private HashSet<string> _countries = new();
-    private HashSet<string> _cities = new();
+	private HashSet<string> _countries = new();
+	private HashSet<string> _cities = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        await UpdateDropDowns();
+	protected override async Task OnInitializedAsync()
+	{
+		var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
 
-        var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
+		_knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+			.OrderBy(x => x.UpdatedAt)
+			.Where(x => x.Status.Equals("Active"))
+			.ToList();
 
-        _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
-            .OrderBy(x => x.UpdatedAt)
-            .Where(x => x.Status.Equals("Active"))
-            .ToList();
+		_knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
 
-        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
+		await base.OnInitializedAsync();
+		StateHasChanged();
+	}
 
-        await base.OnInitializedAsync();
-        StateHasChanged();
-    }
+	// This method is called when the user enters a new prompt or question
+	private async Task OnPromptChanged()
+	{
+		string question = _promptField;
+		// Check if the question is null or empty, and return if it is
+		if (string.IsNullOrEmpty(question))
+			return;
 
-    protected void OnSubmit()
-    {
-        string question = _promptField;
+		// Set the status to "Thinking" to indicate that the application is processing the question
+		_status = Status.Thinking;
+		// Trigger a UI update to reflect the new status
+		StateHasChanged();
 
-    }
+		// Add the user's question to the chat message history
+		await _chatMessageHistory.AddUserMessage(question);
 
-    protected Task Submit()
-    {
-        return Task.CompletedTask;
-    }
+		try
+		{
+			var request = new RetrieveAndGenerateRequest
+				{
+					Input = new RetrieveAndGenerateInput { Text = question },
+					RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+					{
+						Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+						KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+						{
+							KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+							ModelArn = TextModelId,
+							RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
+							{
+								VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
+								{
+									OverrideSearchType = "HYBRID"
+								}
+							}
+						}
+					}
+				};
 
-    // This method is called when the user enters a new prompt or question
-    private async Task OnPromptChanged()
-    {
-        string question = _promptField;
-        // Check if the question is null or empty, and return if it is
-        if (string.IsNullOrEmpty(question))
-            return;
+			var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
-        // Set the status to "Thinking" to indicate that the application is processing the question
-        _status = Status.Thinking;
-        // Trigger a UI update to reflect the new status
-        StateHasChanged();
+			await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+		}
+		catch (AmazonBedrockAgentRuntimeException ex)
+		{
+			Console.WriteLine($"AWS Error: {ex.Message}");
+			throw;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"General Error: {ex.Message}");
+			throw;
+		}
 
-        // Add the user's question to the chat message history
-        await _chatMessageHistory.AddUserMessage(question);
+		// Invoke the following code on the UI thread
+		await InvokeAsync(() =>
+		{
+			// Clear the prompt field
+			_promptField = "";
+			// Set the status back to "Default"
+			_status = Status.Default;
+			// Scroll to the prompt field in the UI
+			JsRuntime.InvokeVoidAsync("scrollToElement", "chat");
 
-        try
-        {
-            var request = new RetrieveAndGenerateRequest
-                {
-                    Input = new RetrieveAndGenerateInput { Text = question },
-                    RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
-                    {
-                        Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-                        KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-                        {
-                            KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-                            ModelArn = TextModelId,
-                            RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-                            {
-                                VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-                                {
-                                    OverrideSearchType = "HYBRID"
-                                }
-                            }
-                        }
-                    }
-                };
-
-            if (_filters is not null)
-            {
-                request
-                    .RetrieveAndGenerateConfiguration
-                    .KnowledgeBaseConfiguration
-                    .RetrievalConfiguration
-                    .VectorSearchConfiguration
-                    .Filter = new RetrievalFilter { OrAll = _filters };
-            }
-
-            var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
-
-            // await _chatMessageHistory.AddAiMessage(result.Output.Text!);
-
-            // var uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
-            // var uniqueSets = new Dictionary<string, Runtime.Documents.Document>();
-
-            // foreach (var retrievedReference in uniqueSet)
-            // {
-            //     foreach (var r in retrievedReference.Metadata)
-            //     {
-            //         uniqueSets.Add(r.Key, r.Value);
-            //     }
-            // }
-
-            await _chatMessageHistory.AddAiMessage(result.Output.Text!);
-        }
-        catch (AmazonBedrockAgentRuntimeException ex)
-        {
-            Console.WriteLine($"AWS Error: {ex.Message}");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"General Error: {ex.Message}");
-            throw;
-        }
-
-        // Invoke the following code on the UI thread
-        await InvokeAsync(() =>
-        {
-            // Clear the prompt field
-            _promptField = "";
-            // Set the status back to "Default"
-            _status = Status.Default;
-            // Scroll to the prompt field in the UI
-            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
-
-            // Trigger a UI update to reflect the changes
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
-
-    private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)
-    {
-        _filters = filters!.Count == 0 ? null : filters;
-        return Task.CompletedTask;
-    }
-
-    private async Task UpdateDropDowns()
-    {
-        try
-        {
-            var s3Wrapper = new S3Wrapper(AmazonS3Client);
-            var attributes = await s3Wrapper.GetMetaDataFromS3(BucketName, DocumentPrefix, MetadataExtension);
-            foreach (var item in attributes)
-            {
-                foreach (var dict in item)
-                {
-                    if (dict.Key.Equals("country", StringComparison.OrdinalIgnoreCase)) _countries.Add(dict.Value);
-                    if (dict.Key.Equals("city", StringComparison.OrdinalIgnoreCase)) _cities.Add(dict.Value);
-                }
-            }
-            _countries = _countries.OrderBy(x => x).ToHashSet();
-            _cities = _cities.OrderBy(x => x).ToHashSet();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
-    }
+			// Trigger a UI update to reflect the changes
+			StateHasChanged();
+			return Task.CompletedTask;
+		});
+	}
 }

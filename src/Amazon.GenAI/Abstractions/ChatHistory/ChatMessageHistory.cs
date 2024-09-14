@@ -23,6 +23,7 @@ public class ChatMessageHistory : BaseChatMessageHistory
     {
         if (IsMessageAccepted(message))
         {
+            message = message with { DateTime = DateTime.Now };
             _messages.Add(message);
         }
 

@@ -9,6 +9,7 @@
 public readonly record struct Message(
     string Content,
     MessageRole Role,
+    DateTime DateTime = default,
     string? FunctionName = null)
 {
     /// <summary>
@@ -67,4 +68,6 @@ public readonly record struct Message(
         }
         return $"{Role}: {Content}";
     }
+
+    public DateTime DateTime { get; init; }
 }

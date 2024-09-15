@@ -1,11 +1,10 @@
-﻿@page "/knowledgeBaseFilter"
+﻿@page "/knowledgebase-with-filters"
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
 @using Amazon.GenAI.Abstractions
 @using Amazon.GenAI.Abstractions.ChatHistory
-@using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
 @using Amazon.Runtime.Internal
@@ -17,44 +16,33 @@
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
 @inject AmazonS3Client AmazonS3Client;
 
+<div class="container-fluid h-100 d-flex flex-column">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mt-3 mb-3">Octank Contact Center</h1>
+        </div>
+    </div>
 
-<MudStack Style="width: 100%">
-	<MudCard>
-		<MudCardContent>
-			<div>
-				<MudText Typo="Typo.h4">AWS Summit Bedrock</MudText>
-				<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
-			</div>
-			<br />
-			<MudTimeline Reverse="true">
-				@foreach (var item in _chatMessageHistory.Messages)
-				{
-					var label = item.Role == MessageRole.Human ? "Human" : "Assistant";
-					<MudTimelineItem>
-						<MudField Label="@label" Class="white-space-pre-line">
-							@((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
-						</MudField>
-					</MudTimelineItem>
-				}
-				<MudTimelineItem>
-					<MudTextField id="PromptId" @ref="_promptField" T="string" ValueChanged="@OnPromptChanged" Label="Human"></MudTextField>
-				</MudTimelineItem>
-			</MudTimeline>
-		</MudCardContent>
-		<Progress Status="_status" OnClickCallback="Submit"></Progress>
-	</MudCard>
-</MudStack>
+    <KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
+    <MessageHistory History="_chatMessageHistory"></MessageHistory>
+</div>
+
+<div class="input-wrapper">
+	<Prompt Model="_chatMessageHistory"
+			OnPromptChanged="PromptChanged"
+			Status="_status">
+	</Prompt>
+</div>
 
 @code {
 
 	private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
 
 	private const string BucketName = "dotnet-rag-datasource";
-	private const string DocumentPrefix = "knowledge";
+	private const string DocumentPrefix = "fictitious";
 	private const string MetadataExtension = ".json";
 
 	private readonly ChatMessageHistory _chatMessageHistory = new();
-	private MudTextField<string>? _promptField;
 	Status _status = Status.Default;
 
 	private KnowledgeBaseSummary? _knowledgeBase;
@@ -82,31 +70,20 @@
 		StateHasChanged();
 	}
 
-	protected Task Submit()
+	private async Task PromptChanged(string prompt)
 	{
-		return Task.CompletedTask;
-	}
+        if (string.IsNullOrEmpty(prompt))
+            return;
 
-	// This method is called when the user enters a new prompt or question
-	private async Task OnPromptChanged(string question)
-	{
-		// Check if the question is null or empty, and return if it is
-		if (string.IsNullOrEmpty(question))
-			return;
-
-		// Set the status to "Thinking" to indicate that the application is processing the question
-		_status = Status.Thinking;
-		// Trigger a UI update to reflect the new status
-		StateHasChanged();
-
-		// Add the user's question to the chat message history
-		await _chatMessageHistory.AddUserMessage(question);
+        _status = Status.Thinking;
+        StateHasChanged();
+        await _chatMessageHistory.AddUserMessage(prompt);
 
 		try
 		{
 			var request = new RetrieveAndGenerateRequest
 				{
-					Input = new RetrieveAndGenerateInput { Text = question },
+					Input = new RetrieveAndGenerateInput { Text = prompt },
 					RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
 					{
 						Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
@@ -138,19 +115,6 @@
 			var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
 			await _chatMessageHistory.AddAiMessage(result.Output.Text!);
-
-			var uniqueSet = new HashSet<RetrievedReference>(result.Citations[0].RetrievedReferences);
-			var uniqueSets = new Dictionary<string, Runtime.Documents.Document>();
-
-			foreach (var retrievedReference in uniqueSet)
-			{
-				foreach (var r in retrievedReference.Metadata)
-				{
-					uniqueSets.Add(r.Key, r.Value);
-				}
-			}
-
-			await _chatMessageHistory.AddAiMessage(result.Output.Text!);
 		}
 		catch (AmazonBedrockAgentRuntimeException ex)
 		{
@@ -163,20 +127,13 @@
 			throw;
 		}
 
-		// Invoke the following code on the UI thread
-		await InvokeAsync(() =>
-		{
-			// Clear the prompt field
-			_promptField?.SetText("");
-			// Set the status back to "Default"
-			_status = Status.Default;
-			// Scroll to the prompt field in the UI
-			JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
-
-			// Trigger a UI update to reflect the changes
-			StateHasChanged();
-			return Task.CompletedTask;
-		});
+        await InvokeAsync(() =>
+        {
+            _status = Status.Default;
+            JsRuntime.InvokeVoidAsync("scrollToElement", "chat");
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
 	}
 
 	private Task OnFilterUpdated(AutoConstructedList<RetrievalFilter>? filters)

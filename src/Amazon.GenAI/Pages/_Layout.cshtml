@@ -14,9 +14,16 @@
     <link href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" rel="stylesheet">
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="css/site.css" rel="stylesheet" />
-    
+
     <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         .chat-container {
+            position: relative;
             margin: 20px auto;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -77,6 +84,28 @@
             position: fixed;
             width: 70%;
             bottom: 20px;
+            left: inherit;
+            transform: translateX(20px);
+        }
+
+         .fixed-bottom-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            padding-bottom: 20px;
+        }
+
+        .fixed-bottom {
+            width: 200px;
+            height: 50px;
+            background-color: #f0f0f0;
+            border: 1px solid #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .mud-input-control > .mud-input-control-input-container {

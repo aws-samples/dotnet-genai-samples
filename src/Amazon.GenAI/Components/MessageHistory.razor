@@ -1,0 +1,53 @@
+﻿@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Abstractions.Message
+@using Markdig
+@inject MarkdownPipeline Pipeline
+
+<div class="row flex-grow-1">
+    <div class="col-12 chat-container">
+        <div class="chat-messages" id="chatMessages">
+            @if (History!.Messages.Count > 0)
+            {
+                @foreach (var item in History.Messages)
+                {
+                    var label = item.Role == MessageRole.Human ? "human" : "bot";
+
+                    <div class="message-wrapper @label-wrapper">
+                        <div class="timestamp">
+                            @if (item.Role == MessageRole.Human)
+                            {
+                                <span>
+                                    <strong>Human  -  </strong>
+                                </span>
+                            }
+                            @item.DateTime.ToLongTimeString()
+                            @if (item.Role != MessageRole.Human)
+                            {
+                                <span>
+                                    <strong>  -  Virtual Assistant</strong>
+                                </span>
+                            }
+                        </div>
+                        <div class="message @label-message">
+                            @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <h2>
+                    <i>
+                        @DefaultText
+                    </i>
+                </h2>
+            }
+        </div>
+    </div>
+    <div id="chat"></div>
+</div>
+
+@code {
+    [Parameter] public ChatMessageHistory? History { get; set; } = new();
+    [Parameter] public string? DefaultText { get; set; } = "Hello, how can I help you?";
+}

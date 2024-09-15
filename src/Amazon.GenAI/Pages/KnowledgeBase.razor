@@ -1,74 +1,31 @@
-﻿@page "/knowledgeBase"
+﻿@page "/knowledgebase"
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
 @using Amazon.GenAI.Abstractions.ChatHistory
-@using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
-@using Markdig
-@inject MarkdownPipeline Pipeline
 @inject IJSRuntime JsRuntime
 @inject AmazonBedrockAgentClient AgentClient;
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
 
 
-
-<div class="container-fluid h-100 d-flex flex-column">
+<div class="container-fluid h-100 d-flex flex-column" style="position:relative !important">
     <div class="row">
         <div class="col-12">
             <h1 class="mt-3 mb-3">Octank Contact Center</h1>
         </div>
+        <MessageHistory History="_chatMessageHistory"></MessageHistory>
     </div>
-
-    <div class="row flex-grow-1">
-        <div class="col-12 chat-container">
-            <div class="chat-messages" id="chatMessages">
-                @if (_chatMessageHistory.Messages.Count > 0)
-                {
-                    @foreach (var item in _chatMessageHistory.Messages)
-                    {
-                        var label = item.Role == MessageRole.Human ? "human" : "bot";
-
-                        <div class="message-wrapper @label-wrapper">
-                            <div class="timestamp">@item.DateTime.ToLongTimeString()</div>
-                            <div class="message @label-message">
-                                @((MarkupString)Markdown.ToHtml(item.Content, Pipeline))
-                            </div>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <h2>
-                        <i>
-                            Hello, how can I help you?
-                        </i>
-                    </h2>
-                }
-            </div>
-        </div>
-        <div id="chat"></div>
-    </div>
-
-    <EditForm Model="@_chatMessageHistory" OnSubmit="OnPromptChanged">
-        <div class="row flex-grow-1">
-            <div class="col-7">
-                <div class="input-wrapper">
-                    <MudPaper Elevation="5" Class="mb-2">
-                        <MudToolBar>
-                            <MudIconButton Icon="@Icons.Material.Outlined.Search" Color="Color.Inherit" Class="mr-5" />
-                            <MudTextField T="string" @ref="_promptField" Label="Type your message..." Variant="Variant.Text" Margin="Margin.Dense"></MudTextField>
-                            <Progress Status="_status" OnClickCallback="OnPromptChanged"></Progress>
-                        </MudToolBar>
-                    </MudPaper>
-                </div>
-            </div>
-        </div>
-    </EditForm>
 </div>
 
+<div class="input-wrapper">
+    <Prompt Model="_chatMessageHistory"
+            OnPromptChanged="PromptChanged"
+            Status="_status">
+    </Prompt>
+</div>
 
 @code {
 
@@ -76,7 +33,6 @@
     private const string DocumentPrefix = "fictitious";
 
     private readonly ChatMessageHistory _chatMessageHistory = new();
-    private MudTextField<string>? _promptField;
     Status _status = Status.Default;
 
     private KnowledgeBaseSummary? _knowledgeBase;
@@ -97,26 +53,20 @@
         StateHasChanged();
     }
 
-    // This method is called when the user enters a new prompt or question
-    private async Task OnPromptChanged()
+    private async Task PromptChanged(string prompt)
     {
-        // Check if the question is null or empty, and return if it is
-        if (string.IsNullOrEmpty(_promptField?.Value))
+        if (string.IsNullOrEmpty(prompt))
             return;
 
-        // Set the status to "Thinking" to indicate that the application is processing the question
         _status = Status.Thinking;
-        // Trigger a UI update to reflect the new status
         StateHasChanged();
-
-        // Add the user's question to the chat message history
-        await _chatMessageHistory.AddUserMessage(_promptField.Value);
+        await _chatMessageHistory.AddUserMessage(prompt);
 
         try
         {
             var request = new RetrieveAndGenerateRequest
                 {
-                    Input = new RetrieveAndGenerateInput { Text = _promptField.Value },
+                    Input = new RetrieveAndGenerateInput { Text = prompt },
                     RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
                     {
                         Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
@@ -152,10 +102,9 @@
 
         await InvokeAsync(() =>
         {
-            _promptField?.SetText("");
             _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "chat");
             StateHasChanged();
+            JsRuntime.InvokeVoidAsync("scrollToElement", "chatMessages");
             return Task.CompletedTask;
         });
     }

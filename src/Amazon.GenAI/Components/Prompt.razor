@@ -1,0 +1,27 @@
+﻿@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Models
+
+<EditForm Model="@Model" OnSubmit="PromptChanged">
+    <MudPaper Elevation="5" Class="mb-2">
+        <MudToolBar>
+            <MudIconButton Icon="@Icons.Material.Outlined.Search" Color="Color.Inherit" Class="mr-5" />
+            <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Text" Margin="Margin.Dense"></MudTextField>
+            <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
+        </MudToolBar>
+    </MudPaper>
+</EditForm>
+
+@code {
+    [Parameter] public ChatMessageHistory? Model { get; set; } = new();
+    [Parameter] public Status Status { get; set; } = Status.Default;
+    [Parameter] public EventCallback<string> OnPromptChanged { get; set; }
+    [Parameter] public string? DefaultText { get; set; } = "Type your message...";
+
+    private MudTextField<string>? _promptField;
+
+    private async Task PromptChanged()
+    {
+        await OnPromptChanged.InvokeAsync(_promptField?.Value);
+        _promptField?.SetText("");
+    }
+}

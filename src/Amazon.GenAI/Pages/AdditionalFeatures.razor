@@ -1,9 +1,13 @@
-﻿@page "/knowledgebase-with-filters"
+﻿@page "/additional-features"
+@using System.Runtime.InteropServices
+@using System.Text.Json.Nodes
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
+@using Amazon.BedrockRuntime
 @using Amazon.GenAI.Abstractions
+@using Amazon.GenAI.Abstractions.Bedrock
 @using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
@@ -16,6 +20,7 @@
 @inject AmazonBedrockAgentClient AgentClient;
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
 @inject AmazonS3Client AmazonS3Client;
+@inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 
 <div class="container-fluid h-100 d-flex flex-column">
     <div class="row">
@@ -111,7 +116,9 @@
 
             var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
-            await _messageHistory.AddAiMessage(result.Output.Text!);
+            var message = await TransformResponseToMessage(result);
+
+            await _messageHistory.AddAiMessage(message);
         }
         catch (AmazonBedrockAgentRuntimeException ex)
         {
@@ -160,5 +167,43 @@
         {
             Console.WriteLine($"An error occurred: {ex.Message}");
         }
+    }
+
+    private async Task<Message?> TransformResponseToMessage(RetrieveAndGenerateResponse result)
+    {
+        if (result.Citations.Count == 0) return null;
+
+        var tasks = new List<Task<JsonNode?>>();
+
+        foreach (var responseCitation in result.Citations)
+        {
+            foreach (var retrievedReference in responseCitation.RetrievedReferences)
+            {
+                var bodyJson = AnthropicClaude3.CreateBodyJson(retrievedReference.Content.Text);
+                var response =  BedrockRuntimeClient.InvokeModelAsync(TextModelId, bodyJson)/* .ConfigureAwait(false) */;
+                tasks.Add(response);
+            }
+        }
+
+        var results = await Task.WhenAll(tasks);
+        var citations = new List<MessageCitation>(results.Length);
+
+        foreach (var response in results)
+        {
+            var citation = new MessageCitation
+            {
+                Text = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty
+            };
+            citations.Add(citation);
+        }
+
+
+        return new Message();
+    }
+
+    public class CitationItem
+    {
+        public string? ResponseText { get; set; }
+        public Task<JsonNode?>? Task { get; set; }
     }
 }

@@ -16,12 +16,12 @@
         <div class="col-12">
             <h1 class="mt-3 mb-3">Octank Contact Center</h1>
         </div>
-        <MessageHistory History="_chatMessageHistory"></MessageHistory>
+        <MessageHistory History="_messageHistory"></MessageHistory>
     </div>
 </div>
 
 <div class="input-wrapper">
-    <Prompt Model="_chatMessageHistory"
+    <Prompt Model="_messageHistory"
             OnPromptChanged="PromptChanged"
             Status="_status">
     </Prompt>
@@ -32,35 +32,30 @@
     private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
     private const string DocumentPrefix = "fictitious";
 
-    private readonly ChatMessageHistory _chatMessageHistory = new();
+    private readonly ChatMessageHistory _messageHistory = new();
     Status _status = Status.Default;
 
     private KnowledgeBaseSummary? _knowledgeBase;
-    private List<KnowledgeBaseSummary?>? _knowledgeBases = new();
+    private List<KnowledgeBaseSummary?>? _knowledgeBases = [];
 
     protected override async Task OnInitializedAsync()
     {
-        var knowledgeBasesRequest = new ListKnowledgeBasesRequest();
-
-        _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(knowledgeBasesRequest)).KnowledgeBaseSummaries
+        _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(new ListKnowledgeBasesRequest())).KnowledgeBaseSummaries
             .OrderBy(x => x.UpdatedAt)
-            .Where(x => x.Status.Equals("Active"))
+            .Where(x => x.Status.Value.Equals("Active", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
+        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null && x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
 
         await base.OnInitializedAsync();
-        StateHasChanged();
     }
 
     private async Task PromptChanged(string prompt)
     {
-        if (string.IsNullOrEmpty(prompt))
-            return;
+        if (string.IsNullOrEmpty(prompt)) return;
 
         _status = Status.Thinking;
-        StateHasChanged();
-        await _chatMessageHistory.AddUserMessage(prompt);
+        await _messageHistory.AddUserMessage(prompt);
 
         try
         {
@@ -87,7 +82,7 @@
 
             var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
-            await _chatMessageHistory.AddAiMessage(result.Output.Text!);
+            await _messageHistory.AddAiMessage(result.Output.Text!);
         }
         catch (AmazonBedrockAgentRuntimeException ex)
         {

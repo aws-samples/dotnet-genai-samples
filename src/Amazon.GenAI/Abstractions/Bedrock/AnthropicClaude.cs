@@ -15,7 +15,9 @@ public static class AnthropicClaude3
         var bodyJson = new JsonObject
         {
             ["anthropic_version"] = "bedrock-2023-05-31",
-            ["max_tokens"] = 8000,
+            ["max_tokens"] = 2048,
+            ["top_p"] = 1,
+            ["temperature"] = 0,
             ["messages"] = new JsonArray
             {
                 new JsonObject

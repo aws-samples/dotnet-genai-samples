@@ -1,4 +1,7 @@
-﻿namespace Amazon.GenAI.Abstractions.Message;
+﻿using Amazon.BedrockAgentRuntime.Model;
+using Amazon.EC2;
+
+namespace Amazon.GenAI.Abstractions.Message;
 
 /// <summary>
 /// 
@@ -70,4 +73,13 @@ public readonly record struct Message(
     }
 
     public DateTime DateTime { get; init; }
+
+    public MessageCitation Citation { get; init; }
+}
+
+public class MessageCitation
+{
+    public string Text { get; set; } = "";
+    public string ReferenceText { get; set; } = "";
+    public string ReferenceLocation { get; set; } = "";
 }

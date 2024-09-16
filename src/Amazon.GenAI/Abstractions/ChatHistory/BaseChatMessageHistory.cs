@@ -35,9 +35,10 @@ public abstract class BaseChatMessageHistory
     /// This method may be deprecated in a future release.
     /// </summary>
     /// <param name="message"></param>
-    public async Task AddAiMessage(string message)
+    public async Task AddAiMessage(Message.Message message)
     {
-        await AddMessage(message.AsAiMessage()).ConfigureAwait(false);
+        message = message with { Role = MessageRole.Ai };
+        await AddMessage(message).ConfigureAwait(false);
     }
 
     /// <summary>

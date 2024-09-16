@@ -16,12 +16,12 @@
             <h1 class="mt-3 mb-3">Octank Contact Center</h1>
         </div>
     </div>
-    <MessageHistory History="_chatMessageHistory"></MessageHistory>
+    <MessageHistory History="_messageHistory"></MessageHistory>
 </div>
 
-    
+
 <div class="input-wrapper">
-    <Prompt Model="_chatMessageHistory"
+    <Prompt Model="_messageHistory"
             OnPromptChanged="PromptChanged"
             Status="_status">
     </Prompt>
@@ -30,29 +30,26 @@
 @code {
     private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
 
-    private readonly ChatMessageHistory _chatMessageHistory = new();
+    private readonly ChatMessageHistory _messageHistory = new();
     Status _status = Status.Default;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        StateHasChanged();
     }
 
     private async Task PromptChanged(string prompt)
     {
-        if (string.IsNullOrEmpty(prompt))
-            return;
+        if (string.IsNullOrEmpty(prompt)) return;
 
         _status = Status.Thinking;
-        StateHasChanged();
-        await _chatMessageHistory.AddUserMessage(prompt);
+        await _messageHistory.AddUserMessage(prompt);
 
-        var bodyJson = AnthropicClaude3.CreateBodyJson(_chatMessageHistory.Messages.AsHistory());
+        var bodyJson = AnthropicClaude3.CreateBodyJson(_messageHistory.Messages.AsHistory());
         var response = await BedrockRuntimeClient.InvokeModelAsync(TextModelId, bodyJson).ConfigureAwait(false);
         var generatedText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty;
 
-        await _chatMessageHistory.AddAiMessage(generatedText!);
+        await _messageHistory.AddAiMessage(generatedText!);
 
         await InvokeAsync(() =>
         {

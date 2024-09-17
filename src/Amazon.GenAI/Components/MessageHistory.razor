@@ -10,6 +10,8 @@
             {
                 @foreach (var item in History.Messages)
                 {
+                    if (item.Content is null) continue;
+
                     var label = item.Role == MessageRole.Human ? "human" : "bot";
 
                     <div class="message-wrapper @label-wrapper">

@@ -127,7 +127,7 @@
         await InvokeAsync(() =>
         {
             _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "chat");
+            JsRuntime.InvokeVoidAsync("scrollToElement", "chatMessages");
             StateHasChanged();
             return Task.CompletedTask;
         });

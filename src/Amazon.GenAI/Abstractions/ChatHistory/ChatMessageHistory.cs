@@ -40,24 +40,20 @@ public class ChatMessageHistory : BaseChatMessageHistory
     public Task AddAiMessage(string text)
     {
         var message = new Message.Message();
-        if (IsMessageAccepted(message))
-        {
-            message = message with { Content = text };
-            message = message with { DateTime = DateTime.Now };
-            _messages.Add(message);
-        }
+        message = message with { Content = text };
+        message = message with { DateTime = DateTime.Now };
+        _messages.Add(message);
 
         return Task.CompletedTask;
     }
 
     public  Task AddAiMessage(Message.Message? message)
     {
-        if (IsMessageAccepted(message.Value))
-        {
-            message = message.Value with { Content = message.Value.Content };
-            message = message.Value with { DateTime = DateTime.Now };
-            _messages.Add(message.Value);
-        }
+        if (!IsMessageAccepted(message!.Value)) return Task.CompletedTask;
+
+        message = message.Value with { Content = message.Value.Content };
+        message = message.Value with { DateTime = DateTime.Now };
+        _messages.Add(message.Value);
 
         return Task.CompletedTask;
     }

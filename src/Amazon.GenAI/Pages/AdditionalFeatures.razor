@@ -1,6 +1,8 @@
 ﻿@page "/additional-features"
 @using System.Runtime.InteropServices
 @using System.Text.Json.Nodes
+@using System.Text.Json.Serialization
+@using System.Text.RegularExpressions
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
@@ -43,6 +45,7 @@
 @code {
 
     private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+    private const string ImageModelId = "stability.sd3-large-v1:0";
 
     private const string BucketName = "dotnet-rag-datasource";
     private const string DocumentPrefix = "fictitious";
@@ -134,7 +137,7 @@
         await InvokeAsync(() =>
         {
             _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "chat");
+            JsRuntime.InvokeVoidAsync("scrollToElement", "chatMessages");
             StateHasChanged();
             return Task.CompletedTask;
         });
@@ -171,39 +174,90 @@
 
     private async Task<Message?> TransformResponseToMessage(RetrieveAndGenerateResponse result)
     {
-        if (result.Citations.Count == 0) return null;
+        var message = new Message();
+        message = message with { Content = result.Output.Text };
+        message = message with { Role = MessageRole.Ai };
+        message = message with { DateTime = DateTime.Now };
 
-        var tasks = new List<Task<JsonNode?>>();
+        if (result.Citations.Count <= 0 || result.Citations[0].RetrievedReferences.Count <= 0) return message;
 
-        foreach (var responseCitation in result.Citations)
-        {
-            foreach (var retrievedReference in responseCitation.RetrievedReferences)
-            {
-                var bodyJson = AnthropicClaude3.CreateBodyJson(retrievedReference.Content.Text);
-                var response =  BedrockRuntimeClient.InvokeModelAsync(TextModelId, bodyJson)/* .ConfigureAwait(false) */;
-                tasks.Add(response);
-            }
-        }
+        var citation = result.Citations[0];
 
-        var results = await Task.WhenAll(tasks);
-        var citations = new List<MessageCitation>(results.Length);
+        var originalText = citation.GeneratedResponsePart.TextResponsePart.Text;
+        var referenceText = citation.RetrievedReferences[0].Content.Text;
 
-        foreach (var response in results)
-        {
-            var citation = new MessageCitation
-            {
-                Text = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty
-            };
-            citations.Add(citation);
-        }
+        message = message with { Content = originalText };
 
+        var prompt = $@"
+you are a professional reviewer. your only job is to highlight the sentence based on similarities to it's citation.  you can only highlight the sentence once in your response.  if your highlight text, you're not allowed to highlight text again.
+here's the text:
+'{originalText}'
 
-        return new Message();
+highlight the text based by wrapping double hash ## around the sentence.  if the citation doesn't appear to be relevant then write ##NOT RELEVANT##
+
+here's the citation::
+'{referenceText}'
+";
+
+        var bodyJson = AnthropicClaude3.CreateBodyJson(prompt);
+        var response = await BedrockRuntimeClient.InvokeModelAsync(TextModelId, bodyJson).ConfigureAwait(false);
+        var responseText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty;
+
+        var foundSentence = ExtractTextBetweenHashes(responseText);
+        if (foundSentence.Equals("NOT RELEVANT", StringComparison.OrdinalIgnoreCase)) return message;
+
+        var split = SplitSentencesBySentence(originalText, foundSentence);
+
+        var generatedText = $"{split[0]} <a href='#'>[{0 + 1}]</a>";
+        generatedText = split.Count > 1 ? $"{generatedText} {split[1]}" : generatedText;
+
+        var image = await GetImageFromTexts(foundSentence, referenceText);
+
+        generatedText = image != null ? $"{generatedText} <img class='citation-img' src='data:image/jpeg;base64,{image.ToBase64()}' />" : generatedText;
+
+        message = message with { Content = generatedText };
+
+        return message;
     }
 
-    public class CitationItem
+    private async Task<Data?> GetImageFromTexts(string foundSentence, string referenceText)
     {
-        public string? ResponseText { get; set; }
-        public Task<JsonNode?>? Task { get; set; }
+        var prompt = $@"
+based on the below context create a photorealistic image.
+\n\n
+'{foundSentence}'\n
+...\n
+'{referenceText}'
+";
+        var bodyJson = StableDiffusionImage.CreateBodyJson(prompt);
+        var response = await BedrockRuntimeClient.InvokeModelAsync<StableDiffusionSD3Response>(ImageModelId, bodyJson).ConfigureAwait(false);
+        var images = response?.Images.Select(Data.FromBase64).ToList() ?? [];
+
+        return images.FirstOrDefault();
+    }
+
+    private static List<string> SplitSentencesBySentence(string originalText, string foundSentence)
+    {
+        var startIndex = originalText.IndexOf(foundSentence, StringComparison.Ordinal);
+        if (startIndex <= 0) return [originalText];
+
+        var firstPart = originalText[..startIndex].Trim();
+        var secondPart = originalText[startIndex..].Trim();
+        return [firstPart, secondPart];
+    }
+
+    static string ExtractTextBetweenHashes(string input)
+    {
+        const string pattern = @"##([\s\S]*?)##";
+        var match = Regex.Match(input, pattern);
+
+        return match.Success ? match.Groups[1].Value : input;
+    }
+
+    public class StableDiffusionSD3Response
+    {
+        [JsonPropertyName("images")]
+        public IReadOnlyList<string> Images { get; set; } = new List<string>();
     }
 }
+

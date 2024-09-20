@@ -1,4 +1,5 @@
-﻿@page "/image-search-playground"
+﻿@page "/"
+@page "/image-search-playground"
 @using System.Net
 @using System.Text.Json
 @using Amazon.BedrockRuntime
@@ -20,9 +21,9 @@
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject IJSRuntime JsRuntime
 
-<MudText Typo="Typo.h4">Image Search Playground</MudText>
+<MudText Typo="Typo.h4">Green Basket</MudText>
 <MudStack Style="width: 100%">
-	<MudCard>
+@* 	<MudCard>
 		<MudCardContent>
 			<div>
 				<MudSelect T="CollectionSummary" @bind-Value="_collection" ToStringFunc="@_selectConverter" Required="true"
@@ -39,7 +40,7 @@
 				</MudSelect>
 			</div>
 		</MudCardContent>
-	</MudCard>
+	</MudCard> *@
 
 	<MudRadioGroup @bind-Value="_actionType">
 		<MudRadio Value="ActionType.Searching" Color="Color.Primary">Search</MudRadio>
@@ -226,25 +227,25 @@
 		_uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
 		if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
-		_collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
-			.CollectionSummaries
-			.Where(x => x.Name.StartsWith(NamePrefix))
-			.ToList();
+		// _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+		// 	.CollectionSummaries
+		// 	.Where(x => x.Name.StartsWith(NamePrefix))
+		// 	.ToList();
 
-		_buckets = (await new AmazonS3Client().ListBucketsAsync()).Buckets.ToList();
+		// _buckets = (await new AmazonS3Client().ListBucketsAsync()).Buckets.ToList();
 
-		var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
-		var options = new OpenSearchVectorStoreOptions
-			{
-				Region = regionEndpoint,
-				IndexName = _indexName,
-				Dimensions = Dimensions,
-				CollectionArn = _collections[0]?.Arn,
-			};
+		// var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
+		// var options = new OpenSearchVectorStoreOptions
+		// 	{
+		// 		Region = regionEndpoint,
+		// 		IndexName = _indexName,
+		// 		Dimensions = Dimensions,
+		// 		CollectionArn = _collections[0]?.Arn,
+		// 	};
 
-		_openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+		// _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-		await GetAll();
+		//await GetAll();
 
 		await base.OnInitializedAsync();
 		StateHasChanged();

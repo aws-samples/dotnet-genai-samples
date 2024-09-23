@@ -9,11 +9,53 @@
 @inject IJSRuntime JsRuntime
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 
-
+<style>
+    .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 40vh;
+            background-color: #f0f0f0;
+        }
+     .centered-div {
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            border-radius: 10px;
+            text-align:center;
+        }
+        .rounded-border{
+             border: 1px solid #000;
+            border-radius: 20px;
+            margin: 0 15px 0 0;
+        }
+</style>
 <div class="container-fluid h-100 d-flex flex-column">
     <MessageHistory History="_messageHistory"></MessageHistory>
 </div>
 
+<div class="container">
+    <div class="centered-div">
+        <div class="row">
+            <div class="col-2"></div>
+            <div class="col-2 rounded-border">
+                here's one question
+            </div>
+            <div class="col-2 rounded-border">
+                here's one question
+            </div>
+            <div class="col-2 rounded-border">
+                here's one question
+            </div>
+            <div class="col-2 rounded-border">
+                here's one question
+            </div>
+            <div class="col-2"></div>
+        </div>
+    </div>
+</div>
 
 <div class="input-wrapper">
     <Prompt Model="_messageHistory"

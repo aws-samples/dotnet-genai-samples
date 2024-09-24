@@ -2,22 +2,29 @@
 @using Amazon.GenAI.Models
 
 <EditForm Model="@Model" OnSubmit="PromptChanged">
-    <MudPaper Elevation="5" Class="mb-2">
-        <MudToolBar>
-            <MudIconButton Icon="@Icons.Material.Outlined.Search" Color="Color.Inherit" Class="mr-5" />
-            <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Text" Margin="Margin.Dense"></MudTextField>
-            <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
-        </MudToolBar>
-    </MudPaper>
+        <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
+                      Style="background-color: white"/>
+        <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
 </EditForm>
 
 @code {
     [Parameter] public ChatMessageHistory? Model { get; set; } = new();
     [Parameter] public Status Status { get; set; } = Status.Default;
     [Parameter] public EventCallback<string> OnPromptChanged { get; set; }
-    [Parameter] public string? DefaultText { get; set; } = "Type your message...";
+    [Parameter] public string? DefaultText { get; set; } = "";
+    [Parameter] public string? BuiltinPrompt { get; set; }
 
-    private MudTextField<string>? _promptField;
+    private MudTextField<string>? _promptField = new();
+
+    protected override void OnParametersSet()
+    {
+        if (_promptField?.Text != BuiltinPrompt)
+        {
+            _promptField?.SetText(BuiltinPrompt);
+            Console.WriteLine("a parameter has changed");
+        }
+    }
 
     private async Task PromptChanged()
     {

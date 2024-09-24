@@ -22,6 +22,10 @@
             padding: 0;
         }
 
+        main{
+            background: floralwhite
+        }
+
         .chat-container {
             position: relative;
             margin: 20px auto;
@@ -82,7 +86,6 @@
 
         .input-wrapper {
             position: fixed;
-            width: 70%;
             bottom: 20px;
             left: inherit;
             transform: translateX(20px);
@@ -121,6 +124,11 @@
             object-fit: contain;
             max-width: 100%;
         }
+
+        .shortcuts-wrapper {
+            position: fixed;
+            bottom: 110px;
+        }
     </style>
 
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
@@ -140,7 +148,7 @@
     </div>
 
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-    <script src="scroll.js"></script>
+    <script src="site.js"></script>
     <script src="_framework/blazor.server.js"></script>
 </body>
 </html>

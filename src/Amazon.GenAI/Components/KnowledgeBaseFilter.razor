@@ -1,36 +1,42 @@
 ﻿@using Amazon.BedrockAgentRuntime.Model
 @using Amazon.Runtime.Internal
 
-<div class="row pt-4">
-    <div class="col-4">
-        <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
-                   SelectedValuesChanged="OnSelectedCountriesChanged"
-                   Label="Select Country"
-                   Variant="Variant.Outlined">
-            @if (Countries != null)
-            {
-                @foreach (var item in Countries)
-                {
-                    <MudSelectItem Value="@item" />
-                }
-            }
-        </MudSelect>
-    </div>
-    <div class="col-4">
-        <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
-                   SelectedValuesChanged="OnSelectedCitiesChanged"
-                   Label="Select City"
-                   Variant="Variant.Outlined">
-            @if (Cities != null)
-            {
-                @foreach (var item in Cities)
-                {
-                    <MudSelectItem Value="@item" />
-                }
-            }
-        </MudSelect>
-    </div>
-</div>
+
+<MudPaper Elevation="0" Class="mb-2">
+    <MudToolBar>
+        <div id="filters" class="row pt-4">
+            <div class="col-4">
+                <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
+                           SelectedValuesChanged="OnSelectedCountriesChanged"
+                           Label="Select Country"
+                           Variant="Variant.Outlined">
+                    @if (Countries != null)
+                    {
+                        @foreach (var item in Countries)
+                        {
+                            <MudSelectItem Value="@item" />
+                        }
+                    }
+                </MudSelect>
+            </div>
+            <div class="col-4">
+                <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
+                           SelectedValuesChanged="OnSelectedCitiesChanged"
+                           Label="Select City"
+                           Variant="Variant.Outlined">
+                    @if (Cities != null)
+                    {
+                        @foreach (var item in Cities)
+                        {
+                            <MudSelectItem Value="@item" />
+                        }
+                    }
+                </MudSelect>
+            </div>
+        </div>
+    </MudToolBar>
+</MudPaper>
+
 
 @code {
     [Parameter] public HashSet<string>? Countries { get; set; }

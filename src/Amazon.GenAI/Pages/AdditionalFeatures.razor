@@ -1,6 +1,5 @@
 ﻿@page "/additional-features"
-@using System.Runtime.InteropServices
-@using System.Text.Json.Nodes
+@inherits PageBase
 @using System.Text.Json.Serialization
 @using System.Text.RegularExpressions
 @using Amazon.BedrockAgent
@@ -17,7 +16,6 @@
 @using Amazon.Runtime.Internal
 @using Amazon.S3
 @using Markdig
-@inject MarkdownPipeline Pipeline
 @inject IJSRuntime JsRuntime
 @inject AmazonBedrockAgentClient AgentClient;
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
@@ -29,24 +27,22 @@
     <MessageHistory History="_messageHistory"></MessageHistory>
 </div>
 
+<ShortcutPrompts OnPromptChanged="PromptChanged"></ShortcutPrompts>
+
 <div class="input-wrapper">
     <Prompt Model="_messageHistory"
             OnPromptChanged="PromptChanged"
+            BuiltinPrompt="@_builtinPrompt"
             Status="_status">
     </Prompt>
 </div>
 
 @code {
 
-    private const string TextModelId = "anthropic.claude-3-haiku-20240307-v1:0";
-    private const string ImageModelId = "stability.sd3-large-v1:0";
-
-    private const string BucketName = "dotnet-rag-datasource";
-    private const string DocumentPrefix = "fictitious";
-    private const string MetadataExtension = ".json";
-
     private readonly ChatMessageHistory _messageHistory = new();
     Status _status = Status.Default;
+
+    private string? _builtinPrompt;
 
     private KnowledgeBaseSummary? _knowledgeBase;
     private List<KnowledgeBaseSummary?>? _knowledgeBases = [];
@@ -65,15 +61,17 @@
             .Where(x => x.Status.Value.Equals("Active", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null && x.Name.StartsWith(DocumentPrefix, StringComparison.OrdinalIgnoreCase));
+        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null && 
+                                                             x.Name.StartsWith(Constants.KnowledgeBaseName, StringComparison.OrdinalIgnoreCase));
 
         await base.OnInitializedAsync();
     }
 
     private async Task PromptChanged(string prompt)
     {
-        if (string.IsNullOrEmpty(prompt))
-            return;
+        _builtinPrompt = prompt;
+
+        if (string.IsNullOrEmpty(prompt)) return;
 
         _status = Status.Thinking;
         await _messageHistory.AddUserMessage(prompt);
@@ -89,7 +87,7 @@
                         KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
                         {
                             KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-                            ModelArn = TextModelId,
+                            ModelArn = Constants.TextModelId,
                             RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
                             {
                                 VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
@@ -148,7 +146,7 @@
         try
         {
             var s3Wrapper = new S3Wrapper(AmazonS3Client);
-            var attributes = await s3Wrapper.GetMetaDataFromS3(BucketName, DocumentPrefix, MetadataExtension);
+            var attributes = await s3Wrapper.GetMetaDataFromS3(Constants.BucketName, Constants.KnowledgeBaseName, Constants.MetadataExtension);
             foreach (var item in attributes)
             {
                 foreach (var dict in item)
@@ -194,7 +192,7 @@ here's the citation::
 ";
 
         var bodyJson = AnthropicClaude3.CreateBodyJson(prompt);
-        var response = await BedrockRuntimeClient.InvokeModelAsync(TextModelId, bodyJson).ConfigureAwait(false);
+        var response = await BedrockRuntimeClient.InvokeModelAsync(Constants.TextModelId, bodyJson).ConfigureAwait(false);
         var responseText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty;
 
         var foundSentence = ExtractTextBetweenHashes(responseText);
@@ -224,7 +222,7 @@ based on the below context create a photorealistic image.
 '{referenceText}'
 ";
         var bodyJson = StableDiffusionImage.CreateBodyJson(prompt);
-        var response = await BedrockRuntimeClient.InvokeModelAsync<StableDiffusionSD3Response>(ImageModelId, bodyJson).ConfigureAwait(false);
+        var response = await BedrockRuntimeClient.InvokeModelAsync<StableDiffusionSD3Response>(Constants.ImageModelId, bodyJson).ConfigureAwait(false);
         var images = response?.Images.Select(Data.FromBase64).ToList() ?? [];
 
         return images.FirstOrDefault();

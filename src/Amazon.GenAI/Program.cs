@@ -2,6 +2,7 @@ using Amazon.Bedrock;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgentRuntime;
 using Amazon.BedrockRuntime;
+using Amazon.GenAI.Abstractions;
 using Amazon.S3;
 using Markdig;
 using Markdown.ColorCode;
@@ -30,6 +31,8 @@ internal class Program
         builder.Services.AddSingleton(new AmazonBedrockAgentClient());
         builder.Services.AddSingleton(new AmazonBedrockAgentRuntimeClient());
         builder.Services.AddSingleton(new AmazonS3Client());
+
+        builder.Services.AddSingleton<BrowserService>();
 
 #if DEBUG
         builder.Logging.AddDebug();

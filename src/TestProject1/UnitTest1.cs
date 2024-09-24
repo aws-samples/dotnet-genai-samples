@@ -234,7 +234,7 @@ public class Tests
                     Type = KnowledgeBaseType.VECTOR,
                     VectorKnowledgeBaseConfiguration = new VectorKnowledgeBaseConfiguration
                     {
-                        EmbeddingModelArn = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
+                        EmbeddingModelArn = "arn:aws:bedrock:us-west-2::foundation-model/amazon.titan-embed-text-v2:0"
                     }
                 },
                 StorageConfiguration = new StorageConfiguration
@@ -295,7 +295,7 @@ public class Tests
 	[TestCase("p13bjd14b8l75s8d4ujg", "my-images-index")]
     public async Task DoesIndexExist(string uniqueIdentifier, string indexName)
     {
-        var endpoint = new Uri($"https://{uniqueIdentifier}.us-east-1.aoss.amazonaws.com");
+        var endpoint = new Uri($"https://{uniqueIdentifier}.us-west-2.aoss.amazonaws.com");
         var connection = new AwsSigV4HttpConnection(RegionEndpoint.USEast1, service: AwsSigV4HttpConnection.OpenSearchServerlessService);
         var config = new ConnectionSettings(endpoint, connection);
         var client = new OpenSearchClient(config);

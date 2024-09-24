@@ -146,7 +146,7 @@ public class AddToOpenSearch
             throw;
         }
 
-        var regionEndpoint = RegionEndpoint.USEast1;
+        var regionEndpoint = RegionEndpoint.USWest2;
         var match = Regex.Match(collection?.Arn!, @"(?<=\/)[^\/]+$");
         var endpoint = new Uri($"https://{match.Value}.{regionEndpoint.SystemName}.aoss.amazonaws.com");
         var connection = new AwsSigV4HttpConnection(regionEndpoint, service: AwsSigV4HttpConnection.OpenSearchServerlessService);

@@ -10,10 +10,8 @@
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
 
 
-<div class="container-fluid h-100 d-flex flex-column" style="position:relative !important">
-    <div class="row">
-        <MessageHistory History="MessageHistory"></MessageHistory>
-    </div>
+<div class="container-fluid h-100 d-flex flex-column">
+    <MessageHistory History="MessageHistory"></MessageHistory>
 </div>
 
 <ShortcutPrompts OnPromptChanged="PromptChanged"></ShortcutPrompts>
@@ -38,7 +36,7 @@
             .Where(x => x.Status.Value.Equals("Active", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null && 
+        _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null &&
                                                              x.Name.StartsWith(Constants.KnowledgeBaseName, StringComparison.OrdinalIgnoreCase));
 
         await base.OnInitializedAsync();

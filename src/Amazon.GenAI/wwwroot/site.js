@@ -51,7 +51,7 @@ window.resizeListener = function (dotnethelper) {
                 }
 
                 let filters = document.getElementById('filters');
-                let filtersHeight = filters ? filters.offsetHeight : 0;
+                let filtersHeight = filters ? filters.offsetHeight + 20 : 0;
 
                 const chatMessages = document.getElementById('chatMessages');
                 if (chatMessages) {

@@ -3,7 +3,6 @@
 @inherits PageBase
 @using Amazon.BedrockRuntime
 @using Amazon.GenAI.Abstractions.Bedrock
-@using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Abstractions.Message
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
@@ -11,47 +10,36 @@
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 
 <div class="container-fluid h-100 d-flex flex-column">
-    <MessageHistory History="_messageHistory"></MessageHistory>
+    <MessageHistory History="MessageHistory"></MessageHistory>
 </div>
 
 <ShortcutPrompts OnPromptChanged="PromptChanged"></ShortcutPrompts>
 
 <div class="input-wrapper">
-    <Prompt Model="_messageHistory"
+    <Prompt Model="MessageHistory"
             OnPromptChanged="PromptChanged"
-            BuiltinPrompt="@_builtinPrompt"
-            Status="_status">
+            BuiltinPrompt="@BuiltinPrompt"
+            Status="Status">
     </Prompt>
 </div>
 
 @code {
 
-    private readonly ChatMessageHistory _messageHistory = new();
-    Status _status = Status.Default;
-
-    private string? _builtinPrompt;
-
     private async Task PromptChanged(string prompt)
     {
-        _builtinPrompt = prompt;
-        
+        BuiltinPrompt = prompt;
+
         if (string.IsNullOrEmpty(prompt)) return;
 
-        _status = Status.Thinking;
-        await _messageHistory.AddUserMessage(prompt);
+        Status = Status.Thinking;
+        await MessageHistory.AddUserMessage(prompt);
 
-        var bodyJson = AnthropicClaude3.CreateBodyJson(_messageHistory.Messages.AsHistory());
+        var bodyJson = AnthropicClaude3.CreateBodyJson(MessageHistory.Messages.AsHistory());
         var response = await BedrockRuntimeClient.InvokeModelAsync(Constants.TextModelId, bodyJson).ConfigureAwait(false);
         var generatedText = response?["content"]?[0]?["text"]?.GetValue<string>() ?? string.Empty;
 
-        await _messageHistory.AddAiMessage(generatedText!);
+        await MessageHistory.AddAiMessage(generatedText!);
 
-        await InvokeAsync(() =>
-        {
-            _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "chatMessages");
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
+        await UpdatePage();
     }
 }

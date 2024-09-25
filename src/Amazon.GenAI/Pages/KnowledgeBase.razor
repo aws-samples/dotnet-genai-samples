@@ -4,36 +4,29 @@
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
 @using Amazon.BedrockAgentRuntime.Model
-@using Amazon.GenAI.Abstractions.ChatHistory
 @using Amazon.GenAI.Components
 @using Amazon.GenAI.Models
-@inject IJSRuntime JsRuntime
 @inject AmazonBedrockAgentClient AgentClient;
 @inject AmazonBedrockAgentRuntimeClient AgentRuntimeClient;
 
 
 <div class="container-fluid h-100 d-flex flex-column" style="position:relative !important">
     <div class="row">
-        <MessageHistory History="_messageHistory"></MessageHistory>
+        <MessageHistory History="MessageHistory"></MessageHistory>
     </div>
 </div>
 
 <ShortcutPrompts OnPromptChanged="PromptChanged"></ShortcutPrompts>
 
 <div class="input-wrapper">
-    <Prompt Model="_messageHistory"
+    <Prompt Model="MessageHistory"
             OnPromptChanged="PromptChanged"
-            BuiltinPrompt="@_builtinPrompt"
-            Status="_status">
+            BuiltinPrompt="@BuiltinPrompt"
+            Status="Status">
     </Prompt>
 </div>
 
 @code {
-
-    private readonly ChatMessageHistory _messageHistory = new();
-    Status _status = Status.Default;
-
-    private string? _builtinPrompt;
 
     private KnowledgeBaseSummary? _knowledgeBase;
     private List<KnowledgeBaseSummary?>? _knowledgeBases = [];
@@ -53,12 +46,12 @@
 
     private async Task PromptChanged(string prompt)
     {
-        _builtinPrompt = prompt;
+        BuiltinPrompt = prompt;
 
         if (string.IsNullOrEmpty(prompt)) return;
 
-        _status = Status.Thinking;
-        await _messageHistory.AddUserMessage(prompt);
+        Status = Status.Thinking;
+        await MessageHistory.AddUserMessage(prompt);
 
         try
         {
@@ -85,7 +78,7 @@
 
             var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
 
-            await _messageHistory.AddAiMessage(result.Output.Text!);
+            await MessageHistory.AddAiMessage(result.Output.Text!);
         }
         catch (AmazonBedrockAgentRuntimeException ex)
         {
@@ -98,12 +91,6 @@
             throw;
         }
 
-        await InvokeAsync(() =>
-        {
-            _status = Status.Default;
-            JsRuntime.InvokeVoidAsync("scrollToElement", "chatMessages");
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
+        await UpdatePage();
     }
 }

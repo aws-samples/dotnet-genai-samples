@@ -8,4 +8,17 @@ public static class Constants
     public static string ImageModelId { get; set; } = "stability.sd3-large-v1:0";
     public static string BucketName { get; set; } = "dotnet-rag-datasource";
     public static string MetadataExtension { get; set; } = ".json";
+    public static string[] BuiltinPrompts { get; set; } =
+    [
+        "What are the check-in and check-out times",
+        "Is there a free shuttle service from the airport?",
+        "Does the room rate include breakfast?",
+        "Do you have a fitness center or swimming pool?",
+        "Is there an on-site restaurant or room service available?",
+        "What type of views does the room offer?",
+        "How far is the hotel from the Las Vegas Strip?",
+        "Do you offer any complimentary drinks or gambling vouchers for guests?",
+        "Do you have non-gaming areas for families or those who prefer a quieter environment?",
+        "Is there a concierge service?"
+    ];
 }

@@ -22,8 +22,10 @@
 @inject AmazonS3Client AmazonS3Client;
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 
+
+<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
+
 <div class="container-fluid h-100 d-flex flex-column">
-    <KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
     <MessageHistory History="_messageHistory"></MessageHistory>
 </div>
 

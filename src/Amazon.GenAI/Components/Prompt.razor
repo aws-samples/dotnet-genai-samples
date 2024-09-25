@@ -2,10 +2,17 @@
 @using Amazon.GenAI.Models
 
 <EditForm Model="@Model" OnSubmit="PromptChanged">
-        <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
-                      Style="background-color: white"/>
-        <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
+    <div class="row">
+        <div class="@_textFieldClass">
+            <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
+                          Style="background-color: white"/>
+        </div>
+
+        <div class="@_progressClass">
+            <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
+        </div>
+    </div>
 </EditForm>
 
 @code {
@@ -16,9 +23,14 @@
     [Parameter] public string? BuiltinPrompt { get; set; }
 
     private MudTextField<string>? _promptField = new();
+    private string _textFieldClass = "col-12";
+    private string _progressClass = "visually-hidden";
 
     protected override void OnParametersSet()
     {
+        _textFieldClass = Status == Status.Default ? "col-12" : "col-11";
+        _progressClass = Status == Status.Default ? "visually-hidden" : "col-1";
+
         if (_promptField?.Text != BuiltinPrompt)
         {
             _promptField?.SetText(BuiltinPrompt);

@@ -27,13 +27,11 @@ window.resizeListener = function (dotnethelper) {
     const inputWrapper = document.querySelector('.input-wrapper');
     if (inputWrapper) {
         inputWrapper.style.width = `${mainWidth - 100}px`;
-        console.log(`input-wrapper: ${inputWrapper.style.width}`);
     }
 
     const shortcuts = document.querySelector('.shortcuts-wrapper');
     if (shortcuts) {
         shortcuts.style.width = `${mainWidth - 100}px`;
-        console.log(`shortcuts: ${shortcuts.style.width}`);
     }
 
     window.addEventListener('resize', () => {
@@ -62,7 +60,6 @@ window.resizeListener = function (dotnethelper) {
 
                     if (chatMessages.offsetHeight > newHeight) {
                         chatMessages.style.height = `${newHeight}px`;
-                        console.log(`chatMessages: ${chatMessages.style.height}`);
                     }
                 }
             })

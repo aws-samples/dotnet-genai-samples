@@ -31,10 +31,10 @@
         _textFieldClass = Status == Status.Default ? "col-12" : "col-11";
         _progressClass = Status == Status.Default ? "visually-hidden" : "col-1";
 
+        _promptField?.SetText("");
         if (_promptField?.Text != BuiltinPrompt)
         {
             _promptField?.SetText(BuiltinPrompt);
-            Console.WriteLine("a parameter has changed");
         }
     }
 

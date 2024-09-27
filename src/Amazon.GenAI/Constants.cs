@@ -14,11 +14,13 @@ public static class Constants
         "Is there a free shuttle service from the airport?",
         "Does the room rate include breakfast?",
         "Do you have a fitness center or swimming pool?",
-        "Is there an on-site restaurant or room service available?",
+        "Is there an on-site restaurant available?",
+        "Is there room service available?",
         "What type of views does the room offer?",
         "How far is the hotel from the Las Vegas Strip?",
-        "Do you offer any complimentary drinks or gambling vouchers for guests?",
-        "Do you have non-gaming areas for families or those who prefer a quieter environment?",
+        "Are there complimentary drinks?",
+        "Are there complimentary betting vouchers for guests?",
+        "Are quiet, non-gaming spaces available?",
         "Is there a concierge service?"
     ];
 }

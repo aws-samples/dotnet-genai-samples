@@ -1,0 +1,10 @@
+﻿@page "/"
+@inject NavigationManager NavManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+       NavManager.NavigateTo("/chat", true);
+       await base.OnInitializedAsync();
+    }
+}

@@ -14,3 +14,10 @@ public enum ActionType
     Adding,
     S3Adding
 }
+
+public enum ModalType
+{
+	Text,
+	Image,
+	TextAndImage
+}

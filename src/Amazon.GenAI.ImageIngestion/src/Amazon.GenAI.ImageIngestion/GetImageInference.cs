@@ -43,7 +43,7 @@ public class GetImageInference
             return new Dictionary<string, string>
             {
                 { "key", key },
-                { "inference", generatedText }
+                { "imageText", generatedText }
             };
         }
         catch (Exception e)

@@ -1,7 +1,6 @@
 using Amazon.BedrockRuntime;
 using Amazon.Lambda.Core;
 using Amazon.S3;
-using System.Text.Json;
 using Amazon.GenAI.ImageIngestion.Abstractions;
 using Amazon.GenAI.ImageIngestion.Abstractions.Splitter;
 
@@ -9,72 +8,104 @@ namespace Amazon.GenAI.ImageIngestion;
 
 public class GetImageEmbeddings
 {
-    private readonly IAmazonS3 _s3Client = new AmazonS3Client();
-    private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
+	private readonly IAmazonS3 _s3Client = new AmazonS3Client();
+	private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
 
+	public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
+	{
+		context.Logger.LogInformation($"in GetImageEmbeddings.  destination: {_destinationBucket}");
 
-    public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
-    {
-        context.Logger.LogInformation($"in GetImageEmbeddings.  destination: {_destinationBucket}");
+		if (!input.TryGetValue("key", out var key))
+		{
+			throw new ArgumentException("Image key not provided in the input.");
+		}
 
-        if (!input.TryGetValue("key", out var key))
-        {
-            throw new ArgumentException("Image key not provided in the input.");
-        }
+		if (!input.TryGetValue("imageText", out var imageText))
+		{
+			throw new ArgumentException("Image inference not provided in the input.");
+		}
 
-        if (!input.TryGetValue("inference", out var inference))
-        {
-            throw new ArgumentException("Image inference not provided in the input.");
-        }
+		Console.WriteLine("imageText");
+		Console.WriteLine(imageText);
 
-        Console.WriteLine("inference");
-        Console.WriteLine(inference);
+		try
+		{
+			var responseMetadata = await _s3Client.GetObjectMetadataAsync(_destinationBucket, key);
 
-        try
-        {
-            // Download the image from S3
-            using var response = await _s3Client.GetObjectAsync(_destinationBucket, key);
-            using var memoryStream = new MemoryStream();
-            await response.ResponseStream.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
+			// Download the image from S3
+			using var response = await _s3Client.GetObjectAsync(_destinationBucket, key);
+			using var memoryStream = new MemoryStream();
+			await response.ResponseStream.CopyToAsync(memoryStream);
+			memoryStream.Position = 0;
 
-            var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
-            var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
+			var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
+			var content = imageText.Trim();
+			var chunkSize = 4000;
+			var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
+			var splitText = textSplitter.SplitText(content);
+			var textEmbeddings = new List<float[]>(capacity: splitText.Count);
+			var imageEmbeddings = new List<float[]>(capacity: splitText.Count);
 
-            var content = inference.Trim();
-            var chunkSize = 4000;
-            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
-            var splitText = textSplitter.SplitText("     ");
-            var embeddings = new List<float[]>(capacity: splitText.Count);
+			var metadataKeys = responseMetadata.Metadata.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+			var metadata = responseMetadata.Metadata[metadataKeys.FirstOrDefault()!];
+			context.Logger.LogInformation($"metadata: {metadata}");
 
-            var embeddingModelId = "amazon.titan-embed-image-v1";
-            var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), embeddingModelId);
-            var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync(content, image);
+			if (metadata.Contains("Text"))
+			{
+				const string textModelId = "amazon.titan-embed-text-v2:0";
+				var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), textModelId);
 
-            var embedding = embeddingsAsync?["embedding"]?.AsArray();
-            if (embedding == null) return null;
+				var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync(content);
 
-            context.Logger.LogInformation($"GetImageEmbeddings got embeddings");
-            
-            var f = new float[1024];
-            for (var j = 0; j < embedding.Count; j++)
-            {
-                f[j] = (float)embedding[j]?.AsValue()!;
-            }
+				var embedding = embeddingsAsync?["embedding"]?.AsArray();
+				if (embedding == null) return null;
 
-            embeddings.Add(f);
+				context.Logger.LogInformation($"GetImageEmbeddings got text embeddings");
 
-            return new Dictionary<string, object>
-            {
-                { "key", key },
-                { "embeddings", embeddings },
-                { "inference", inference },
-            };
-        }
-        catch (Exception e)
-        {
-            context.Logger.LogError($"Error getting embeddings: {e.Message}");
-            throw;
-        }
-    }
+				var f = new float[1024];
+				for (var j = 0; j < embedding.Count; j++)
+				{
+					f[j] = (float)embedding[j]?.AsValue()!;
+				}
+
+				textEmbeddings.Add(f);
+			}
+
+			if (metadata.Contains("Image"))
+			{
+				const string embeddingModelId = "amazon.titan-embed-image-v1";
+				var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), embeddingModelId);
+
+				var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
+
+				var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync("image", image);
+
+				var embedding = embeddingsAsync?["embedding"]?.AsArray();
+				if (embedding == null) return null;
+
+				context.Logger.LogInformation($"GetImageEmbeddings got image embeddings");
+
+				var f = new float[1024];
+				for (var j = 0; j < embedding.Count; j++)
+				{
+					f[j] = (float)embedding[j]?.AsValue()!;
+				}
+
+				imageEmbeddings.Add(f);
+			}
+
+			return new Dictionary<string, object>
+			{
+				{ "key", key },
+				{ "textEmbeddings", textEmbeddings },
+				{ "imageEmbeddings", imageEmbeddings },
+				{ "imageText", content },
+			};
+		}
+		catch (Exception e)
+		{
+			context.Logger.LogError($"Error getting embeddings: {e.Message}");
+			throw;
+		}
+	}
 }

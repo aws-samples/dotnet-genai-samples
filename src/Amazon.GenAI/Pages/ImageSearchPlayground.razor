@@ -114,13 +114,19 @@
 
 	@if (_actionType == ActionType.Adding)
 	{
-		<MudPaper Elevation="5" Class="p-3">
-			<Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-					  Files="Files"
-					  FileCount="100"
-					  OnFileChangedCallback="OnInputFileChanged">
-			</Uploader>
-		</MudPaper>
+        <MudPaper Elevation="5" Class="p-3">
+            <MudRadioGroup @bind-Value="_modalType">
+                <MudRadio Value="ModalType.Text" Color="Color.Primary">Text Embeddings</MudRadio>
+                <MudRadio Value="ModalType.Image" Color="Color.Secondary">Video Embeddings</MudRadio>
+				<MudRadio Value="ModalType.TextAndImage" Color="Color.Secondary">Text and Image Embeddings</MudRadio>
+            </MudRadioGroup>
+
+            <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+                      Files="Files"
+                      FileCount="100"
+                      OnFileChangedCallback="OnInputFileChanged">
+            </Uploader>
+        </MudPaper>
 
 		<ImageListing ActionType="_actionType"
 					  SearchType="SearchType"
@@ -145,20 +151,32 @@
 	{
 
 		<MudPaper Elevation="5" Class="p-3">
-			<div>
-				<MudSelect T="S3Bucket" @bind-Value="_bucket" Required="true"
-						   Label="Select S3 Bucket"
-						   Variant="Variant.Outlined">
-					@if (_buckets != null)
-					{
-						@foreach (var item in _buckets)
-						{
-							_bucket ??= item;
-							<MudSelectItem Value="@item">@item?.BucketName</MudSelectItem>
-						}
-					}
-				</MudSelect>
-			</div>
+            <div>
+                <MudRadioGroup @bind-Value="_modalType">
+                    <MudRadio Value="ModalType.Text" Color="Color.Primary">Text Embeddings</MudRadio>
+                    <MudRadio Value="ModalType.Image" Color="Color.Secondary">Video Embeddings</MudRadio>
+                    <MudRadio Value="ModalType.TextAndImage" Color="Color.Secondary">Text and Image Embeddings</MudRadio>
+                </MudRadioGroup>
+
+                <MudRadioGroup @bind-Value="_actionType">
+                    <MudRadio Value="ActionType.Searching" Color="Color.Primary">Search</MudRadio>
+                    <MudRadio Value="ActionType.Adding" Color="Color.Secondary">Add Images from My Computer</MudRadio>
+                    <MudRadio Value="ActionType.S3Adding" Color="Color.Secondary">Add Images from S3</MudRadio>
+                </MudRadioGroup>
+
+                <MudSelect T="S3Bucket" @bind-Value="_bucket" Required="true"
+                           Label="Select S3 Bucket"
+                           Variant="Variant.Outlined">
+                    @if (_buckets != null)
+                    {
+                        @foreach (var item in _buckets)
+                        {
+                            _bucket ??= item;
+                            <MudSelectItem Value="@item">@item?.BucketName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </div>
 		</MudPaper>
 
 		<EditForm Model="@_chatMessageHistory" OnSubmit="OnS3Submit">
@@ -216,6 +234,9 @@
 	private List<S3Bucket?>? _buckets;
 	private S3Bucket? _bucket;
 
+    private ModalType _modalType;
+
+
 	#endregion
 
 	protected override async Task OnInitializedAsync()
@@ -271,8 +292,9 @@
 					BucketName = bucket?.BucketName,
 					Key = Path.GetFileName(path),
 					FilePath = path,
-					ContentType = "text/plain"
+					ContentType = "text/plain",
 				};
+				transferUtilityUploadRequest.Metadata.Add("modalType", Enum.GetName(typeof(ModalType), _modalType));
 
 				transferUtility.UploadAsync(transferUtilityUploadRequest);
 			}

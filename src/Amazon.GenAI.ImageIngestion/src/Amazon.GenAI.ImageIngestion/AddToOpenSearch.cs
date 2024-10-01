@@ -29,43 +29,76 @@ public class AddToOpenSearch
 
         context.Logger.LogInformation($"in AddToOpenSearch.  destination: {_bucketName}");
 
-        var key = GetInputValues(input, context, out var inference, out var embeddings);
+        var key = GetInputValues(input, context, out var inference, 
+	        out var textEmbeddings,
+	        out var imageEmbeddings
+
+        );
 
         var indexName = "my-images-index";
         var (endpoint, client) = await CreateClient();
+        Console.WriteLine($"endpointUrl: {endpoint.AbsoluteUri}");
 
-        var existsResponse = await client.Indices.ExistsAsync(Indices.Parse(indexName));
+		var existsResponse = await client.Indices.ExistsAsync(Indices.Parse(indexName));
         if (existsResponse.Exists == false) CreateIndex(client, context, indexName, _namePrefix, _nameSuffix);
 
         try
         {
-            Console.WriteLine($"endpointUrl: {endpoint.AbsoluteUri}");
+	        if (textEmbeddings.Length > 0)
+	        {
+		        var vectorRecord = new VectorRecord
+		        {
+			        Text = "  ",
+			        Path = $"{_distributionDomainName}/{key}",
+			        Vector = textEmbeddings
+		        };
 
-            var vectorRecord = new VectorRecord
-            {
-                Text = inference,
-                Path = $"{_distributionDomainName}/{key}",
-                Vector = embeddings
-            };
+				var bulkDescriptor = new BulkDescriptor();
+		        bulkDescriptor.Index<VectorRecord>(desc => desc
+			        .Document(vectorRecord)
+			        .Index(indexName)
+		        );
 
-            var bulkDescriptor = new BulkDescriptor();
-            bulkDescriptor.Index<VectorRecord>(desc => desc
-                .Document(vectorRecord)
-                .Index(indexName)
-            );
+		        var bulkResponse = await client!.BulkAsync(bulkDescriptor)
+			        .ConfigureAwait(false);
 
-            var bulkResponse = await client!.BulkAsync(bulkDescriptor)
-                .ConfigureAwait(false);
+		        Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
+		        context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
 
-            Console.WriteLine($"bulkResponse IsValid: {bulkResponse.IsValid}");
-            context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
+		        if (bulkResponse.IsValid == false)
+		        {
+			        throw new Exception(bulkResponse.DebugInformation);
+		        }
+			}
 
-            if (bulkResponse.IsValid == false)
-            {
-                throw new Exception(bulkResponse.DebugInformation);
-            }
+			if (textEmbeddings.Length > 0)
+			{
+				var vectorRecord = new VectorRecord
+				{
+					Text = "  ",
+					Path = $"{_distributionDomainName}/{key}",
+					Vector = imageEmbeddings
+				};
 
-            return bulkDescriptor;
+				var bulkDescriptor = new BulkDescriptor();
+				bulkDescriptor.Index<VectorRecord>(desc => desc
+					.Document(vectorRecord)
+					.Index(indexName)
+				);
+
+				var bulkResponse = await client!.BulkAsync(bulkDescriptor)
+					.ConfigureAwait(false);
+
+				Console.WriteLine($"bulkResponse forImages is IsValid: {bulkResponse.IsValid}");
+				context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
+
+				if (bulkResponse.IsValid == false)
+				{
+					throw new Exception(bulkResponse.DebugInformation);
+				}
+			}
+
+			return new BulkDescriptor();
         }
         catch (Exception e)
         {
@@ -101,8 +134,9 @@ public class AddToOpenSearch
     private static string? GetInputValues(
 	    Dictionary<string, string> input, 
 	    ILambdaContext context, 
-	    out string inference,
-        out float[] embeddings)
+	    out string imageText,
+        out float[] textEmbeddings,
+	    out float[] imageEmbeddings)
     {
         if (!input.TryGetValue("key", out var key))
         {
@@ -110,19 +144,27 @@ public class AddToOpenSearch
         }
         context.Logger.LogInformation($"key: {key}");
 
-        inference = "";
-        if (input.TryGetValue("inference", out var value))
+        imageText = "";
+        if (input.TryGetValue("imageText", out var value))
         {
-            inference = value;
-            context.Logger.LogInformation($"inference: {inference}");
+	        imageText = value;
+            context.Logger.LogInformation($"imageText: {imageText}");
         }
 
-        embeddings = new float[] { };
-        if (input.TryGetValue("embeddings", out var arrayString))
+        textEmbeddings = new float[] { };
+        if (input.TryGetValue("textEmbeddings", out var arrayTextString))
         {
-            var stringValues = arrayString.Trim('[', ']').Split(',');
-            embeddings = stringValues.Select(float.Parse).ToArray();
-            context.Logger.LogInformation($"embeddings: {embeddings}");
+	        var stringValues = arrayTextString.Trim('[', ']').Split(',');
+	        textEmbeddings = stringValues.Select(float.Parse).ToArray();
+	        context.Logger.LogInformation($"textEmbeddings: {textEmbeddings}");
+        }
+
+		imageEmbeddings = new float[] { };
+        if (input.TryGetValue("imageEmbeddings", out var arrayImageString))
+        {
+            var stringValues = arrayImageString.Trim('[', ']').Split(',');
+            imageEmbeddings = stringValues.Select(float.Parse).ToArray();
+            context.Logger.LogInformation($"imageEmbeddings: {imageEmbeddings}");
         }
 
         return key;

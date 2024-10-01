@@ -7,7 +7,7 @@ public class EmbeddingModel(
     AmazonBedrockRuntimeClient bedrockRuntimeClient,
     string? embeddingModelId)
 {
-    internal async Task<JsonNode?> CreateEmbeddingsAsync(string prompt, BinaryData? image = null)
+    internal async Task<JsonNode?>  CreateEmbeddingsAsync(string prompt, BinaryData? image = null)
     {
         try
         {

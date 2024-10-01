@@ -44,8 +44,9 @@ public class ImageResizer
         try
         {
             var response = await _s3Client.GetObjectAsync(bucketName, key);
+           var responseMetadata =  await _s3Client.GetObjectMetadataAsync(bucketName, key);
 
-            using (var imageStream = new MemoryStream())
+			using (var imageStream = new MemoryStream())
             {
                 await response.ResponseStream.CopyToAsync(imageStream);
                 imageStream.Position = 0;
@@ -67,6 +68,10 @@ public class ImageResizer
 					InputStream = outputStream,
 					ContentType = response.Headers.ContentType
 				};
+				foreach (var metadataKey in responseMetadata.Metadata.Keys)
+				{
+					putRequest.Metadata.Add(metadataKey, responseMetadata.Metadata[metadataKey]);
+				}
 
 				var putObjectResponse = await _s3Client.PutObjectAsync(putRequest);
             }

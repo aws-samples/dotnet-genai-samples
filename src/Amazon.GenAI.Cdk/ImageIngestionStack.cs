@@ -231,9 +231,10 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.Payload.key",
-                ["inference.$"] = "$.Payload.inference",
-                ["embeddings.$"] = "$.Payload.embeddings"
-            }
+                ["imageText.$"] = "$.Payload.imageText",
+                ["textEmbeddings.$"] = "$.Payload.textEmbeddings",
+                ["imageEmbeddings.$"] = "$.Payload.imageEmbeddings"
+			}
         });
 
         var putItemTask = new DynamoPutItem(this, "PutItem", new DynamoPutItemProps
@@ -243,7 +244,7 @@ public class ImageIngestionStack : Stack
             {
                 ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
                 ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
-                ["inference"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.inference")),
+                ["imageText"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.imageText")),
             }
         });
 
@@ -252,8 +253,9 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.key",
-                ["inference.$"] = "$.inference",
-                ["embeddings.$"] = "States.JsonToString($.embeddings)"
+                ["imageText.$"] = "$.imageText",
+                ["textEmbeddings.$"] = "States.JsonToString($.textEmbeddings)",
+                ["imageEmbeddings.$"] = "States.JsonToString($.imageEmbeddings)",
             }
         });
 

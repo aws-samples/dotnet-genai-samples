@@ -6,9 +6,9 @@
         <div class="@_textFieldClass">
             <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
-                          Style="background-color: white"/>
+                          Style="background-color: white" />
         </div>
-
+        <div>Do not enter personally identifiable information.</div>
         <div class="@_progressClass">
             <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
         </div>

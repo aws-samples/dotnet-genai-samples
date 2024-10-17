@@ -1,0 +1,46 @@
+﻿@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Models
+
+<EditForm Model="@Model" OnSubmit="PromptChanged">
+    <div class="row">
+        <div class="@_textFieldClass">
+            <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
+                          Style="background-color: white"/>
+        </div>
+
+        <div class="@_progressClass">
+            <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public ChatMessageHistory? Model { get; set; } = new();
+    [Parameter] public Status Status { get; set; } = Status.Default;
+    [Parameter] public EventCallback<string> OnPromptChanged { get; set; }
+    [Parameter] public string? DefaultText { get; set; } = "";
+    [Parameter] public string? BuiltinPrompt { get; set; }
+
+    private MudTextField<string>? _promptField = new();
+    private string _textFieldClass = "col-12";
+    private string _progressClass = "visually-hidden";
+
+    protected override void OnParametersSet()
+    {
+        _textFieldClass = Status == Status.Default ? "col-12" : "col-11";
+        _progressClass = Status == Status.Default ? "visually-hidden" : "col-1";
+
+        _promptField?.SetText("");
+        if (_promptField?.Text != BuiltinPrompt)
+        {
+            _promptField?.SetText(BuiltinPrompt);
+        }
+    }
+
+    private async Task PromptChanged()
+    {
+        await OnPromptChanged.InvokeAsync(_promptField?.Value);
+        _promptField?.SetText("");
+    }
+}

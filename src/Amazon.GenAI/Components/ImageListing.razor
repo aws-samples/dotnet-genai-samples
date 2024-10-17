@@ -1,81 +1,66 @@
 ﻿@using Amazon.GenAI.Abstractions.OpenSearch
 @using Amazon.GenAI.Models
 
-<div class="container text-center">
-    <div class="row d-flex justify-center">
-        @if (ActionType == ActionType.Searching)
+
+@if (ActionType == ActionType.Searching)
+{
+    <div>
+        @foreach (var result in SearchResults!)
         {
-            @foreach (var result in SearchResults!)
+            var uri = new Uri($"http://{result.Path}");
+            var path = Uri.UnescapeDataString(uri.PathAndQuery);
+
+            // Get the last segment of the path (everything after the last '/')
+            var fileName = Path.GetFileName(path);
+
+            // Remove query string if present
+            var queryIndex = fileName.IndexOf('?');
+            if (queryIndex != -1)
             {
-                var uri = new Uri($"http://{result.Path}");
-                var path = Uri.UnescapeDataString(uri.PathAndQuery);
-
-                // Get the last segment of the path (everything after the last '/')
-                var fileName = Path.GetFileName(path);
-
-                // Remove query string if present
-                var queryIndex = fileName.IndexOf('?');
-                if (queryIndex != -1)
-                {
-                    fileName = fileName.Substring(0, queryIndex);
-                }
-
-                var styleWidth = $"width:{Width}px";
-                <div class="col">
-                    <div class="position-relative" style="@styleWidth">
-                        <MudTooltip Text="@result.Text" Arrow="true" Placement="Placement.Top" ShowOnHover="true" Inline="true" Style="@styleWidth">
-                            <MudImage Width="@Width" Src="@($"http://{result.Path}")" Alt="@fileName" Elevation="6" Class="pa-3 ma-2"/>
-                        </MudTooltip>
-                        <div>
-                            <MudChip T="string" Color="Color.Dark" Text="@fileName"/>
-                        </div>
-                        @if (result.Score < 1)
-                        {
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 1.5em">
-                                @Math.Round((double)(result.Score * 100)!)%
-                            </span>
-                        }
-                    </div>
-                </div>
+                fileName = fileName.Substring(0, queryIndex);
             }
 
-            <div class="container text-center">
-                <div class="row d-flex justify-center">
-                    @for (var i = 0; i < ImageUrls.Count; i++)
-                    {
-                        var file = Files.ElementAt(i);
-                        var imageDataUrl = ImageUrls[i];
-                        <div class="col">
-                            <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-3 ma-2" />
-                            <div>
-                                <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
-                            </div>
-                        </div>
-                    }
-                </div>
+            <div>
+                <MudTooltip Text="@result.Text" Arrow="true" Placement="Placement.Top" ShowOnHover="true" Inline="true">
+                    <MudImage Src="@($"http://{result.Path}")" Elevation="6" Class="pa-1 ma-2" />
+                </MudTooltip>
+     @*            <div>
+                    <MudChip T="string" Color="Color.Dark" Text="@fileName" />
+                </div> *@
+                @if (ShowRelevance && result.Score < 1)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 1.5em">
+                        @Math.Round((double)(result.Score * 100)!)%
+                    </span>
+                }
             </div>
         }
 
-        @if (ActionType == ActionType.Adding && SearchType)
+        @for (var i = 0; i < ImageUrls.Count; i++)
         {
-            <div class="container text-center">
-                <div class="row d-flex justify-center">
-                    @for (var i = 0; i < ImageUrls.Count; i++)
-                    {
-                        var file = Files.ElementAt(i);
-                        var imageDataUrl = ImageUrls[i];
-                        <div class="col">
-                            <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-3 ma-2" />
-                            <div>
-                                <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+            var file = Files.ElementAt(i);
+            var imageDataUrl = ImageUrls[i];
+            <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-1 ma-2" />
+@*             <div>
+                <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
+            </div> *@
         }
     </div>
-</div>
+}
+
+@if (ActionType == ActionType.Adding && SearchType)
+{
+    @for (var i = 0; i < ImageUrls.Count; i++)
+    {
+        var file = Files.ElementAt(i);
+        var imageDataUrl = ImageUrls[i];
+        <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-1 ma-2" />
+    @*     <div>
+            <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
+        </div> *@
+    }
+}
+
 
 @code {
     [Parameter, EditorRequired]
@@ -93,6 +78,7 @@
     [Parameter]
     public int Width { get; set; }
 
-    [Parameter]
-    public bool SearchType { get; set; }
+    [Parameter] public bool SearchType { get; set; } = false;
+
+    [Parameter] public bool ShowRelevance { get; set; } = false;
 }

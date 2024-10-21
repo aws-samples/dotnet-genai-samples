@@ -39,8 +39,6 @@ public class ImageResizer
         context.Logger.LogInformation($"key: {key}");
         context.Logger.LogInformation($"bucketName: {bucketName}");
 
-        if (bucketName == null && key == null) return null;
-
         try
         {
             var response = await _s3Client.GetObjectAsync(bucketName, key);
@@ -52,15 +50,12 @@ public class ImageResizer
                 imageStream.Position = 0;
 
                 using var image = await Image.LoadAsync(imageStream);
-                // Resize the image
                 image.Mutate(x => x.Resize(TargetWidth, 0)); // 0 height to maintain aspect ratio
 
-                // Save the resized image to a new stream
                 using var outputStream = new MemoryStream();
                 await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat!);
                 outputStream.Position = 0;
 
-                // Upload the resized image to the destination bucket
                 var putRequest = new PutObjectRequest
                 {
                     BucketName = _destinationBucket,

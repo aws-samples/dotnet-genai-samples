@@ -11,7 +11,7 @@ public class GetImageEmbeddings
 	private readonly IAmazonS3 _s3Client = new AmazonS3Client();
 	private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
 
-	public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
+	public async Task<Dictionary<string, object>?> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
 	{
 		context.Logger.LogInformation($"in GetImageEmbeddings.  destination: {_destinationBucket}");
 
@@ -25,14 +25,18 @@ public class GetImageEmbeddings
 			throw new ArgumentException("Image inference not provided in the input.");
 		}
 
-		Console.WriteLine("imageText");
+        if (!input.TryGetValue("classifications", out var classifications))
+        {
+            throw new ArgumentException("classifications not provided in the input.");
+        }
+
+        Console.WriteLine("imageText");
 		Console.WriteLine(imageText);
 
 		try
 		{
 			var responseMetadata = await _s3Client.GetObjectMetadataAsync(_destinationBucket, key);
 
-			// Download the image from S3
 			using var response = await _s3Client.GetObjectAsync(_destinationBucket, key);
 			using var memoryStream = new MemoryStream();
 			await response.ResponseStream.CopyToAsync(memoryStream);
@@ -99,8 +103,9 @@ public class GetImageEmbeddings
 				{ "key", key },
 				{ "textEmbeddings", textEmbeddings },
 				{ "imageEmbeddings", imageEmbeddings },
+				{ "classifications", classifications },
 				{ "imageText", content },
-			};
+            };
 		}
 		catch (Exception e)
 		{

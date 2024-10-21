@@ -2,17 +2,17 @@
 @using Amazon.GenAI.Models
 
 <EditForm Model="@Model" OnSubmit="PromptChanged">
-    <div class="row">
-        <div class="@_textFieldClass">
+    <div style="display:flex">
+        <div style="flex: 1 1 auto">
             <MudTextField T="string" @ref="_promptField" Label="@DefaultText" Variant="Variant.Outlined" Margin="Margin.Dense"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Secondary"
-                          Style="background-color: white"/>
+                          Style="background-color: white" />
         </div>
-
-        <div class="@_progressClass">
+        <div class="@_progressClass" style="align-content: center; padding-left: 10px;">
             <Progress Status="Status" OnClickCallback="PromptChanged"></Progress>
         </div>
     </div>
+
 </EditForm>
 
 @code {

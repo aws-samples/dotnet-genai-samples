@@ -5,6 +5,7 @@ using Amazon.IdentityManagement;
 using Amazon.OpenSearchServerless.Model;
 using OpenSearch.Client;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Amazon.BedrockAgent;
 using Amazon.BedrockAgent.Model;
 using Amazon.IdentityManagement.Model;
@@ -21,6 +22,15 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.DynamoDBv2.DocumentModel;
 
 namespace TestProject1;
+
+public class ImageResponse
+{
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("classifications")]
+    public List<string>? Classifications { get; set; }
+}
 
 public class Tests
 {
@@ -66,6 +76,26 @@ public class Tests
         //};
         //var deleteCollectionTask = client.DeleteCollectionAsync(request);
         //deleteCollectionTask.Wait();
+    }
+
+    [Test]
+    public void can_test()
+    {
+        var generatedText = @"
+{
+    ""description"": ""The image shows the AWS Access Portal login screen. It contains a search bar where users can enter their AWS account details, including their AWS account ID and IAM user name. Below the search bar, there are options to create a new account or sign in using Amazon Web Services. The background of the page is a plain white color, giving the login screen a clean and simple appearance."",
+    ""classifications"": [
+        ""AWS Access Portal"",
+        ""Login Screen"",
+        ""Account Management""
+    ]
+}
+";
+
+        var imageResponse = JsonSerializer.Deserialize<ImageResponse>(generatedText);
+        var options = new JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = false };
+        var jsonString = JsonSerializer.Serialize(imageResponse, options);
+        Console.WriteLine(jsonString);
     }
 
     [Test]

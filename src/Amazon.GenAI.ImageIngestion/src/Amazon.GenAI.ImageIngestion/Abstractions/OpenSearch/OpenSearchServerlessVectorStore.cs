@@ -68,7 +68,6 @@ public class OpenSearchServerlessVectorStore
     {
         var embeddingModel = new Bedrock.EmbeddingModel(_bedrockRuntimeClient, _embeddingModelId);
         var bulkDescriptor = new BulkDescriptor();
-        var i = 1;
 
         var enumerable = documents as Document[] ?? documents.ToArray();
         foreach (var document in enumerable)

@@ -29,13 +29,14 @@ public class AddToOpenSearch
 
         context.Logger.LogInformation($"in AddToOpenSearch.  destination: {_bucketName}");
 
-        var key = GetInputValues(input, context, out var inference, 
+        var key = GetInputValues(input, context, 
+            out var imageText, 
 	        out var textEmbeddings,
-	        out var imageEmbeddings
-
+	        out var imageEmbeddings,
+            out var classifications
         );
 
-        var indexName = "my-images-index";
+        const string indexName = "my-images-index";
         var (endpoint, client) = await CreateClient();
         Console.WriteLine($"endpointUrl: {endpoint.AbsoluteUri}");
 
@@ -44,61 +45,32 @@ public class AddToOpenSearch
 
         try
         {
-	        if (textEmbeddings.Length > 0)
-	        {
-		        var vectorRecord = new VectorRecord
-		        {
-			        Text = "  ",
-			        Path = $"{_distributionDomainName}/{key}",
-			        Vector = textEmbeddings
-		        };
+            var vectorRecord = new VectorRecord
+            {
+                Text = imageText,
+                Path = $"{_distributionDomainName}/{key}",
+                Classifications = classifications,
+                Vector = imageEmbeddings
+            };
 
-				var bulkDescriptor = new BulkDescriptor();
-		        bulkDescriptor.Index<VectorRecord>(desc => desc
-			        .Document(vectorRecord)
-			        .Index(indexName)
-		        );
+            var bulkDescriptor = new BulkDescriptor();
+            bulkDescriptor.Index<VectorRecord>(desc => desc
+                .Document(vectorRecord)
+                .Index(indexName)
+            );
 
-		        var bulkResponse = await client!.BulkAsync(bulkDescriptor)
-			        .ConfigureAwait(false);
+            var bulkResponse = await client!.BulkAsync(bulkDescriptor)
+                .ConfigureAwait(false);
 
-		        Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
-		        context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
+            Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
+            context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
 
-		        if (bulkResponse.IsValid == false)
-		        {
-			        throw new Exception(bulkResponse.DebugInformation);
-		        }
-			}
+            if (bulkResponse.IsValid == false)
+            {
+                throw new Exception(bulkResponse.DebugInformation);
+            }
 
-			if (textEmbeddings.Length > 0)
-			{
-				var vectorRecord = new VectorRecord
-				{
-					Text = "  ",
-					Path = $"{_distributionDomainName}/{key}",
-					Vector = imageEmbeddings
-				};
-
-				var bulkDescriptor = new BulkDescriptor();
-				bulkDescriptor.Index<VectorRecord>(desc => desc
-					.Document(vectorRecord)
-					.Index(indexName)
-				);
-
-				var bulkResponse = await client!.BulkAsync(bulkDescriptor)
-					.ConfigureAwait(false);
-
-				Console.WriteLine($"bulkResponse forImages is IsValid: {bulkResponse.IsValid}");
-				context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
-
-				if (bulkResponse.IsValid == false)
-				{
-					throw new Exception(bulkResponse.DebugInformation);
-				}
-			}
-
-			return new BulkDescriptor();
+            return new BulkDescriptor();
         }
         catch (Exception e)
         {
@@ -110,6 +82,8 @@ public class AddToOpenSearch
     private void CreateIndex(OpenSearchClient client, ILambdaContext context, string indexName, string? namePrefix,
         string? nameSuffix)
     {
+        context.Logger.LogInformation("Creating Index...");
+
         var createIndexResponse = (client?.Indices.Create(indexName, c => c
             .Settings(x => x
                 .Setting("index.knn", true)
@@ -117,6 +91,7 @@ public class AddToOpenSearch
             .Map<VectorRecord>(m => m
                 .Properties(p => p
                     .Text(t => t.Name(n => n.Text))
+                    .Text(t => t.Name(n => n.Classifications))
                     .Text(t => t.Name(n => n.Path))
                     .KnnVector(d => d.Name(n => n.Vector).Dimension(1024).Similarity("cosine"))
                 )
@@ -136,7 +111,9 @@ public class AddToOpenSearch
 	    ILambdaContext context, 
 	    out string imageText,
         out float[] textEmbeddings,
-	    out float[] imageEmbeddings)
+	    out float[] imageEmbeddings,
+        out string classifications
+        )
     {
         if (!input.TryGetValue("key", out var key))
         {
@@ -152,19 +129,26 @@ public class AddToOpenSearch
         }
 
         textEmbeddings = new float[] { };
-        if (input.TryGetValue("textEmbeddings", out var arrayTextString))
-        {
-	        var stringValues = arrayTextString.Trim('[', ']').Split(',');
-	        textEmbeddings = stringValues.Select(float.Parse).ToArray();
-	        context.Logger.LogInformation($"textEmbeddings: {textEmbeddings}");
-        }
+        //if (input.TryGetValue("textEmbeddings", out var arrayTextString))
+        //{
+	       // var stringValues = arrayTextString.Trim('[', ']').Split(',');
+	       // textEmbeddings = stringValues.Select(float.Parse).ToArray();
+	       // context.Logger.LogInformation($"textEmbeddings: {textEmbeddings}");
+        //}
 
 		imageEmbeddings = new float[] { };
         if (input.TryGetValue("imageEmbeddings", out var arrayImageString))
         {
             var stringValues = arrayImageString.Trim('[', ']').Split(',');
             imageEmbeddings = stringValues.Select(float.Parse).ToArray();
-            context.Logger.LogInformation($"imageEmbeddings: {imageEmbeddings}");
+            context.Logger.LogInformation($"imageEmbeddings: {stringValues}");
+        }
+
+        classifications = "";
+        if (input.TryGetValue("classifications", out var value2))
+        {
+            classifications = value2;
+            context.Logger.LogInformation($"classifications: {classifications}");
         }
 
         return key;
@@ -180,7 +164,7 @@ public class AddToOpenSearch
                 .CollectionSummaries
                 .FirstOrDefault(x => x.Name.Contains("dotnet-genai"));
 
-            Console.WriteLine($"collectionArn: {collection.Arn}");
+            Console.WriteLine($"collectionArn: {collection?.Arn}");
         }
         catch (Exception e)
         {

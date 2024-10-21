@@ -1,10 +1,10 @@
 ﻿window.scrollToElement = function (id) {
-    const container = document.getElementById(id);
-    if (container) {
-        container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    } else {
-        console.error('Container element not found');
-    }
+    //const container = document.getElementById(id);
+    //if (container) {
+    //    container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    //} else {
+    //    console.error('Container element not found');
+    //}
 }
 
 window.registerViewportChangeCallback = (dotnetHelper) => {

@@ -70,7 +70,6 @@ public class OpenSearchServerlessVectorStore
     {
         var embeddingModel = new EmbeddingModel(_bedrockRuntimeClient, _embeddingModelId);
         var bulkDescriptor = new BulkDescriptor();
-        var i = 1;
 
         var enumerable = documents as Document[] ?? documents.ToArray();
         foreach (var document in enumerable)
@@ -179,6 +178,7 @@ public class OpenSearchServerlessVectorStore
             var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chuckSize);
             var splitText = textSplitter.SplitText(content);
             var embeddings = new List<float[]>(capacity: splitText.Count);
+            if (embeddings == null) throw new ArgumentNullException(nameof(embeddings));
             var bytes = Convert.FromBase64String((document.Metadata["base64"] as string)!);
             var image = BinaryData.FromBytes(bytes);
             var embeddingTasks = splitText.Select(text => embeddingModel.CreateEmbeddingsAsync(document.PageContent, image))
@@ -196,7 +196,7 @@ public class OpenSearchServerlessVectorStore
                     f[j] = (float)embedding[j]?.AsValue()!;
                 }
 
-                searchResults = (List<VectorSearchResponse>)await SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+                searchResults = (List<VectorSearchResponse>)await SimilaritySearchByVectorAsync(f, 5, cancellationToken).ConfigureAwait(false);
 
                 embeddings.Add(f);
             }
@@ -307,7 +307,7 @@ public class OpenSearchServerlessVectorStore
                     .Vector(embedding)
                     .K(k)
                 )
-            )).ConfigureAwait(false);
+            ), cancellationToken).ConfigureAwait(false);
 
         if (searchResponse!.IsValid == false)
         {
@@ -319,6 +319,7 @@ public class OpenSearchServerlessVectorStore
             Score = hit.Score,
             Base64 = hit.Source.Base64,
             Vector = hit.Source.Vector,
+            Classifications = hit.Source.Classifications?.Trim('"'),
             Path = hit.Source.Path,
             Text = hit.Source.Text
         }).ToList();

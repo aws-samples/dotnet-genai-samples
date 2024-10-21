@@ -123,7 +123,9 @@ public class ImageIngestionStack : Stack
             MemorySize = 1024,
             Environment = new Dictionary<string, string>
             {
-                { "DESTINATION_BUCKET", destinationBucket.BucketName }
+                { "DESTINATION_BUCKET", destinationBucket.BucketName },
+                { "NAME_PREFIX", props?.AppProps.NamePrefix },
+                { "NAME_SUFFIX", props?.AppProps.NameSuffix },
             },
             Role = new Role(this, $"{getImageInferenceFunctionName}-role", new RoleProps
             {
@@ -132,6 +134,28 @@ public class ImageIngestionStack : Stack
                 {
                     ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
                     ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+                },
+                InlinePolicies = new Dictionary<string, PolicyDocument>
+                {
+                    ["image-dynamo-policy"] = new PolicyDocument(new PolicyDocumentProps
+                    {
+                        Statements = new[]
+                        {
+                            new PolicyStatement(new PolicyStatementProps
+                            {
+                                Effect = Effect.ALLOW,
+                                Resources = new [] { "*" },
+                                Actions = new []
+                                {
+                                    "dynamodb:GetItem",
+                                    "dynamodb:Scan",
+                                    "dynamodb:Query",
+                                    "dynamodb:BatchGetItem",
+                                    "dynamodb:DescribeTable",
+                                }
+                            }),
+                        }
+                    })
                 }
             })
         });
@@ -232,6 +256,7 @@ public class ImageIngestionStack : Stack
             {
                 ["key.$"] = "$.Payload.key",
                 ["imageText.$"] = "$.Payload.imageText",
+                ["classifications.$"] = "$.Payload.classifications",
                 ["textEmbeddings.$"] = "$.Payload.textEmbeddings",
                 ["imageEmbeddings.$"] = "$.Payload.imageEmbeddings"
 			}
@@ -245,6 +270,7 @@ public class ImageIngestionStack : Stack
                 ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
                 ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
                 ["imageText"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.imageText")),
+                ["classifications"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.classifications")),
             }
         });
 
@@ -256,6 +282,7 @@ public class ImageIngestionStack : Stack
                 ["imageText.$"] = "$.imageText",
                 ["textEmbeddings.$"] = "States.JsonToString($.textEmbeddings)",
                 ["imageEmbeddings.$"] = "States.JsonToString($.imageEmbeddings)",
+                ["classifications.$"] = "States.JsonToString($.classifications)",
             }
         });
 

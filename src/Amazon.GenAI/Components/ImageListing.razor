@@ -1,69 +1,64 @@
 ﻿@using Amazon.GenAI.Abstractions.OpenSearch
 @using Amazon.GenAI.Models
 
-
-@if (ActionType == ActionType.Searching)
+@foreach (var result in SearchResults!)
 {
-    <div>
-        @foreach (var result in SearchResults!)
-        {
+    <div class="image-container">
+        @{
             var uri = new Uri($"http://{result.Path}");
             var path = Uri.UnescapeDataString(uri.PathAndQuery);
-
-            // Get the last segment of the path (everything after the last '/')
             var fileName = Path.GetFileName(path);
-
-            // Remove query string if present
             var queryIndex = fileName.IndexOf('?');
             if (queryIndex != -1)
             {
                 fileName = fileName.Substring(0, queryIndex);
             }
 
-            <div>
-                <MudTooltip Text="@result.Text" Arrow="true" Placement="Placement.Top" ShowOnHover="true" Inline="true">
-                    <MudImage Src="@($"http://{result.Path}")" Elevation="6" Class="pa-1 ma-2" />
-                </MudTooltip>
-     @*            <div>
-                    <MudChip T="string" Color="Color.Dark" Text="@fileName" />
-                </div> *@
-                @if (ShowRelevance && result.Score < 1)
-                {
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 1.5em">
-                        @Math.Round((double)(result.Score * 100)!)%
-                    </span>
-                }
-            </div>
+            var classifications = result.Classifications?.Split(",");
         }
 
-        @for (var i = 0; i < ImageUrls.Count; i++)
-        {
-            var file = Files.ElementAt(i);
-            var imageDataUrl = ImageUrls[i];
-            <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-1 ma-2" />
-@*             <div>
-                <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
-            </div> *@
-        }
+        <MudImage Src="@($"http://{result.Path}")" Elevation="0" Class="pa-1 ma-2" />
+      
+        <div class="description-container">
+            <h3>@fileName</h3>
+            <div class="description">
+                <div><strong>Score:</strong> @Math.Round((double)(result.Score * 100)!)%</div>
+                <div>
+                    <strong>Categories:</strong>
+                    @if (classifications != null)
+                    {
+                        foreach (var category in classifications)
+                        {
+                            <MudChip T="string" Color="Color.Dark" Text="@category.ToLower()" Size="Size.Small"/>
+                        }
+                    }
+                </div>
+                <div>@result.Text</div>
+            </div>
+        </div>
     </div>
 }
 
-@if (ActionType == ActionType.Adding && SearchType)
+@*         @for (var i = 0; i < ImageUrls.Count; i++)
+    {
+    var file = Files.ElementAt(i);
+    var imageDataUrl = ImageUrls[i];
+    <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-1 ma-2" />
+    } *@
+
+@* @if (ActionType == ActionType.Adding && SearchType)
 {
     @for (var i = 0; i < ImageUrls.Count; i++)
     {
         var file = Files.ElementAt(i);
         var imageDataUrl = ImageUrls[i];
         <MudImage Width="@Width" Src="@imageDataUrl" Alt="@file.Key" Elevation="6" Class="pa-1 ma-2" />
-    @*     <div>
-            <MudChip T="string" Color="Color.Dark" Text="@file.Key" />
-        </div> *@
     }
-}
+} *@
 
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
     public ActionType ActionType { get; set; }
 
     [Parameter]

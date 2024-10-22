@@ -45,30 +45,62 @@ public class AddToOpenSearch
 
         try
         {
-            var vectorRecord = new VectorRecord
+            if (textEmbeddings is not null)
             {
-                Text = imageText,
-                Path = $"{_distributionDomainName}/{key}",
-                Classifications = classifications,
-                Vector = imageEmbeddings
-            };
+                var vectorRecord = new VectorRecord
+                {
+                    Text = imageText,
+                    Path = $"{_distributionDomainName}/{key}",
+                    Classifications = classifications,
+                    Vector = textEmbeddings
+                };
 
-            var bulkDescriptor = new BulkDescriptor();
-            bulkDescriptor.Index<VectorRecord>(desc => desc
-                .Document(vectorRecord)
-                .Index(indexName)
-            );
+                var bulkDescriptor = new BulkDescriptor();
+                bulkDescriptor.Index<VectorRecord>(desc => desc
+                    .Document(vectorRecord)
+                    .Index(indexName)
+                );
 
-            var bulkResponse = await client!.BulkAsync(bulkDescriptor)
-                .ConfigureAwait(false);
+                var bulkResponse = await client!.BulkAsync(bulkDescriptor)
+                    .ConfigureAwait(false);
 
-            Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
-            context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
+                Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
+                context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
 
-            if (bulkResponse.IsValid == false)
-            {
-                throw new Exception(bulkResponse.DebugInformation);
+                if (bulkResponse.IsValid == false)
+                {
+                    throw new Exception(bulkResponse.DebugInformation);
+                }
             }
+
+            if (imageEmbeddings is not null)
+            {
+                var vectorRecord = new VectorRecord
+                {
+                    Text = imageText,
+                    Path = $"{_distributionDomainName}/{key}",
+                    Classifications = classifications,
+                    Vector = imageEmbeddings
+                };
+
+                var bulkDescriptor = new BulkDescriptor();
+                bulkDescriptor.Index<VectorRecord>(desc => desc
+                    .Document(vectorRecord)
+                    .Index(indexName)
+                );
+
+                var bulkResponse = await client!.BulkAsync(bulkDescriptor)
+                    .ConfigureAwait(false);
+
+                Console.WriteLine($"bulkResponse for Text is IsValid: {bulkResponse.IsValid}");
+                context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
+
+                if (bulkResponse.IsValid == false)
+                {
+                    throw new Exception(bulkResponse.DebugInformation);
+                }
+            }
+
 
             return new BulkDescriptor();
         }
@@ -110,8 +142,8 @@ public class AddToOpenSearch
 	    Dictionary<string, string> input, 
 	    ILambdaContext context, 
 	    out string imageText,
-        out float[] textEmbeddings,
-	    out float[] imageEmbeddings,
+        out float[]? textEmbeddings,
+	    out float[]? imageEmbeddings,
         out string classifications
         )
     {
@@ -128,20 +160,34 @@ public class AddToOpenSearch
             context.Logger.LogInformation($"imageText: {imageText}");
         }
 
-        textEmbeddings = new float[] { };
-        //if (input.TryGetValue("textEmbeddings", out var arrayTextString))
-        //{
-	       // var stringValues = arrayTextString.Trim('[', ']').Split(',');
-	       // textEmbeddings = stringValues.Select(float.Parse).ToArray();
-	       // context.Logger.LogInformation($"textEmbeddings: {textEmbeddings}");
-        //}
+        textEmbeddings = null;
+        if (input.TryGetValue("textEmbeddings", out var arrayTextString))
+        {
+            try
+            {
+                var stringValues = arrayTextString.Trim('[', ']').Split(',');
+                textEmbeddings = stringValues.Select(float.Parse).ToArray();
+                context.Logger.LogInformation($"textEmbeddings: {textEmbeddings}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
 
-		imageEmbeddings = new float[] { };
+        imageEmbeddings = null;
         if (input.TryGetValue("imageEmbeddings", out var arrayImageString))
         {
-            var stringValues = arrayImageString.Trim('[', ']').Split(',');
-            imageEmbeddings = stringValues.Select(float.Parse).ToArray();
-            context.Logger.LogInformation($"imageEmbeddings: {stringValues}");
+            try
+            {
+                var stringValues = arrayImageString.Trim('[', ']').Split(',');
+                imageEmbeddings = stringValues.Select(float.Parse).ToArray();
+                context.Logger.LogInformation($"imageEmbeddings: {imageEmbeddings}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         classifications = "";

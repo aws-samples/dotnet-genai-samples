@@ -256,6 +256,7 @@ public class ImageIngestionStack : Stack
             {
                 ["key.$"] = "$.Payload.key",
                 ["imageText.$"] = "$.Payload.imageText",
+                ["imageDetails.$"] = "$.Payload.imageDetails",
                 ["classifications.$"] = "$.Payload.classifications",
                 ["textEmbeddings.$"] = "$.Payload.textEmbeddings",
                 ["imageEmbeddings.$"] = "$.Payload.imageEmbeddings"
@@ -270,6 +271,7 @@ public class ImageIngestionStack : Stack
                 ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
                 ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
                 ["imageText"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.imageText")),
+                ["imageDetails"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.imageDetails")),
                 ["classifications"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.classifications")),
             }
         });
@@ -280,6 +282,7 @@ public class ImageIngestionStack : Stack
             {
                 ["key.$"] = "$.key",
                 ["imageText.$"] = "$.imageText",
+                ["imageDetails.$"] = "$.imageDetails",
                 ["textEmbeddings.$"] = "States.JsonToString($.textEmbeddings)",
                 ["imageEmbeddings.$"] = "States.JsonToString($.imageEmbeddings)",
                 ["classifications.$"] = "States.JsonToString($.classifications)",

@@ -58,6 +58,8 @@ use these classifications to describe the image in detail.  if the existing clas
             var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
 
             const string textModelId = "anthropic.claude-3-haiku-20240307-v1:0";
+            // const string textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
+
             var textModel = new TextModel(_bedrockClient, textModelId);
             var prompt = CreatePrompt(3, additionalInstruction);
             var generatedText = await textModel.GenerateAsync(prompt, image).ConfigureAwait(false);
@@ -70,11 +72,15 @@ use these classifications to describe the image in detail.  if the existing clas
 
             if (imageResponse is not null)
             {
+                var imageDetails = imageResponse.Details ?? string.Empty;
+                var imageText = imageResponse.Description ?? string.Empty;
+
                 return new Dictionary<string, string>
                 {
                     { "classifications", imageResponse.Classifications?.Any() == true ? string.Join(", ", imageResponse.Classifications).ToLower() : string.Empty },
                     { "key", key },
-                    { "imageText", imageResponse.Description ?? string.Empty }
+                    { "imageText", imageText },
+                    { "imageDetails", imageDetails },
                 };
             }
 
@@ -93,7 +99,10 @@ use these classifications to describe the image in detail.  if the existing clas
 respond back in json format.
 1. Provide a comprehensive description of this image.  this description will be used as the details for an online product catalog.
 make this the 'description' parameter.
-2. classify this image. classify image using 1-2 words. return 1-{maxLabels} labels. make this the 'classifications' parameters.
+2. provide complete detail information from the product image.  
+if the product has a nutritional label, then describe as much information about the nutritional facts.
+this information will be used to search. make this the 'details' parameter.
+3. classify this image. classify image using 1-2 words. return 1-{maxLabels} labels. make this the 'classifications' parameters.
 {additionalInstruction}
 ";
     }
@@ -133,7 +142,7 @@ public class ClassificationRetriever
                     .Select(c => c.Trim());
                 foreach (var classification in splitClassifications)
                 {
-                    uniqueClassifications.Add(classification);
+                    uniqueClassifications.Add(classification.ToLower());
                 }
             }
 
@@ -151,4 +160,7 @@ public class ImageResponse
 
     [JsonPropertyName("classifications")]
     public List<string>? Classifications { get; set; }
+
+    [JsonPropertyName("details")]
+    public string? Details { get; set; }
 }

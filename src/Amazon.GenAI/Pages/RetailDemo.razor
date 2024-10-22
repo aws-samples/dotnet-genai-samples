@@ -28,7 +28,7 @@
     </ImageListing>
 </div>
 
-<div class="search" style="padding: 1px">
+<div class="search">
     <div class="prompt">
         <Prompt Model="MessageHistory"
                 OnPromptChanged="PromptChanged"
@@ -50,16 +50,20 @@
     </div>
 </div>
 
-<div class="previewImages">
-    <PreviewImages ImageUrls="_imageDataUrls"
-                  Files="_inputFiles"
-                  Width="150">
-    </PreviewImages>
-</div>
+@if (_inputFiles.Count > 0)
+{
+    <div class="previewImages">
+        <PreviewImages ImageUrls="_imageDataUrls"
+                       Files="_inputFiles"
+                       Width="150">
+        </PreviewImages>
+    </div>
+}
 
-<div class="footer">
+
+@* <div class="footer">
     © 2024, Amazon Web Services, Inc. or its affiliates.
-</div>
+</div> *@
 
 
 @code {

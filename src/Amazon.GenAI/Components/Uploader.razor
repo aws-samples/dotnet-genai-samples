@@ -12,7 +12,8 @@
                    InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
                    @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
         <ButtonTemplate>
-            <MudText Typo="Typo.h6">Upload file@(Pluralize)</MudText>
+            <MudText Typo="Typo.h6"><i class="fa-solid fa-upload"></i>
+                </MudText>
         </ButtonTemplate>
     </MudFileUpload>
 }

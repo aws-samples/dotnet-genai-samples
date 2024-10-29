@@ -15,7 +15,8 @@ public class OpenSearchServerlessVectorStore
     private readonly string? _textModelId;
     private readonly OpenSearchVectorStoreOptions _options;
     private readonly OpenSearchClient _client;
-    private readonly string? _indexName;
+    private readonly string? _imageIndexName;
+    private readonly string? _textIndexName;
 
     public OpenSearchServerlessVectorStore(
         AmazonBedrockRuntimeClient bedrockRuntimeClient,
@@ -27,7 +28,8 @@ public class OpenSearchServerlessVectorStore
         _embeddingModelId = embeddingModelId;
         _textModelId = textModelId;
         _options = options;
-        _indexName = options.IndexName;
+        _imageIndexName = options.ImageIndexName;
+        _textIndexName = options.TextIndexName;
 
         var match = Regex.Match(options.CollectionArn!, @"(?<=\/)[^\/]+$");
         var endpoint = new Uri($"https://{match.Value}.{options.Region?.SystemName}.aoss.amazonaws.com");
@@ -35,16 +37,15 @@ public class OpenSearchServerlessVectorStore
         var config = new ConnectionSettings(endpoint, connection);
         _client = new OpenSearchClient(config);
 
-        var existsResponse = _client.Indices.Exists(_indexName);
-        if (existsResponse.Exists == false)
-        {
-            CreateIndex();
-        }
+        var existsResponse = _client.Indices.Exists(_imageIndexName);
+        if (existsResponse.Exists == false) CreateIndex(_imageIndexName);
+        existsResponse = _client.Indices.Exists(_textIndexName);
+        if (existsResponse.Exists == false) CreateIndex(_textIndexName);
     }
 
-    internal void CreateIndex()
+    internal void CreateIndex(string? indexName)
     {
-        var createIndexResponse = _client?.Indices.Create(_indexName, c => c
+        var createIndexResponse = _client?.Indices.Create(indexName, c => c
             .Settings(x => x
                 .Setting("index.knn", true)
             )
@@ -108,7 +109,7 @@ public class OpenSearchServerlessVectorStore
 
             bulkDescriptor.Index<VectorRecord>(desc => desc
                 .Document(vectorRecord)
-                .Index(_indexName)
+                .Index(_textIndexName)
             );
         }
 
@@ -196,7 +197,8 @@ public class OpenSearchServerlessVectorStore
                     f[j] = (float)embedding[j]?.AsValue()!;
                 }
 
-                searchResults = (List<VectorSearchResponse>)await SimilaritySearchByVectorAsync(f, 5, cancellationToken).ConfigureAwait(false);
+                searchResults = 
+                    (List<VectorSearchResponse>)await SimilaritySearchByVectorAsync(_imageIndexName, f, 5, cancellationToken).ConfigureAwait(false);
 
                 embeddings.Add(f);
             }
@@ -287,7 +289,7 @@ public class OpenSearchServerlessVectorStore
 
             bulkDescriptor.Index<VectorRecord>(desc => desc
                 .Document(vectorRecord)
-                .Index(_indexName)
+                .Index(_textIndexName)
             );
         }
 
@@ -295,12 +297,13 @@ public class OpenSearchServerlessVectorStore
     }
 
     internal async Task<IReadOnlyCollection<VectorSearchResponse>> SimilaritySearchByVectorAsync(
+        string indexName,
         float[] embedding,
         int k = 4,
         CancellationToken cancellationToken = default)
     {
         var searchResponse = await _client!.SearchAsync<VectorRecord>(s => s
-            .Index(_indexName)
+            .Index(indexName)
             .Query(q => q
                 .Knn(knn => knn
                     .Field(f => f.Vector)

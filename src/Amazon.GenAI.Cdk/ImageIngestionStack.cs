@@ -17,6 +17,7 @@ using Function = Amazon.CDK.AWS.Lambda.Function;
 using FunctionProps = Amazon.CDK.AWS.Lambda.FunctionProps;
 using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
 using Parallel = Amazon.CDK.AWS.StepFunctions.Parallel;
+using Amazon.CDK.AWS.SQS;
 
 namespace Amazon.GenAI.Cdk;
 
@@ -109,7 +110,7 @@ public class ImageIngestionStack : Stack
                     ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
                     ManagedPolicy.FromAwsManagedPolicyName("AmazonS3FullAccess")
                 }
-            })
+            }),
         });
 
         var getImageInferenceFunctionName = $"{props?.AppProps.NamePrefix}-get-image-inference-function-{props?.AppProps.NameSuffix}";
@@ -155,9 +156,24 @@ public class ImageIngestionStack : Stack
                                 }
                             }),
                         }
+                    }),
+                    ["textract-policy"] = new PolicyDocument(new PolicyDocumentProps
+                    {
+                        Statements = new[]
+                        {
+                            new PolicyStatement(new PolicyStatementProps
+                            {
+                                Effect = Effect.ALLOW,
+                                Resources = new [] { "*" },
+                                Actions = new []
+                                {
+                                    "textract:DetectDocumentText",
+                                }
+                            }),
+                        }
                     })
                 }
-            })
+            }),
         });
         getImageInferenceFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
@@ -220,7 +236,7 @@ public class ImageIngestionStack : Stack
                 { "NAME_SUFFIX", props?.AppProps.NameSuffix },
                 { "DISTRIBUTION_DOMAIN_NAME", distribution.DistributionDomainName },
             },
-            Role = props.KbCustomResourceRole
+            Role = props.KbCustomResourceRole,
         });
 
         // Define Step Functions tasks
@@ -242,6 +258,13 @@ public class ImageIngestionStack : Stack
         var invokeGetImageInference = new LambdaInvoke(this, "GetImageInference", new LambdaInvokeProps
         {
             LambdaFunction = getImageInferenceFunction,
+        });
+        invokeGetImageInference.AddRetry(new RetryProps
+        {
+            BackoffRate = 2,
+            Interval = Duration.Seconds(10),
+            MaxAttempts = 6,
+            Errors = new[] { "States.ALL" }
         });
 
         var invokeGetImageEmbeddings = new LambdaInvoke(this, "GetImageEmbeddings", new LambdaInvokeProps

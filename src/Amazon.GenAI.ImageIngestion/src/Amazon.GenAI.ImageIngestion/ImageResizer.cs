@@ -12,7 +12,7 @@ public class ImageResizer
 {
     private readonly IAmazonS3 _s3Client;
     private readonly string? _destinationBucket;
-    private const int TargetWidth = 400;
+    private const int TargetWidth = 800;
 
     public ImageResizer()
     {

@@ -24,6 +24,7 @@
     <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.400.4" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.400.4" />
     <PackageReference Include="AWSSDK.StepFunctions" Version="3.7.401.4" />
+    <PackageReference Include="AWSSDK.Textract" Version="3.7.400.40" />
     <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
     <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />

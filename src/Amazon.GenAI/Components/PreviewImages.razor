@@ -1,4 +1,8 @@
-﻿@for (var i = 0; i < ImageUrls.Count; i++)
+﻿<div>
+    <strong>@ImageUrls.Count</strong> images
+</div>
+
+@for (var i = 0; i < ImageUrls.Count; i++)
 {
     var file = Files.ElementAt(i);
     var imageDataUrl = ImageUrls[i];

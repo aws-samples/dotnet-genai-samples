@@ -36,12 +36,15 @@ public class AddToOpenSearch
             out var classifications
         );
 
-        const string indexName = "my-images-index";
+        const string imageIndexName = "my-images-index";
+        const string textIndexName = "my-texts-index";
         var (endpoint, client) = await CreateClient();
         Console.WriteLine($"endpointUrl: {endpoint.AbsoluteUri}");
 
-		var existsResponse = await client.Indices.ExistsAsync(Indices.Parse(indexName));
-        if (existsResponse.Exists == false) CreateIndex(client, context, indexName, _namePrefix, _nameSuffix);
+		var existsResponse = await client.Indices.ExistsAsync(Indices.Parse(imageIndexName));
+        if (existsResponse.Exists == false) CreateIndex(client, context, imageIndexName, _namePrefix, _nameSuffix);
+        existsResponse = await client.Indices.ExistsAsync(Indices.Parse(textIndexName));
+        if (existsResponse.Exists == false) CreateIndex(client, context, textIndexName, _namePrefix, _nameSuffix);
 
         try
         {
@@ -58,7 +61,7 @@ public class AddToOpenSearch
                 var bulkDescriptor = new BulkDescriptor();
                 bulkDescriptor.Index<VectorRecord>(desc => desc
                     .Document(vectorRecord)
-                    .Index(indexName)
+                    .Index(textIndexName)
                 );
 
                 var bulkResponse = await client!.BulkAsync(bulkDescriptor)
@@ -86,7 +89,7 @@ public class AddToOpenSearch
                 var bulkDescriptor = new BulkDescriptor();
                 bulkDescriptor.Index<VectorRecord>(desc => desc
                     .Document(vectorRecord)
-                    .Index(indexName)
+                    .Index(imageIndexName)
                 );
 
                 var bulkResponse = await client!.BulkAsync(bulkDescriptor)
@@ -100,7 +103,6 @@ public class AddToOpenSearch
                     throw new Exception(bulkResponse.DebugInformation);
                 }
             }
-
 
             return new BulkDescriptor();
         }

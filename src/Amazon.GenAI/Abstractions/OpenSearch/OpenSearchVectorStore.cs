@@ -23,10 +23,10 @@ public class OpenSearchVectorStore
         _bedrockRuntimeClient = bedrockRuntimeClient;
         _embeddingModelId = embeddingModelId;
         _options = options;
-        _indexName = options.IndexName;
+        _indexName = options.ImageIndexName;
 
         var settings = new ConnectionSettings(options.ConnectionUri)
-            .DefaultIndex(options.IndexName)
+            .DefaultIndex(options.ImageIndexName)
             .BasicAuthentication(options.Username, options.Password);
 
         _client = new OpenSearchClient(settings);

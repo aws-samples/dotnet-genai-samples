@@ -259,7 +259,7 @@
 		var options = new OpenSearchVectorStoreOptions
 			{
 				Region = regionEndpoint,
-				IndexName = _indexName,
+				ImageIndexName = _indexName,
 				Dimensions = Dimensions,
 				CollectionArn = _collections[0]?.Arn,
 			};
@@ -404,7 +404,8 @@
 			f[i] = (float)embedding[i]?.AsValue()!;
 		}
 
-		SearchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+		SearchResults = 
+			(List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(_indexName,f, 5).ConfigureAwait(false);
 
 		await InvokeAsync(() =>
 		{

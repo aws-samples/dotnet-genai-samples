@@ -81,20 +81,16 @@
     private const string NamePrefix = "dotnet-genai";
     private OpenSearchServerlessVectorStore? _openSearchVectorStore;
     private const int Dimensions = 1024;
-    private string? _indexName;
-    private string? _textModelId;
-    private string? _embeddingModelId;
+    private string? _imageIndexName = "my-images-index";
+    private string? _textIndexName = "my-texts-index";
+    private string? _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
+    private string? _embeddingModelId = "amazon.titan-embed-image-v1";
     public required IReadOnlyCollection<VectorSearchResponse>? SearchResults = new List<VectorSearchResponse>();
-
     private ModalType _modalType = ModalType.Image;
     private readonly int _pageSize = 15;
 
     protected override async Task OnInitializedAsync()
     {
-        _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
-        _embeddingModelId = "amazon.titan-embed-image-v1";
-        _indexName = "my-images-index";
-
         _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
         if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
 
@@ -107,7 +103,8 @@
         var options = new OpenSearchVectorStoreOptions
             {
                 Region = regionEndpoint,
-                IndexName = _indexName,
+                ImageIndexName = _imageIndexName,
+                TextIndexName = _textIndexName,
                 Dimensions = Dimensions,
                 CollectionArn = _collections[0]?.Arn,
             };
@@ -123,9 +120,9 @@
 
     private async Task PromptChanged(string prompt)
     {
-        BuiltinPrompt = prompt;
-
         if (string.IsNullOrEmpty(prompt)) return;
+       
+        BuiltinPrompt = prompt;
 
         Status = Status.Thinking;
         StateHasChanged();
@@ -139,7 +136,17 @@
             f[i] = (float)embedding[i]?.AsValue()!;
         }
 
-        SearchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+        SearchResults =
+            (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(_imageIndexName, f, 5).ConfigureAwait(false);
+
+        // var textResults =
+        //     (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(_textIndexName, f, 5).ConfigureAwait(false);
+
+        // SearchResults = imageResults.Concat(textResults)
+        //     .GroupBy(x => x.Path)
+        //     .OrderByDescending(group => group.Average(x => x.Score ?? 0))
+        //     .Select(group => group.First())
+        //     .ToList();
 
         await InvokeAsync(() =>
         {
@@ -180,26 +187,26 @@
 
     private async Task OnSubmit()
     {
-        var client = new AmazonS3Client();
+        var client = new AmazonS3Client(); // dependently inject
         var bucket = (await client.ListBucketsAsync()).Buckets.FirstOrDefault(x => x.BucketName.StartsWith("dotnet-genai-source"));
 
         await InvokeAsync(() =>
         {
-            Status = Status.Adding;
-
             if (bucket == null) return;
+            
+            Status = Status.Adding;
 
             foreach (var path in _inputFiles.Select(file => file.Value))
             {
                 var transferUtility = new TransferUtility(client);
 
                 var transferUtilityUploadRequest = new TransferUtilityUploadRequest
-                {
-                    BucketName = bucket?.BucketName,
-                    Key = Path.GetFileName(path),
-                    FilePath = path,
-                    ContentType = "text/plain",
-                };
+                    {
+                        BucketName = bucket?.BucketName,
+                        Key = Path.GetFileName(path),
+                        FilePath = path,
+                        ContentType = "text/plain",
+                    };
                 transferUtilityUploadRequest.Metadata.Add("modalType", Enum.GetName(typeof(ModalType), _modalType));
 
                 transferUtility.UploadAsync(transferUtilityUploadRequest);

@@ -10,6 +10,8 @@ public class GetImageEmbeddings
 {
     private readonly IAmazonS3 _s3Client = new AmazonS3Client();
     private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
+    private static readonly int Dimensions = 1024;
+    private static readonly int ChunkSize = 2000;
 
     public async Task<Dictionary<string, object>?> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
     {
@@ -45,12 +47,14 @@ public class GetImageEmbeddings
             memoryStream.Position = 0;
 
             var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
-            var content = imageText.Trim();
-            var chunkSize = 4000;
-            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
+            var content =
+                "classifications:" + classifications.Trim() + "\n" +
+                imageText.Trim() + "\n" + 
+                imageDetails.Trim() + "\n";
+            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: ChunkSize);
             var splitText = textSplitter.SplitText(content);
-            var textEmbeddings = new List<float[]>(capacity: splitText.Count);
-            var imageEmbeddings = new List<float[]>(capacity: splitText.Count);
+            var textEmbeddings = new List<float[]>();
+            var imageEmbeddings = new List<float[]>();
 
             var metadataKeys = responseMetadata.Metadata.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
             var metadata = responseMetadata.Metadata[metadataKeys.FirstOrDefault()!];
@@ -77,9 +81,9 @@ public class GetImageEmbeddings
                 { "key", key },
                 { "textEmbeddings", textEmbeddings! },
                 { "imageEmbeddings", imageEmbeddings! },
-                { "classifications", classifications },
-                { "imageText", content },
-                { "imageDetails", imageDetails },
+                { "classifications", classifications.Trim() },
+                { "imageText", imageText.Trim() },
+                { "imageDetails", imageDetails.Trim() },
             };
         }
         catch (Exception e)
@@ -105,7 +109,7 @@ public class GetImageEmbeddings
 
         context.Logger.LogInformation($"GetImageEmbeddings got image embeddings");
 
-        var f = new float[1024];
+        var f = new float[Dimensions];
         for (var j = 0; j < embedding.Count; j++)
         {
             f[j] = (float)embedding[j]?.AsValue()!;
@@ -130,7 +134,7 @@ public class GetImageEmbeddings
 
         context.Logger.LogInformation($"GetImageEmbeddings got text embeddings");
 
-        var f = new float[1024];
+        var f = new float[Dimensions];
         for (var j = 0; j < embedding.Count; j++)
         {
             f[j] = (float)embedding[j]?.AsValue()!;

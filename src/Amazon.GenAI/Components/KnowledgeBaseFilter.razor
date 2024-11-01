@@ -3,9 +3,9 @@
 
 
 <MudPaper Elevation="0">
-        <div id="filters" class="row pt-4">
-            <div class="col-4">
-                <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
+        <div id="filters" class="row pt-6">
+            <div class="col-6">
+                <MudSelect T="string" Required="true" MultiSelection="false" Dense="true"
                            SelectedValuesChanged="OnSelectedCountriesChanged"
                            Label="Select Country"
                            Variant="Variant.Outlined">
@@ -18,8 +18,8 @@
                     }
                 </MudSelect>
             </div>
-            <div class="col-4">
-                <MudSelect T="string" Required="true" MultiSelection="true" Dense="true"
+            <div class="col-6">
+                <MudSelect T="string" Required="true" MultiSelection="false" Dense="true"
                            SelectedValuesChanged="OnSelectedCitiesChanged"
                            Label="Select City"
                            Variant="Variant.Outlined">

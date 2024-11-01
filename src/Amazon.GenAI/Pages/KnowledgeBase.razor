@@ -38,7 +38,7 @@
 
         _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null &&
                                                              x.Name.StartsWith(Constants.KnowledgeBaseName, StringComparison.OrdinalIgnoreCase));
-
+        
         await base.OnInitializedAsync();
     }
 

@@ -1,5 +1,6 @@
 ﻿@page "/knowledgebase-with-filters"
 @inherits PageBase
+@using System.Text.RegularExpressions
 @using Amazon.BedrockAgent
 @using Amazon.BedrockAgent.Model
 @using Amazon.BedrockAgentRuntime
@@ -14,7 +15,9 @@
 @inject AmazonS3Client AmazonS3Client;
 
 
-<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" Countries="_countries" Cities="_cities"></KnowledgeBaseFilter>
+<KnowledgeBaseFilter OnFilterUpdated="OnFilterUpdated" 
+                     Countries="_countries" Cities="_cities">
+</KnowledgeBaseFilter>
 
 <div class="container-fluid h-100 d-flex flex-column">
     <MessageHistory History="MessageHistory"></MessageHistory>
@@ -24,9 +27,9 @@
 
 <div class="input-wrapper">
     <Prompt Model="MessageHistory"
-            OnPromptChanged="PromptChanged"
-            BuiltinPrompt="@BuiltinPrompt"
-            Status="Status">
+    OnPromptChanged="PromptChanged"
+    BuiltinPrompt="@BuiltinPrompt"
+    Status="Status">
     </Prompt>
 </div>
 
@@ -39,11 +42,10 @@
 
     private HashSet<string> _countries = [];
     private HashSet<string> _cities = [];
+    Match? _match;
 
     protected override async Task OnInitializedAsync()
     {
-        await UpdateDropDowns();
-
         _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(new ListKnowledgeBasesRequest())).KnowledgeBaseSummaries
             .OrderBy(x => x.UpdatedAt)
             .Where(x => x.Status.Value.Equals("Active", StringComparison.OrdinalIgnoreCase))
@@ -51,6 +53,20 @@
 
         _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null && 
                                                              x.Name.StartsWith(Constants.KnowledgeBaseName, StringComparison.OrdinalIgnoreCase));
+
+        var dataSourcesResponse = await AgentClient.ListDataSourcesAsync(
+            new ListDataSourcesRequest{KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId}).ConfigureAwait(false);
+        var dataSourceSummary = dataSourcesResponse.DataSourceSummaries.First();
+        var dataSource = await AgentClient.GetDataSourceAsync(new GetDataSourceRequest
+        {
+            KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+            DataSourceId = dataSourceSummary.DataSourceId
+        }).ConfigureAwait(false);
+        var bucketArn = dataSource.DataSource.DataSourceConfiguration.S3Configuration.BucketArn;
+        const string pattern = @"(?<=arn:aws:s3:::).*";
+        _match = Regex.Match(bucketArn, pattern);
+
+        await UpdateDropDowns();
 
         await base.OnInitializedAsync();
     }
@@ -88,7 +104,7 @@
                     }
                 };
 
-            if (_filters is not null)
+            if (_filters is not null && _filters.Count % 2 == 0)
             {
                 request
                     .RetrieveAndGenerateConfiguration
@@ -127,7 +143,7 @@
         try
         {
             var s3Wrapper = new S3Wrapper(AmazonS3Client);
-            var attributes = await s3Wrapper.GetMetaDataFromS3(Constants.BucketName, Constants.KnowledgeBaseName, Constants.MetadataExtension);
+            var attributes = await s3Wrapper.GetMetaDataFromS3(_match?.Value, Constants.KnowledgeBaseName, Constants.MetadataExtension);
             foreach (var item in attributes)
             {
                 foreach (var dict in item)

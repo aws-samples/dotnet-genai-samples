@@ -3,7 +3,7 @@
 @using Markdig
 @inject MarkdownPipeline Pipeline
 
-<div class="row flex-grow-1">
+<div class="row flex-grow-1" style="overflow: auto">
     <div class="col-12 chat-container">
         <div class="chat-messages" id="chatMessages">
             @if (History!.Messages.Count > 0)

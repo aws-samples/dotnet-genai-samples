@@ -111,7 +111,7 @@
                     .KnowledgeBaseConfiguration
                     .RetrievalConfiguration
                     .VectorSearchConfiguration
-                    .Filter = new RetrievalFilter { OrAll = _filters };
+                    .Filter = new RetrievalFilter { AndAll = _filters };
             }
 
             var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);

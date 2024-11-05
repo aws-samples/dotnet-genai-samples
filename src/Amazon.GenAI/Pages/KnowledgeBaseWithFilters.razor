@@ -85,7 +85,7 @@
         {
             var request = new RetrieveAndGenerateRequest
                 {
-                    Input = new RetrieveAndGenerateInput { Text = prompt + Constants.AdditionalInstructions },
+                    Input = new RetrieveAndGenerateInput { Text = prompt },
                     RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
                     {
                         Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,

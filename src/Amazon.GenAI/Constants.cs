@@ -10,17 +10,14 @@ public static class Constants
     public static string MetadataExtension { get; set; } = ".json";
     public static string[] BuiltinPrompts { get; set; } =
     [
-        "What are the check-in and check-out times",
-        "Is there a free shuttle service from the airport?",
+        "What are the check-in and check-out times?",
+        "Is there shuttle service to the airport?",
         "Does the room rate include breakfast?",
         "Do you have a fitness center or swimming pool?",
-        "Is there an on-site restaurant available?",
-        "Is there room service available?",
+        "Can I bring my pet?",
+        "What are the dining options?",
         "What type of views does the room offer?",
-        "How far is the hotel from the Las Vegas Strip?",
-        "Are there complimentary drinks?",
-        "Are there complimentary betting vouchers for guests?",
-        "Are quiet, non-gaming spaces available?",
         "Is there a concierge service?"
     ];
+   public static string AdditionalInstructions { get; set; } = ".Where possible, include the Octank location(s) in your response.";
 }

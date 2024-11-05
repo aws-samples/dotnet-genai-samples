@@ -29,11 +29,6 @@ window.resizeListener = function (dotnethelper) {
         inputWrapper.style.width = `${mainWidth - 100}px`;
     }
 
-    const shortcuts = document.querySelector('.shortcuts-wrapper');
-    if (shortcuts) {
-        shortcuts.style.width = `${mainWidth - 100}px`;
-    }
-
     window.addEventListener('resize', () => {
         const mainWidth = document.querySelector('main').offsetWidth;
         const mainHeight = document.querySelector('main').offsetHeight;
@@ -45,18 +40,12 @@ window.resizeListener = function (dotnethelper) {
                     inputWrapper.style.width = `${mainWidth - 100}px`;
                 }
 
-                const shortcuts = document.querySelector('.shortcuts-wrapper');
-                if (shortcuts) {
-                    shortcuts.style.width = `${mainWidth - 100}px`;
-                }
-
                 let filters = document.getElementById('filters');
                 let filtersHeight = filters ? filters.offsetHeight + 20 : 0;
 
                 const chatMessages = document.getElementById('chatMessages');
                 if (chatMessages) {
-                    const newHeight = mainHeight -
-                        (inputWrapper.offsetHeight + shortcuts.offsetHeight + filtersHeight + 100);
+                    const newHeight = mainHeight - (inputWrapper.offsetHeight + filtersHeight + 100);
 
                     if (chatMessages.offsetHeight > newHeight) {
                         chatMessages.style.height = `${newHeight}px`;

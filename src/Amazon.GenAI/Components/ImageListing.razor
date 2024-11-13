@@ -19,7 +19,7 @@
 
         <MudImage Src="@($"http://{result.Path}")" Elevation="0" Class="pa-1 ma-2" />
       
-        <div class="description-container">
+     @*    <div class="description-container hidden">
             <h3>@fileName</h3>
             <div class="description">
                 <div><strong>Score:</strong> @Math.Round((double)(result.Score * 100)!)%</div>
@@ -35,7 +35,7 @@
                 </div>
                 <div>@result.Text</div>
             </div>
-        </div>
+        </div> *@
     </div>
 }
 

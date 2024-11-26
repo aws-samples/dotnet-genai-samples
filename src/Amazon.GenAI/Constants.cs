@@ -8,4 +8,4 @@ public static class Constants
     public static string ImageModelId { get; set; } = "stability.sd3-large-v1:0";
     public static string BucketName { get; set; } = "dotnet-rag-datasource";
     public static string MetadataExtension { get; set; } = ".json";
-}
+} 

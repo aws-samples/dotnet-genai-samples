@@ -56,4 +56,4 @@ window.resizeListener = function (dotnethelper) {
                 console.log("Error during browser resize: " + error);
             });
     });
-};
+}; 

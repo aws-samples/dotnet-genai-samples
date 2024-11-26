@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Remove="Pages\ImageSearchPlayground.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AWSSDK.Bedrock" Version="3.7.401.2" />
     <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.400.4" />
     <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.401.1" />
@@ -35,6 +39,7 @@
 
   <ItemGroup>
     <Folder Include="Services\" />
+    <Folder Include="wwwroot\images\" />
   </ItemGroup>
 
 </Project>

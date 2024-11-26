@@ -29,7 +29,7 @@ public class AddToOpenSearch
 
         context.Logger.LogInformation($"in AddToOpenSearch.  destination: {_bucketName}");
 
-        var key = GetInputValues(input, context, out var inference, out var embeddings);
+        var key = GetInputValues(input, context,  out var embeddings);
 
         var indexName = "my-images-index";
         var (endpoint, client) = await CreateClient();
@@ -43,7 +43,6 @@ public class AddToOpenSearch
 
             var vectorRecord = new VectorRecord
             {
-                Text = inference,
                 Path = $"{_distributionDomainName}/{key}",
                 Vector = embeddings
             };
@@ -101,7 +100,7 @@ public class AddToOpenSearch
     private static string? GetInputValues(
 	    Dictionary<string, string> input, 
 	    ILambdaContext context, 
-	    out string inference,
+	    //out string inference,
         out float[] embeddings)
     {
         if (!input.TryGetValue("key", out var key))
@@ -110,12 +109,12 @@ public class AddToOpenSearch
         }
         context.Logger.LogInformation($"key: {key}");
 
-        inference = "";
-        if (input.TryGetValue("inference", out var value))
-        {
-            inference = value;
-            context.Logger.LogInformation($"inference: {inference}");
-        }
+        //inference = "";
+        //if (input.TryGetValue("inference", out var value))
+        //{
+        //    inference = value;
+        //    context.Logger.LogInformation($"inference: {inference}");
+        //}
 
         embeddings = new float[] { };
         if (input.TryGetValue("embeddings", out var arrayString))

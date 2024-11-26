@@ -73,11 +73,17 @@ public class ImageResizer
 
             context.Logger.LogInformation($"Successfully resized {key} and uploaded to {_destinationBucket}");
 
-            return new
+            return new Dictionary<string, object>
             {
-                key = key,
-                bucketName = _destinationBucket
+                { "key", key },
+                { "bucketName", _destinationBucket },
             };
+
+            //return new
+            //{
+            //    key = key,
+            //    bucketName = _destinationBucket
+            //};
         }
         catch (Exception e)
         {

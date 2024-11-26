@@ -1,26 +1,36 @@
-﻿<MudFileUpload T="IReadOnlyList<IBrowserFile>"
-               @bind-Files="@Files"
-               Accept="@Accept"
-               OnFilesChanged="@OnFileChangedCallback"
-               For="@(() => Files)"
-               Hidden="false" Class="flex-1"
-               MaximumFileCount="FileCount"
-               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
-               @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
-    <ButtonTemplate>
-        <MudText Typo="Typo.h6">Drag and drop image file@(Pluralize) or click here</MudText>
-    </ButtonTemplate>
-</MudFileUpload>
+﻿@using Amazon.GenAI.Models
+﻿@using Amazon.GenAI.Models
+
+@if (Status != Status.Thinking)
+{
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                   @bind-Files="@Files"
+                   Accept="@Accept"
+                   OnFilesChanged="@OnFileChangedCallback"
+                   For="@(() => Files!)"
+                   Hidden="false" Class="flex-1"
+                   MaximumFileCount="FileCount"
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
+                   @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
+        <ButtonTemplate>
+            <MudText Typo="Typo.h6"><i class="fa-solid fa-upload"></i>
+            </MudText>
+        </ButtonTemplate>
+    </MudFileUpload>
+}
+
 
 @code {
     [Parameter, EditorRequired]
-    public string Accept { get; set; }
+    public string? Accept { get; set; }
 
     [Parameter, EditorRequired]
     public IReadOnlyList<IBrowserFile>? Files { get; set; }
 
+    [Parameter, EditorRequired] public int FileCount { get; set; } = 0;
+
     [Parameter, EditorRequired]
-    public int FileCount { get; set; }
+    public Status Status { get; set; }
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
     private string _dragClass = DefaultDragClass;

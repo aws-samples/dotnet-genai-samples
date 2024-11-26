@@ -1,0 +1,234 @@
+﻿@page "/"
+@page "/retail-demo"
+@using Amazon.BedrockRuntime
+@using Amazon.GenAI.Models
+@using Amazon.GenAI.Abstractions.Bedrock
+@using Amazon.GenAI.Abstractions.ChatHistory
+@using Amazon.GenAI.Abstractions.OpenSearch
+@using Amazon.OpenSearchServerless
+@using Amazon.OpenSearchServerless.Model
+@using Amazon.S3
+@using Amazon.S3.Transfer
+@inject AmazonBedrockRuntimeClient BedrockRuntimeClient
+@inject IJSRuntime JsRuntime
+
+<div class="header">
+    <h1>
+        Green Basket
+    </h1>
+</div>
+<div class="content">
+    <h3>
+        welcome to green basket. you can start searching our <strong>@(TotalHits) images</strong> using text or images from the prompt below.
+    </h3>
+
+    <ImageListing SearchResults="SearchResults"
+                  Width="400">
+    </ImageListing>
+</div>
+
+<div class="search">
+    <div class="prompt">
+        <Prompt Model="MessageHistory"
+                OnPromptChanged="PromptChanged"
+                Status="_status">
+        </Prompt>
+    </div>
+    <div class="actions">
+        <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+                  Files="Files"
+                  FileCount="@MaxFileCount"
+                  Status="_status"
+                  OnFileChangedCallback="OnInputFileChanged">
+        </Uploader>
+        @if (_imageDataUrls.Count > 0)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnSubmit">Upload</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="OnCancel">Cancel</MudButton>
+        }
+    </div>
+</div>
+
+@if (_inputFiles.Count > 0)
+{
+    <div class="previewImages">
+        <PreviewImages ImageUrls="_imageDataUrls"
+                       Files="_inputFiles"
+                       Width="150">
+        </PreviewImages>
+    </div>
+}
+
+
+@* <div class="footer">
+    © 2024, Amazon Web Services, Inc. or its affiliates.
+</div> *@
+
+
+@code {
+
+    private string? _uploadDirectory;
+    private readonly Dictionary<string, string> _inputFiles = new();
+    private readonly List<string> _imageDataUrls = new();
+    private readonly List<byte[]> _savedBytesList = new();
+    IReadOnlyList<IBrowserFile>? Files { get; } = new List<IBrowserFile>();
+    private const int MaxFileCount = 250;
+
+    private long TotalHits;
+
+    private List<CollectionSummary?>? _collections;
+    private const string NamePrefix = "dotnet-genai";
+    private OpenSearchServerlessVectorStore? _openSearchVectorStore;
+    private const int Dimensions = 1024;
+    private string? _indexName;
+    private string? _textModelId;
+    private string? _embeddingModelId;
+    public required IReadOnlyCollection<VectorSearchResponse>? SearchResults = new List<VectorSearchResponse>();
+
+    private readonly int _pageSize = 15;
+    Status _status = Status.Default;
+    private readonly ChatMessageHistory MessageHistory = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
+        _embeddingModelId = "amazon.titan-embed-image-v1";
+        _indexName = "my-images-index";
+
+        _uploadDirectory = Path.Combine(Path.GetTempPath(), "unsafe_uploads");
+        if (Directory.Exists(_uploadDirectory) == false) Directory.CreateDirectory(_uploadDirectory);
+
+        _collections = (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
+            .CollectionSummaries
+            .Where(x => x.Name.StartsWith(NamePrefix))
+            .ToList();
+
+        var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
+        var options = new OpenSearchVectorStoreOptions
+            {
+                Region = regionEndpoint,
+                IndexName = _indexName,
+                Dimensions = Dimensions,
+                CollectionArn = _collections[0]?.Arn,
+            };
+
+        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+
+        await GetAll();
+        SearchResults = new List<VectorSearchResponse>();
+
+        await base.OnInitializedAsync();
+        StateHasChanged();
+    }
+
+    private async Task PromptChanged(string prompt)
+    {
+        if (string.IsNullOrEmpty(prompt)) return;
+
+        _status = Status.Thinking;
+        StateHasChanged();
+
+        var embeddingModel = new EmbeddingModel(BedrockRuntimeClient, _embeddingModelId);
+        var questionEmbeddingsResponse = await embeddingModel.CreateEmbeddingsAsync(prompt)!;
+        var embedding = questionEmbeddingsResponse?["embedding"]?.AsArray();
+        var f = new float[Dimensions];
+        for (var i = 0; i < embedding!.Count; i++)
+        {
+            f[i] = (float)embedding[i]?.AsValue()!;
+        }
+
+        SearchResults = (List<VectorSearchResponse>)await _openSearchVectorStore!.SimilaritySearchByVectorAsync(f, 5).ConfigureAwait(false);
+
+        await InvokeAsync(() =>
+        {
+            _status = Status.Default;
+            JsRuntime.InvokeVoidAsync("scrollToElement", "PromptId");
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        _inputFiles.Clear();
+        _imageDataUrls.Clear();
+        _savedBytesList.Clear();
+
+        const long maxFileSize = 1024L * 1024L * 1024L * 2L;
+
+        foreach (var inputFile in e.GetMultipleFiles(MaxFileCount))
+        {
+            var targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
+            var file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 600, int.MaxValue);
+
+            await using var outputStream = File.Create(targetFile);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(outputStream);
+            outputStream.Close();
+
+            var bytes = await File.ReadAllBytesAsync(targetFile);
+            _savedBytesList.Add(bytes);
+            var base64String = Convert.ToBase64String(bytes);
+
+            _imageDataUrls.Add($"data:image/png;base64,{base64String}");
+
+            _inputFiles.Add(inputFile.Name, targetFile);
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        var client = new AmazonS3Client();
+        var bucket = (await client.ListBucketsAsync()).Buckets.FirstOrDefault(x => x.BucketName.StartsWith("dotnet-genai-source"));
+
+        await InvokeAsync(() =>
+        {
+            _status = Status.Adding;
+
+            if (bucket == null) return;
+
+            foreach (var path in _inputFiles.Select(file => file.Value))
+            {
+                var transferUtility = new TransferUtility(client);
+
+                var transferUtilityUploadRequest = new TransferUtilityUploadRequest
+                {
+                    BucketName = bucket?.BucketName,
+                    Key = Path.GetFileName(path),
+                    FilePath = path,
+                    ContentType = "text/plain",
+                };
+
+                transferUtility.UploadAsync(transferUtilityUploadRequest);
+            }
+
+            _ = Clear();
+            StateHasChanged();
+        });
+    }
+
+    private async void OnCancel()
+    {
+        await Clear();
+    }
+
+    private async Task Clear()
+    {
+        await InvokeAsync(() =>
+        {
+            _inputFiles.Clear();
+            _imageDataUrls.Clear();
+            _savedBytesList.Clear();
+
+            _status = Status.Default;
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task GetAll()
+    {
+        (SearchResults, TotalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+    }
+}

@@ -112,34 +112,34 @@ public class ImageIngestionStack : Stack
             })
         });
 
-        var getImageInferenceFunctionName = $"{props?.AppProps.NamePrefix}-get-image-inference-function-{props?.AppProps.NameSuffix}";
-        var getImageInferenceFunction = new Function(this, getImageInferenceFunctionName, new FunctionProps
-        {
-            FunctionName = getImageInferenceFunctionName,
-            Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
-            Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.GetImageInference::FunctionHandler",
-            Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
-            Timeout = Duration.Minutes(5),
-            MemorySize = 1024,
-            Environment = new Dictionary<string, string>
-            {
-                { "DESTINATION_BUCKET", destinationBucket.BucketName }
-            },
-            Role = new Role(this, $"{getImageInferenceFunctionName}-role", new RoleProps
-            {
-                AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
-                ManagedPolicies = new IManagedPolicy[]
-                {
-                    ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
-                    ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
-                }
-            })
-        });
-        getImageInferenceFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
-        {
-            Actions = new[] { "bedrock:InvokeModel" },
-            Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
-        }));
+        //var getImageInferenceFunctionName = $"{props?.AppProps.NamePrefix}-get-image-inference-function-{props?.AppProps.NameSuffix}";
+        //var getImageInferenceFunction = new Function(this, getImageInferenceFunctionName, new FunctionProps
+        //{
+        //    FunctionName = getImageInferenceFunctionName,
+        //    Runtime = CDK.AWS.Lambda.Runtime.DOTNET_8,
+        //    Handler = "Amazon.GenAI.ImageIngestion::Amazon.GenAI.ImageIngestion.GetImageInference::FunctionHandler",
+        //    Code = Code.FromAsset("./src/Amazon.GenAI.ImageIngestion/src/Amazon.GenAI.ImageIngestion/bin/Debug/net8.0"),
+        //    Timeout = Duration.Minutes(5),
+        //    MemorySize = 1024,
+        //    Environment = new Dictionary<string, string>
+        //    {
+        //        { "DESTINATION_BUCKET", destinationBucket.BucketName }
+        //    },
+        //    Role = new Role(this, $"{getImageInferenceFunctionName}-role", new RoleProps
+        //    {
+        //        AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
+        //        ManagedPolicies = new IManagedPolicy[]
+        //        {
+        //            ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+        //            ManagedPolicy.FromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")
+        //        }
+        //    })
+        //});
+        //getImageInferenceFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        //{
+        //    Actions = new[] { "bedrock:InvokeModel" },
+        //    Resources = new[] { "*" } // Restrict this to specific Bedrock model ARN in production
+        //}));
 
         var getImageEmbeddingsFunctionName = $"{props?.AppProps.NamePrefix}-get-image-embeddings-function-{props?.AppProps.NameSuffix}";
         var getImageEmbeddingsFunction = new Function(this, getImageEmbeddingsFunctionName, new FunctionProps
@@ -215,10 +215,10 @@ public class ImageIngestionStack : Stack
             OutputPath = "$.Payload",
         });
 
-        var invokeGetImageInference = new LambdaInvoke(this, "GetImageInference", new LambdaInvokeProps
-        {
-            LambdaFunction = getImageInferenceFunction,
-        });
+        //var invokeGetImageInference = new LambdaInvoke(this, "GetImageInference", new LambdaInvokeProps
+        //{
+        //    LambdaFunction = getImageInferenceFunction,
+        //});
 
         var invokeGetImageEmbeddings = new LambdaInvoke(this, "GetImageEmbeddings", new LambdaInvokeProps
         {
@@ -231,7 +231,7 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.Payload.key",
-                ["inference.$"] = "$.Payload.inference",
+                //["inference.$"] = "$.Payload.inference",
                 ["embeddings.$"] = "$.Payload.embeddings"
             }
         });
@@ -243,7 +243,7 @@ public class ImageIngestionStack : Stack
             {
                 ["key"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.key")),
                 ["bucketName"] = DynamoAttributeValue.FromString(destinationBucketName),
-                ["inference"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.inference")),
+                //["inference"] = DynamoAttributeValue.FromString(JsonPath.StringAt("$.inference")),
             }
         });
 
@@ -252,7 +252,7 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.key",
-                ["inference.$"] = "$.inference",
+                //["inference.$"] = "$.inference",
                 ["embeddings.$"] = "States.JsonToString($.embeddings)"
             }
         });
@@ -272,7 +272,7 @@ public class ImageIngestionStack : Stack
         // Define the state machine
         var definition = filterS3Json
             .Next(invokeImageResizer)
-            .Next(invokeGetImageInference)
+           // .Next(invokeGetImageInference)
             .Next(invokeGetImageEmbeddings)
             .Next(transformResults)
             .Next(parallel)

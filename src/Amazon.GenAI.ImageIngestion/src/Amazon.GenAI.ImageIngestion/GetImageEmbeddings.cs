@@ -22,13 +22,13 @@ public class GetImageEmbeddings
             throw new ArgumentException("Image key not provided in the input.");
         }
 
-        if (!input.TryGetValue("inference", out var inference))
-        {
-            throw new ArgumentException("Image inference not provided in the input.");
-        }
+        //if (!input.TryGetValue("inference", out var inference))
+        //{
+        //    throw new ArgumentException("Image inference not provided in the input.");
+        //}
 
-        Console.WriteLine("inference");
-        Console.WriteLine(inference);
+       // Console.WriteLine("inference");
+       // Console.WriteLine(inference);
 
         try
         {
@@ -41,7 +41,7 @@ public class GetImageEmbeddings
             var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
             var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
 
-            var content = inference.Trim();
+            var content = "";
             var chunkSize = 4000;
             var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
             var splitText = textSplitter.SplitText("     ");
@@ -68,7 +68,7 @@ public class GetImageEmbeddings
             {
                 { "key", key },
                 { "embeddings", embeddings },
-                { "inference", inference },
+               // { "inference", inference },
             };
         }
         catch (Exception e)

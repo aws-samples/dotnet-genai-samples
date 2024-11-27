@@ -23,13 +23,13 @@ public class AddToOpenSearch
         _distributionDomainName = Environment.GetEnvironmentVariable("DISTRIBUTION_DOMAIN_NAME");
     }
 
-    public async Task<BulkDescriptor> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
+    public async Task<BulkDescriptor> FunctionHandler(Dictionary<string, string?> input, ILambdaContext context)
     {
-        Console.WriteLine("in AddToOpenSearch");
+        Console.WriteLine("in AddToOpenSearch v3");
 
         context.Logger.LogInformation($"in AddToOpenSearch.  destination: {_bucketName}");
 
-        var key = GetInputValues(input, context,  out var embeddings);
+        var key = GetInputValues(input, context, out var origBucketName, out var embeddings);
 
         var indexName = "my-images-index";
         var (endpoint, client) = await CreateClient();
@@ -43,6 +43,7 @@ public class AddToOpenSearch
 
             var vectorRecord = new VectorRecord
             {
+                OrigBucketName = origBucketName,
                 Path = $"{_distributionDomainName}/{key}",
                 Vector = embeddings
             };
@@ -82,6 +83,7 @@ public class AddToOpenSearch
             )
             .Map<VectorRecord>(m => m
                 .Properties(p => p
+                    .Text(t => t.Name(n => n.OrigBucketName))
                     .Text(t => t.Name(n => n.Text))
                     .Text(t => t.Name(n => n.Path))
                     .KnnVector(d => d.Name(n => n.Vector).Dimension(1024).Similarity("cosine"))
@@ -98,9 +100,9 @@ public class AddToOpenSearch
     }
 
     private static string? GetInputValues(
-	    Dictionary<string, string> input, 
+	    Dictionary<string, string?> input, 
 	    ILambdaContext context, 
-	    //out string inference,
+	    out string? origBucketName,
         out float[] embeddings)
     {
         if (!input.TryGetValue("key", out var key))
@@ -108,6 +110,12 @@ public class AddToOpenSearch
             throw new ArgumentException("Image key not provided in the input.");
         }
         context.Logger.LogInformation($"key: {key}");
+
+        if (!input.TryGetValue("origBucketName", out origBucketName))
+        {
+            throw new ArgumentException("origBucketName not provided in the input.");
+        }
+        context.Logger.LogInformation($"origBucketName: {origBucketName}");
 
         //inference = "";
         //if (input.TryGetValue("inference", out var value))
@@ -119,8 +127,8 @@ public class AddToOpenSearch
         embeddings = new float[] { };
         if (input.TryGetValue("embeddings", out var arrayString))
         {
-            var stringValues = arrayString.Trim('[', ']').Split(',');
-            embeddings = stringValues.Select(float.Parse).ToArray();
+            var stringValues = arrayString?.Trim('[', ']').Split(',');
+            if (stringValues != null) embeddings = stringValues.Select(float.Parse).ToArray();
             context.Logger.LogInformation($"embeddings: {embeddings}");
         }
 

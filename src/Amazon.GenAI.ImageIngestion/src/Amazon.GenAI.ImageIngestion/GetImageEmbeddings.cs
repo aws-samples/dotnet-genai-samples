@@ -14,11 +14,16 @@ public class GetImageEmbeddings
 
     public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
     {
-        context.Logger.LogInformation($"in GetImageEmbeddings.  destination: {_destinationBucket}");
+        context.Logger.LogInformation($"in GetImageEmbeddings v3.  destination: {_destinationBucket}");
 
         if (!input.TryGetValue("key", out var key))
         {
             throw new ArgumentException("Image key not provided in the input.");
+        }
+
+        if (!input.TryGetValue("origBucketName", out var origBucketName))
+        {
+            throw new ArgumentException("origBucketName not provided in the input.");
         }
 
         try
@@ -57,7 +62,8 @@ public class GetImageEmbeddings
             return new Dictionary<string, object>
             {
                 { "key", key },
-                { "embeddings", embeddings }
+                { "embeddings", embeddings },
+                { "origBucketName", origBucketName },
             };
         }
         catch (Exception e)

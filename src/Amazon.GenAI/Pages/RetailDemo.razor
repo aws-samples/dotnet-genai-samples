@@ -11,40 +11,59 @@
 @using Amazon.S3.Transfer
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
 @inject IJSRuntime JsRuntime
+@using System.Timers
 
 <div class="header">
     <h1>
-        Green Basket
+        re:Invent Image Basket (<strong>@(TotalHits) images</strong>)
     </h1>
 </div>
 <div class="content">
-    <h3>
-        welcome to green basket. you can start searching our <strong>@(TotalHits) images</strong> using text or images from the prompt below.
-    </h3>
-
-    <ImageListing SearchResults="SearchResults"
-    Width="400">
-    </ImageListing>
+    @if (_status == Status.Thinking)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (SearchResults?.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No results found. Try a different search query.
+        </MudAlert>
+    }
+    else
+    {
+        <ImageListing SearchResults="SearchResults" Width="800" />
+    }
 </div>
 
 <div class="search">
     <div class="prompt">
         <Prompt Model="MessageHistory"
-        OnPromptChanged="PromptChanged"
-        Status="_status">
-        </Prompt>
+                OnPromptChanged="PromptChanged"
+                Status="_status" />
     </div>
     <div class="actions">
         <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-        Files="Files"
-        FileCount="@MaxFileCount"
-        Status="_status"
-        OnFileChangedCallback="OnInputFileChanged">
-        </Uploader>
+                  Files="Files"
+                  FileCount="@MaxFileCount"
+                  Status="_status"
+                  OnFileChangedCallback="OnInputFileChanged" />
+
         @if (_imageDataUrls.Count > 0)
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnSubmit">Upload</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="OnCancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                       OnClick="OnSubmit">
+                Upload
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Close"
+                       OnClick="OnCancel">
+                Cancel
+            </MudButton>
         }
     </div>
 </div>
@@ -53,8 +72,8 @@
 {
     <div class="previewImages">
         <PreviewImages ImageUrls="_imageDataUrls"
-        Files="_inputFiles"
-        Width="150">
+                       Files="_inputFiles"
+                       Width="150">
         </PreviewImages>
     </div>
 }
@@ -88,6 +107,7 @@
     private readonly int _pageSize = 15;
     Status _status = Status.Default;
     private readonly ChatMessageHistory MessageHistory = new();
+    private Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,11 +134,32 @@
 
         _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-        await GetAll();
+       // await GetAll();
         SearchResults = new List<VectorSearchResponse>();
 
+        await InitializeTimer();
         await base.OnInitializedAsync();
         StateHasChanged();
+    }
+
+    private Task InitializeTimer()
+    {
+        Console.WriteLine("in  InitializeTimer");
+        _refreshTimer = new Timer(3000);
+        _refreshTimer.Elapsed += async (sender, e) => await RefreshHits();
+        _refreshTimer.AutoReset = true;
+        _refreshTimer.Start();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshHits()
+    {
+        await InvokeAsync(async () =>
+        {
+            System.Console.WriteLine("in RefreshHits");
+            (_, TotalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+            StateHasChanged();
+        });
     }
 
     private async Task PromptChanged(string prompt)
@@ -192,12 +233,12 @@
                 var transferUtility = new TransferUtility(client);
 
                 var transferUtilityUploadRequest = new TransferUtilityUploadRequest
-                {
-                    BucketName = bucket?.BucketName,
-                    Key = Path.GetFileName(path),
-                    FilePath = path,
-                    ContentType = "text/plain",
-                };
+                    {
+                        BucketName = bucket?.BucketName,
+                        Key = Path.GetFileName(path),
+                        FilePath = path,
+                        ContentType = "text/plain",
+                    };
 
                 transferUtility.UploadAsync(transferUtilityUploadRequest);
             }
@@ -230,5 +271,10 @@
     private async Task GetAll()
     {
         (SearchResults, TotalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
     }
 }

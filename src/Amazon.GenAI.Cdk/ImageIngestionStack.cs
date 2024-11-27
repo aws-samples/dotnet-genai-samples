@@ -48,7 +48,7 @@ public class ImageIngestionStack : Stack
         var oaiName = $"{props?.AppProps.NamePrefix}-oai-{props.AppProps.NameSuffix}";
         var oai = new OriginAccessIdentity(this, oaiName, new OriginAccessIdentityProps
         {
-            Comment = $"OAI for {destinationBucketName}"
+            Comment = $"OAI for {sourceBucketName}"
         });
 
         // Create a CloudFront distribution
@@ -57,7 +57,7 @@ public class ImageIngestionStack : Stack
         {
             DefaultBehavior = new BehaviorOptions
             {
-                Origin = new S3Origin(destinationBucket, new S3OriginProps
+                Origin = new S3Origin(sourceBucket, new S3OriginProps
                 {
                     OriginAccessIdentity = oai
                 }),
@@ -80,10 +80,17 @@ public class ImageIngestionStack : Stack
             }
         });
 
-        destinationBucket.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+        //destinationBucket.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+        //{
+        //    Actions = new[] { "s3:GetBucket*", "s3:GetObject*", "s3:List*" },
+        //    Resources = new[] { destinationBucket.BucketArn, destinationBucket.ArnForObjects("*") },
+        //    Principals = new[] { new CanonicalUserPrincipal(oai.CloudFrontOriginAccessIdentityS3CanonicalUserId) }
+        //}));
+
+        sourceBucket.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
         {
             Actions = new[] { "s3:GetBucket*", "s3:GetObject*", "s3:List*" },
-            Resources = new[] { destinationBucket.BucketArn, destinationBucket.ArnForObjects("*") },
+            Resources = new[] { sourceBucket.BucketArn, sourceBucket.ArnForObjects("*") },
             Principals = new[] { new CanonicalUserPrincipal(oai.CloudFrontOriginAccessIdentityS3CanonicalUserId) }
         }));
 
@@ -211,8 +218,7 @@ public class ImageIngestionStack : Stack
 
         var invokeImageResizer = new LambdaInvoke(this, "ImageResizer", new LambdaInvokeProps
         {
-            LambdaFunction = imageResizerFunction,
-            OutputPath = "$.Payload",
+            LambdaFunction = imageResizerFunction
         });
 
         //var invokeGetImageInference = new LambdaInvoke(this, "GetImageInference", new LambdaInvokeProps
@@ -231,8 +237,11 @@ public class ImageIngestionStack : Stack
             Parameters = new Dictionary<string, object>
             {
                 ["key.$"] = "$.Payload.key",
+                ["origBucketName.$"] = "$.Payload.origBucketName",
+                ["embeddings.$"] = "States.JsonToString($.Payload.embeddings)"
+
                 //["inference.$"] = "$.Payload.inference",
-                ["embeddings.$"] = "$.Payload.embeddings"
+                // ["embeddings.$"] = "$.Payload.embeddings",
             }
         });
 
@@ -257,14 +266,15 @@ public class ImageIngestionStack : Stack
             }
         });
 
-        var parallel = new Parallel(this, "Parallel");
-        parallel.Branch(putItemTask);
-        parallel.Branch(passTask);
+        //var parallel = new Parallel(this, "Parallel");
+        //parallel.Branch(putItemTask);
+        //parallel.Branch(passTask);
 
         var invokeAddToOpenSearch = new LambdaInvoke(this, "AddToOpenSearch", new LambdaInvokeProps
         {
             LambdaFunction = addToOpenSearchFunction,
-            InputPath = "$[1]"
+            //InputPath = "$.Payload"
+            //InputPath = "$[1]"
         });
 
         var success = new Succeed(this, "Success");
@@ -275,7 +285,7 @@ public class ImageIngestionStack : Stack
            // .Next(invokeGetImageInference)
             .Next(invokeGetImageEmbeddings)
             .Next(transformResults)
-            .Next(parallel)
+          //  .Next(parallel)
             .Next(invokeAddToOpenSearch)
             .Next(success);
 

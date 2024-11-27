@@ -22,7 +22,7 @@ public class ImageResizer
 
     public async Task<object> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
     {
-        Console.WriteLine("in ImageResizer");
+        Console.WriteLine("in ImageResizer v1");
 
         context.Logger.LogInformation($"in ImageResizer.  destination: {_destinationBucket}");
 
@@ -73,10 +73,11 @@ public class ImageResizer
 
             context.Logger.LogInformation($"Successfully resized {key} and uploaded to {_destinationBucket}");
 
-            return new Dictionary<string, object>
+            return new Dictionary<string, string>
             {
                 { "key", key },
                 { "bucketName", _destinationBucket },
+                { "origBucketName", bucketName }
             };
 
             //return new

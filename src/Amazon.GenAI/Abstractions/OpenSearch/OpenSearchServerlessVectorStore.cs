@@ -321,7 +321,7 @@ public class OpenSearchServerlessVectorStore
             Vector = hit.Source.Vector,
             Path = hit.Source.Path,
             Text = hit.Source.Text
-        }).ToList();
+        }).Take(k).ToList();
     }
 
     internal async Task<(IReadOnlyCollection<VectorSearchResponse>, long TotalHits)> GetAllAsync(

@@ -8,9 +8,13 @@
 
   <ItemGroup>
     <Compile Remove="bin\**" />
+    <Compile Remove="Services\**" />
     <Content Remove="bin\**" />
+    <Content Remove="Services\**" />
     <EmbeddedResource Remove="bin\**" />
+    <EmbeddedResource Remove="Services\**" />
     <None Remove="bin\**" />
+    <None Remove="Services\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,7 +42,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Services\" />
     <Folder Include="wwwroot\images\" />
   </ItemGroup>
 

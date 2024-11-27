@@ -1,7 +1,6 @@
 using Amazon.BedrockRuntime;
 using Amazon.Lambda.Core;
 using Amazon.S3;
-using System.Text.Json;
 using Amazon.GenAI.ImageIngestion.Abstractions;
 using Amazon.GenAI.ImageIngestion.Abstractions.Splitter;
 
@@ -22,17 +21,8 @@ public class GetImageEmbeddings
             throw new ArgumentException("Image key not provided in the input.");
         }
 
-        //if (!input.TryGetValue("inference", out var inference))
-        //{
-        //    throw new ArgumentException("Image inference not provided in the input.");
-        //}
-
-       // Console.WriteLine("inference");
-       // Console.WriteLine(inference);
-
         try
         {
-            // Download the image from S3
             using var response = await _s3Client.GetObjectAsync(_destinationBucket, key);
             using var memoryStream = new MemoryStream();
             await response.ResponseStream.CopyToAsync(memoryStream);
@@ -41,7 +31,7 @@ public class GetImageEmbeddings
             var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
             var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
 
-            var content = "";
+            var prompt = "describe image";
             var chunkSize = 4000;
             var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
             var splitText = textSplitter.SplitText("     ");
@@ -49,7 +39,7 @@ public class GetImageEmbeddings
 
             var embeddingModelId = "amazon.titan-embed-image-v1";
             var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), embeddingModelId);
-            var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync(content, image);
+            var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync(prompt, image);
 
             var embedding = embeddingsAsync?["embedding"]?.AsArray();
             if (embedding == null) return null;
@@ -67,8 +57,7 @@ public class GetImageEmbeddings
             return new Dictionary<string, object>
             {
                 { "key", key },
-                { "embeddings", embeddings },
-               // { "inference", inference },
+                { "embeddings", embeddings }
             };
         }
         catch (Exception e)

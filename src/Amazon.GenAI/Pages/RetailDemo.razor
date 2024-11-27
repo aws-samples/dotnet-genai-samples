@@ -23,23 +23,23 @@
     </h3>
 
     <ImageListing SearchResults="SearchResults"
-                  Width="400">
+    Width="400">
     </ImageListing>
 </div>
 
 <div class="search">
     <div class="prompt">
         <Prompt Model="MessageHistory"
-                OnPromptChanged="PromptChanged"
-                Status="_status">
+        OnPromptChanged="PromptChanged"
+        Status="_status">
         </Prompt>
     </div>
     <div class="actions">
         <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-                  Files="Files"
-                  FileCount="@MaxFileCount"
-                  Status="_status"
-                  OnFileChangedCallback="OnInputFileChanged">
+        Files="Files"
+        FileCount="@MaxFileCount"
+        Status="_status"
+        OnFileChangedCallback="OnInputFileChanged">
         </Uploader>
         @if (_imageDataUrls.Count > 0)
         {
@@ -53,8 +53,8 @@
 {
     <div class="previewImages">
         <PreviewImages ImageUrls="_imageDataUrls"
-                       Files="_inputFiles"
-                       Width="150">
+        Files="_inputFiles"
+        Width="150">
         </PreviewImages>
     </div>
 }

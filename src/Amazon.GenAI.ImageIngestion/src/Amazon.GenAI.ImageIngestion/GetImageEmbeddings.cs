@@ -36,12 +36,8 @@ public class GetImageEmbeddings
             var contentType = EnumerableExtensions.GetMimeType(Path.GetExtension(key)) ?? "";
             var image = BinaryData.FromBytes(memoryStream.ToArray(), contentType);
 
+            var embeddings = new List<float[]>();
             var prompt = "describe image";
-            var chunkSize = 4000;
-            var textSplitter = new RecursiveCharacterTextSplitter(chunkSize: chunkSize);
-            var splitText = textSplitter.SplitText("     ");
-            var embeddings = new List<float[]>(capacity: splitText.Count);
-
             var embeddingModelId = "amazon.titan-embed-image-v1";
             var embeddingModel = new EmbeddingModel(new AmazonBedrockRuntimeClient(), embeddingModelId);
             var embeddingsAsync = await embeddingModel.CreateEmbeddingsAsync(prompt, image);

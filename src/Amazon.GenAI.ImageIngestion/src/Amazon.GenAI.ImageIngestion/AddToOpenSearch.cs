@@ -25,10 +25,6 @@ public class AddToOpenSearch
 
     public async Task<BulkDescriptor> FunctionHandler(Dictionary<string, string?> input, ILambdaContext context)
     {
-        Console.WriteLine("in AddToOpenSearch v3");
-
-        context.Logger.LogInformation($"in AddToOpenSearch.  destination: {_bucketName}");
-
         var key = GetInputValues(input, context, out var origBucketName, out var embeddings);
 
         var indexName = "my-images-index";
@@ -39,8 +35,6 @@ public class AddToOpenSearch
 
         try
         {
-            Console.WriteLine($"endpointUrl: {endpoint.AbsoluteUri}");
-
             var vectorRecord = new VectorRecord
             {
                 OrigBucketName = origBucketName,
@@ -56,9 +50,6 @@ public class AddToOpenSearch
 
             var bulkResponse = await client!.BulkAsync(bulkDescriptor)
                 .ConfigureAwait(false);
-
-            Console.WriteLine($"bulkResponse IsValid: {bulkResponse.IsValid}");
-            context.Logger.LogInformation($"bulkResponse DebugInformation: {bulkResponse.DebugInformation}");
 
             if (bulkResponse.IsValid == false)
             {
@@ -90,9 +81,6 @@ public class AddToOpenSearch
                 )
             ))!);
 
-        context.Logger.LogInformation($"createIndexResponse Acknowledged: {createIndexResponse.Acknowledged}");
-        context.Logger.LogInformation($"createIndexResponse DebugInformation: {createIndexResponse.DebugInformation}");
-
         if (createIndexResponse.IsValid == false)
         {
             throw new Exception(createIndexResponse.DebugInformation);
@@ -109,20 +97,11 @@ public class AddToOpenSearch
         {
             throw new ArgumentException("Image key not provided in the input.");
         }
-        context.Logger.LogInformation($"key: {key}");
 
         if (!input.TryGetValue("origBucketName", out origBucketName))
         {
             throw new ArgumentException("origBucketName not provided in the input.");
         }
-        context.Logger.LogInformation($"origBucketName: {origBucketName}");
-
-        //inference = "";
-        //if (input.TryGetValue("inference", out var value))
-        //{
-        //    inference = value;
-        //    context.Logger.LogInformation($"inference: {inference}");
-        //}
 
         embeddings = new float[] { };
         if (input.TryGetValue("embeddings", out var arrayString))
@@ -144,8 +123,6 @@ public class AddToOpenSearch
                 (await new AmazonOpenSearchServerlessClient().ListCollectionsAsync(new ListCollectionsRequest()))
                 .CollectionSummaries
                 .FirstOrDefault(x => x.Name.Contains("dotnet-genai"));
-
-            Console.WriteLine($"collectionArn: {collection.Arn}");
         }
         catch (Exception e)
         {

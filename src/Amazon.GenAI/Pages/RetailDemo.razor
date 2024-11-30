@@ -15,7 +15,7 @@
 
 <div class="header">
     <h1>
-        re:Invent Image Basket (<strong>@(TotalHits) images</strong>)
+        re:Invent Image Basket (<strong>@(_totalHits) images</strong>)
     </h1>
 </div>
 <div class="content">
@@ -31,22 +31,25 @@
     }
     else
     {
-        <ImageListing SearchResults="SearchResults" Width="800" />
+        <ImageListing SearchResults="SearchResults" Width="MaxImageWidth" />
     }
 </div>
 
 <div class="search">
     <div class="prompt">
-        <Prompt Model="MessageHistory"
-                OnPromptChanged="PromptChanged"
-                Status="_status" />
+        <Prompt Model="_messageHistory"
+        OnPromptChanged="PromptChanged"
+        Status="_status" />
     </div>
     <div class="actions">
-        <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
-                  Files="Files"
-                  FileCount="@MaxFileCount"
-                  Status="_status"
-                  OnFileChangedCallback="OnInputFileChanged" />
+        @if (_imageDataUrls.Count == 0)
+        {
+            <Uploader Accept=".bmp,.gif,.jpg,.jpeg,.png,.tiff"
+                      Files="Files"
+                      FileCount="@MaxFileCount"
+                      Status="_status"
+                      OnFileChangedCallback="OnInputFileChanged"/>
+        }
 
         @if (_imageDataUrls.Count > 0)
         {
@@ -72,28 +75,22 @@
 {
     <div class="previewImages">
         <PreviewImages ImageUrls="_imageDataUrls"
-                       Files="_inputFiles"
-                       Width="150">
+        Files="_inputFiles"
+        Width="150">
         </PreviewImages>
     </div>
 }
-
-
-@* <div class="footer">
-    © 2024, Amazon Web Services, Inc. or its affiliates.
-</div> *@
-
 
 @code {
 
     private string? _uploadDirectory;
     private readonly Dictionary<string, string> _inputFiles = new();
     private readonly List<string> _imageDataUrls = new();
-    private readonly List<byte[]> _savedBytesList = new();
     IReadOnlyList<IBrowserFile>? Files { get; } = new List<IBrowserFile>();
     private const int MaxFileCount = 250;
+    private const int MaxImageWidth = 800;
 
-    private long TotalHits;
+    private long _totalHits;
 
     private List<CollectionSummary?>? _collections;
     private const string NamePrefix = "dotnet-genai";
@@ -106,7 +103,7 @@
 
     private readonly int _pageSize = 15;
     Status _status = Status.Default;
-    private readonly ChatMessageHistory MessageHistory = new();
+    private readonly ChatMessageHistory _messageHistory = new();
     private Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
@@ -134,32 +131,12 @@
 
         _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
 
-       // await GetAll();
+        await GetAll();
         SearchResults = new List<VectorSearchResponse>();
 
         await InitializeTimer();
         await base.OnInitializedAsync();
         StateHasChanged();
-    }
-
-    private Task InitializeTimer()
-    {
-        Console.WriteLine("in  InitializeTimer");
-        _refreshTimer = new Timer(3000);
-        _refreshTimer.Elapsed += async (sender, e) => await RefreshHits();
-        _refreshTimer.AutoReset = true;
-        _refreshTimer.Start();
-        return Task.CompletedTask;
-    }
-
-    private async Task RefreshHits()
-    {
-        await InvokeAsync(async () =>
-        {
-            System.Console.WriteLine("in RefreshHits");
-            (_, TotalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
-            StateHasChanged();
-        });
     }
 
     private async Task PromptChanged(string prompt)
@@ -194,21 +171,19 @@
     {
         _inputFiles.Clear();
         _imageDataUrls.Clear();
-        _savedBytesList.Clear();
 
         const long maxFileSize = 1024L * 1024L * 1024L * 2L;
 
         foreach (var inputFile in e.GetMultipleFiles(MaxFileCount))
         {
             var targetFile = Path.Combine(_uploadDirectory!, inputFile.Name);
-            var file = await inputFile.RequestImageFileAsync(inputFile.ContentType, 600, int.MaxValue);
+            var file = await inputFile.RequestImageFileAsync(inputFile.ContentType, MaxImageWidth, int.MaxValue);
 
             await using var outputStream = File.Create(targetFile);
             await file.OpenReadStream(maxFileSize).CopyToAsync(outputStream);
             outputStream.Close();
 
             var bytes = await File.ReadAllBytesAsync(targetFile);
-            _savedBytesList.Add(bytes);
             var base64String = Convert.ToBase64String(bytes);
 
             _imageDataUrls.Add($"data:image/png;base64,{base64String}");
@@ -248,9 +223,32 @@
         });
     }
 
+    private async Task GetAll()
+    {
+        (SearchResults, _totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+    }
+
     private async void OnCancel()
     {
         await Clear();
+    }
+
+    private Task InitializeTimer()
+    {
+        _refreshTimer = new Timer(3000);
+        _refreshTimer.Elapsed += async (sender, e) => await RefreshHits();
+        _refreshTimer.AutoReset = true;
+        _refreshTimer.Start();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshHits()
+    {
+        await InvokeAsync(async () =>
+        {
+            (_, _totalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
+            StateHasChanged();
+        });
     }
 
     private async Task Clear()
@@ -259,18 +257,12 @@
         {
             _inputFiles.Clear();
             _imageDataUrls.Clear();
-            _savedBytesList.Clear();
 
             _status = Status.Default;
 
             StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private async Task GetAll()
-    {
-        (SearchResults, TotalHits) = await _openSearchVectorStore?.GetAllAsync(pageSize: _pageSize, pageNumber: 1)!;
     }
 
     public void Dispose()

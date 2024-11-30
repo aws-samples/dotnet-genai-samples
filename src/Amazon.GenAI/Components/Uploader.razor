@@ -1,41 +1,21 @@
 ﻿@using Amazon.GenAI.Models
 ﻿@using Amazon.GenAI.Models
 
-@* <div class="upload-container @(Status != Status.Thinking ? "" : "hidden")">
+<div class="upload-container @(Status != Status.Thinking ? "" : "hidden")">
     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                    @bind-Files="@Files"
                    Accept="@Accept"
                    OnFilesChanged="@OnFileChangedCallback"
                    For="@(() => Files!)"
-                   Hidden="false"
-                   InputClass="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                   Hidden="false" Class="flex-1 upload-button"
                    MaximumFileCount="FileCount"
-                   Class="relative">
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
+                   @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
         <ButtonTemplate>
-            <MudIconButton Icon="@Icons.Material.Filled.Upload" 
-                           Color="Color.Primary"
-                           Size="Size.Medium"
-                           Class="pointer-events-none" />
+            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Class="upload-icon" />
         </ButtonTemplate>
     </MudFileUpload>
-</div> *@
-
-<div class="upload-container @(Status != Status.Thinking ? "" : "hidden")">
-        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                       @bind-Files="@Files"
-                       Accept="@Accept"
-                       OnFilesChanged="@OnFileChangedCallback"
-                       For="@(() => Files!)"
-                       Hidden="false"
-                       MaximumFileCount="FileCount">
-            <ButtonTemplate>
-                <MudIconButton Icon="@Icons.Material.Filled.Upload" 
-                               Color="Color.Primary"
-                               Size="Size.Medium"
-                               Class="mx-2" />
-            </ButtonTemplate>
-        </MudFileUpload>
-    </div>
+</div>
 
 
 @code {

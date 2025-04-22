@@ -35,8 +35,6 @@ var chain = new CredentialProfileStoreChain();
 
 if (chain.TryGetAWSCredentials("Bedrock", out awsCredentials))
 {
-    var client = new AmazonBedrockClient(awsCredentials);
-
     builder.Services.AddSingleton<AmazonBedrockRuntimeClient>(
     new AmazonBedrockRuntimeClient(awsCredentials, new AmazonBedrockRuntimeConfig()
     {

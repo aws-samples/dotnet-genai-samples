@@ -2,7 +2,6 @@ using Amazon.BedrockRuntime;
 using Amazon.Lambda.Core;
 using Amazon.S3;
 using Amazon.GenAI.ImageIngestion.Abstractions;
-using Amazon.GenAI.ImageIngestion.Abstractions.Splitter;
 
 namespace Amazon.GenAI.ImageIngestion;
 
@@ -10,12 +9,10 @@ public class GetImageEmbeddings
 {
     private readonly IAmazonS3 _s3Client = new AmazonS3Client();
     private readonly string? _destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
-
+    private const int Dimensions = 1024;
 
     public async Task<Dictionary<string, object>> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
     {
-        context.Logger.LogInformation($"in GetImageEmbeddings v3.  destination: {_destinationBucket}");
-
         if (!input.TryGetValue("key", out var key))
         {
             throw new ArgumentException("Image key not provided in the input.");
@@ -44,10 +41,8 @@ public class GetImageEmbeddings
 
             var embedding = embeddingsAsync?["embedding"]?.AsArray();
             if (embedding == null) return null;
-
-            context.Logger.LogInformation($"GetImageEmbeddings got embeddings");
             
-            var f = new float[1024];
+            var f = new float[Dimensions];
             for (var j = 0; j < embedding.Count; j++)
             {
                 f[j] = (float)embedding[j]?.AsValue()!;

@@ -10,14 +10,12 @@ namespace Amazon.GenAI.ImageIngestion;
 
 public class AddToOpenSearch
 {
-    private readonly string? _bucketName;
     private readonly string? _namePrefix;
     private readonly string? _nameSuffix;
     private readonly string? _distributionDomainName;
 
     public AddToOpenSearch()
     {
-        _bucketName = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
         _namePrefix = Environment.GetEnvironmentVariable("NAME_PREFIX");
         _nameSuffix = Environment.GetEnvironmentVariable("NAME_SUFFIX");
         _distributionDomainName = Environment.GetEnvironmentVariable("DISTRIBUTION_DOMAIN_NAME");
@@ -75,7 +73,6 @@ public class AddToOpenSearch
             .Map<VectorRecord>(m => m
                 .Properties(p => p
                     .Text(t => t.Name(n => n.OrigBucketName))
-                    .Text(t => t.Name(n => n.Text))
                     .Text(t => t.Name(n => n.Path))
                     .KnnVector(d => d.Name(n => n.Vector).Dimension(1024).Similarity("cosine"))
                 )
@@ -108,7 +105,6 @@ public class AddToOpenSearch
         {
             var stringValues = arrayString?.Trim('[', ']').Split(',');
             if (stringValues != null) embeddings = stringValues.Select(float.Parse).ToArray();
-            context.Logger.LogInformation($"embeddings: {embeddings}");
         }
 
         return key;

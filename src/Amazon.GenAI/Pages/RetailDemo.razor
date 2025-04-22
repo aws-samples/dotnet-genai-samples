@@ -10,6 +10,7 @@
 @using Amazon.S3
 @using Amazon.S3.Transfer
 @inject AmazonBedrockRuntimeClient BedrockRuntimeClient
+@inject AmazonS3Client S3Client
 @inject IJSRuntime JsRuntime
 @using System.Timers
 
@@ -38,8 +39,8 @@
 <div class="search">
     <div class="prompt">
         <Prompt Model="_messageHistory"
-        OnPromptChanged="PromptChanged"
-        Status="_status" />
+                OnPromptChanged="PromptChanged"
+                Status="_status" />
     </div>
     <div class="actions">
         @if (_imageDataUrls.Count == 0)
@@ -48,7 +49,7 @@
                       Files="Files"
                       FileCount="@MaxFileCount"
                       Status="_status"
-                      OnFileChangedCallback="OnInputFileChanged"/>
+                      OnFileChangedCallback="OnInputFileChanged" />
         }
 
         @if (_imageDataUrls.Count > 0)
@@ -75,40 +76,40 @@
 {
     <div class="previewImages">
         <PreviewImages ImageUrls="_imageDataUrls"
-        Files="_inputFiles"
-        Width="150">
+                       Files="_inputFiles"
+                       Width="150">
         </PreviewImages>
     </div>
 }
 
 @code {
 
+    #region variables
+
     private string? _uploadDirectory;
     private readonly Dictionary<string, string> _inputFiles = new();
-    private readonly List<string> _imageDataUrls = new();
+    private readonly List<string> _imageDataUrls = [];
     IReadOnlyList<IBrowserFile>? Files { get; } = new List<IBrowserFile>();
     private const int MaxFileCount = 250;
     private const int MaxImageWidth = 800;
-
     private long _totalHits;
-
     private List<CollectionSummary?>? _collections;
     private const string NamePrefix = "dotnet-genai";
     private OpenSearchServerlessVectorStore? _openSearchVectorStore;
     private const int Dimensions = 1024;
     private string? _indexName;
-    private string? _textModelId;
+    public string? TextModelId;
     private string? _embeddingModelId;
     public required IReadOnlyCollection<VectorSearchResponse>? SearchResults = new List<VectorSearchResponse>();
-
-    private readonly int _pageSize = 15;
+    private readonly int _pageSize = Constants.PageSize;
     Status _status = Status.Default;
     private readonly ChatMessageHistory _messageHistory = new();
     private Timer? _refreshTimer;
 
+    #endregion
+
     protected override async Task OnInitializedAsync()
     {
-        _textModelId = "anthropic.claude-3-5-sonnet-20240620-v1:0";
         _embeddingModelId = "amazon.titan-embed-image-v1";
         _indexName = "my-images-index";
 
@@ -122,14 +123,14 @@
 
         var regionEndpoint = RegionEndpoint.GetBySystemName(Constants.Region);
         var options = new OpenSearchVectorStoreOptions
-            {
-                Region = regionEndpoint,
-                IndexName = _indexName,
-                Dimensions = Dimensions,
-                CollectionArn = _collections[0]?.Arn,
-            };
+        {
+            Region = regionEndpoint,
+            IndexName = _indexName,
+            Dimensions = Dimensions,
+            CollectionArn = _collections[0]?.Arn,
+        };
 
-        _openSearchVectorStore = new OpenSearchServerlessVectorStore(BedrockRuntimeClient, _embeddingModelId, _textModelId, options);
+        _openSearchVectorStore = new OpenSearchServerlessVectorStore(options);
 
         await GetAll();
         SearchResults = new List<VectorSearchResponse>();
@@ -194,26 +195,25 @@
 
     private async Task OnSubmit()
     {
-        var client = new AmazonS3Client();
-        var bucket = (await client.ListBucketsAsync()).Buckets.FirstOrDefault(x => x.BucketName.StartsWith("dotnet-genai-source"));
-
         await InvokeAsync(() =>
         {
+            var bucket = S3Client.ListBucketsAsync().Result.Buckets.FirstOrDefault(x => x.BucketName.StartsWith("dotnet-genai-source"));
+
             _status = Status.Adding;
 
             if (bucket == null) return;
 
             foreach (var path in _inputFiles.Select(file => file.Value))
             {
-                var transferUtility = new TransferUtility(client);
+                var transferUtility = new TransferUtility(S3Client);
 
                 var transferUtilityUploadRequest = new TransferUtilityUploadRequest
-                    {
-                        BucketName = bucket?.BucketName,
-                        Key = Path.GetFileName(path),
-                        FilePath = path,
-                        ContentType = "text/plain",
-                    };
+                {
+                    BucketName = bucket?.BucketName,
+                    Key = Path.GetFileName(path),
+                    FilePath = path,
+                    ContentType = "text/plain",
+                };
 
                 transferUtility.UploadAsync(transferUtilityUploadRequest);
             }
@@ -230,7 +230,14 @@
 
     private async void OnCancel()
     {
-        await Clear();
+        try
+        {
+            await Clear();
+        }
+        catch (Exception e)
+        {
+            throw; 
+        }
     }
 
     private Task InitializeTimer()

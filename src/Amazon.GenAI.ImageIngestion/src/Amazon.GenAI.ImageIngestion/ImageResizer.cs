@@ -12,7 +12,7 @@ public class ImageResizer
 {
     private readonly IAmazonS3 _s3Client;
     private readonly string? _destinationBucket;
-    private const int TargetWidth = 400;
+    private const int TargetWidth = 800;
 
     public ImageResizer()
     {
@@ -22,10 +22,6 @@ public class ImageResizer
 
     public async Task<object> FunctionHandler(Dictionary<string, string> input, ILambdaContext context)
     {
-        Console.WriteLine("in ImageResizer v1");
-
-        context.Logger.LogInformation($"in ImageResizer.  destination: {_destinationBucket}");
-
         if (!input.TryGetValue("key", out var key))
         {
             throw new ArgumentException("Image key not provided in the input.");
@@ -36,55 +32,37 @@ public class ImageResizer
             throw new ArgumentException("bucketName not provided in the input.");
         }
 
-        context.Logger.LogInformation($"key: {key}");
-        context.Logger.LogInformation($"bucketName: {bucketName}");
-
-        if (bucketName == null && key == null) return null;
-
         try
         {
             var response = await _s3Client.GetObjectAsync(bucketName, key);
 
-            using (var imageStream = new MemoryStream())
+            using var imageStream = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(imageStream);
+            imageStream.Position = 0;
+
+            using var image = await Image.LoadAsync(imageStream);
+            image.Mutate(x => x.Resize(TargetWidth, 0));
+
+            using var outputStream = new MemoryStream();
+            await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat!);
+            outputStream.Position = 0;
+
+            var putRequest = new PutObjectRequest
             {
-                await response.ResponseStream.CopyToAsync(imageStream);
-                imageStream.Position = 0;
+                BucketName = _destinationBucket,
+                Key = key,
+                InputStream = outputStream,
+                ContentType = response.Headers.ContentType
+            };
 
-				using var image = await Image.LoadAsync(imageStream);
-				// Resize the image
-				image.Mutate(x => x.Resize(TargetWidth, 0)); // 0 height to maintain aspect ratio
-
-				// Save the resized image to a new stream
-				using var outputStream = new MemoryStream();
-				await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat!);
-				outputStream.Position = 0;
-
-				// Upload the resized image to the destination bucket
-				var putRequest = new PutObjectRequest
-				{
-					BucketName = _destinationBucket,
-					Key = key,
-					InputStream = outputStream,
-					ContentType = response.Headers.ContentType
-				};
-
-				var putObjectResponse = await _s3Client.PutObjectAsync(putRequest);
-            }
-
-            context.Logger.LogInformation($"Successfully resized {key} and uploaded to {_destinationBucket}");
+            await _s3Client.PutObjectAsync(putRequest);
 
             return new Dictionary<string, string>
             {
                 { "key", key },
-                { "bucketName", _destinationBucket },
+                { "bucketName", _destinationBucket! },
                 { "origBucketName", bucketName }
             };
-
-            //return new
-            //{
-            //    key = key,
-            //    bucketName = _destinationBucket
-            //};
         }
         catch (Exception e)
         {

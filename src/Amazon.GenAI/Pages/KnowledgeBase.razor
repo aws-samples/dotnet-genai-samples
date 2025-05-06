@@ -30,8 +30,6 @@
     protected override async Task OnInitializedAsync()
     {
         _knowledgeBases = (await AgentClient.ListKnowledgeBasesAsync(new ListKnowledgeBasesRequest())).KnowledgeBaseSummaries
-            .OrderBy(x => x.UpdatedAt)
-            .Where(x => x.Status.Value.Equals("Active", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null &&
@@ -61,13 +59,6 @@
                         {
                             KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
                             ModelArn = Constants.TextModelId,
-                            RetrievalConfiguration = new KnowledgeBaseRetrievalConfiguration
-                            {
-                                VectorSearchConfiguration = new KnowledgeBaseVectorSearchConfiguration
-                                {
-                                    OverrideSearchType = "HYBRID"
-                                }
-                            }
                         }
                     }
                 };

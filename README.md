@@ -1,4 +1,4 @@
-Welcome to our AWS Generative AI Showcase! This C# Blazor application demonstrates various use cases of generative AI powered by Amazon Web Services. Explore the cutting-edge capabilities of AI and machine learning through practical, interactive examples.
+Welcome to our AWS Generative AI Showcase! This C# Blazor application demonstrates various use cases of generative AI powered by Amazon Web Services. Explore the cutting-edge capabilities of AI and machine learning through practical, interactive examples and demos.
 
 ## Introduction
 This repository contains sample code demonstrating various use cases leveraging Amazon Bedrock and Generative AI with .NET. Each sample is a separate project with its own directory, and includes a basic Blazor frontend to help users quickly set up a proof of concept.

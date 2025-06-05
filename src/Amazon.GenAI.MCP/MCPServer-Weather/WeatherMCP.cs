@@ -22,7 +22,7 @@ namespace WeatherMCPServer
     {
         //McpServerTool has a Description which will be fed into any client connecting to the server. This description helps the client determine which tool to call.
         [McpServerTool, Description("Get weather alerts for a US state.")]
-        public static async Task<string> GetAlerts(
+        public static async Task<string> GetWeatherAlertsForAState(
             HttpClient client,
             [Description("The US state to get alerts for.")] string state)
         {
@@ -49,7 +49,7 @@ namespace WeatherMCPServer
         }
 
         [McpServerTool, Description("Get weather forecast for a location.")]
-        public static async Task<string> GetForecast(
+        public static async Task<string> GetWeatherForecastForALocation(
             HttpClient client,
             [Description("Latitude of the location.")] double latitude,
             [Description("Longitude of the location.")] double longitude)

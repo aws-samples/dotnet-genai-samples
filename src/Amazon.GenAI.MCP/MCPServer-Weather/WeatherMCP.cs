@@ -1,18 +1,6 @@
 using ModelContextProtocol.Server;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using System.Linq;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using System.Net.Http.Headers;
-using System.IO.Compression;
 using System.Globalization;
 
 namespace WeatherMCPServer

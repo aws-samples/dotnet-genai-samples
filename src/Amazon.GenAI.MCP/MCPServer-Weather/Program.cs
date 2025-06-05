@@ -1,11 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
-using System.ComponentModel;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 
 namespace WeatherMCPServer
 {
@@ -15,6 +10,7 @@ namespace WeatherMCPServer
         {
             var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
+            // WithToolsFromAssembly() will scan the assembly for classes with the McpServerToolType attribute and register all methods with the McpServerTool attribute
             builder.Services.AddMcpServer()
                 .WithStdioServerTransport()
                 .WithToolsFromAssembly();

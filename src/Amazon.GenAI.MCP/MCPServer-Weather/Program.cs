@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-namespace FinanceMCPServer
+namespace WeatherMCPServer
 {
     public class Program
     {

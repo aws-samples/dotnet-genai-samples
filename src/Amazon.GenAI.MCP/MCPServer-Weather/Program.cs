@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace FinanceMCPServer
@@ -20,7 +21,8 @@ namespace FinanceMCPServer
 
             builder.Services.AddSingleton(_ =>
             {
-                var client = new HttpClient() { BaseAddress = new Uri("https://api.finance.com") };
+                var client = new HttpClient() { BaseAddress = new Uri("https://api.weather.gov") };
+                client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("weather-tool", "1.0"));
                 return client;
             });
 
@@ -28,13 +30,6 @@ namespace FinanceMCPServer
             
             // Get the HttpClient from the dependency injection container
             var client = app.Services.GetRequiredService<HttpClient>();
-
-            await FinanceTools.GetStockHistory(client, "AAPL", DateTime.Now.AddYears(-5), DateTime.Now);
-
-
-
-            // Call GetAlerts with the required parameters
-            await FinanceTools.GetStockPrice(client, new string[] { "AAPL", "MSFT", "GOOG" });
 
             
             await app.RunAsync();

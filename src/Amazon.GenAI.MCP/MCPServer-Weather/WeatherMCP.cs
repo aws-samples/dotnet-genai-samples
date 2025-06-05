@@ -59,7 +59,3 @@ namespace WeatherMCPServer
         }
     }
 }
-
-   
-
-   

@@ -39,7 +39,7 @@ public class S3Wrapper
             }
 
             request.ContinuationToken = response.NextContinuationToken;
-        } while (response.IsTruncated);
+        } while (response.IsTruncated ?? false);
 
         return result;
     }

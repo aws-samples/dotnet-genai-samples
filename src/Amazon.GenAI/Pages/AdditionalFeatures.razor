@@ -152,9 +152,9 @@
         }
     }
 
-    private async Task<Message?> TransformResponseToMessage(RetrieveAndGenerateResponse result)
+    private async Task<Amazon.GenAI.Abstractions.Message.Message?> TransformResponseToMessage(RetrieveAndGenerateResponse result)
     {
-        var message = new Message();
+        var message = new Amazon.GenAI.Abstractions.Message.Message();
         message = message with { Content = result.Output.Text };
         message = message with { Role = MessageRole.Ai };
         message = message with { DateTime = DateTime.Now };

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -18,21 +18,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Bedrock" Version="3.7.303.2" />
-    <PackageReference Include="AWSSDK.BedrockAgent" Version="3.7.311.2" />
-    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.309.2" />
-    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.307.2" />
-    <PackageReference Include="AWSSDK.EC2" Version="3.7.335" />
-    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="3.7.301.108" />
-    <PackageReference Include="AWSSDK.OpenSearchService" Version="3.7.311.3" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.400" />
-    <PackageReference Include="Markdig" Version="0.37.0" />
-    <PackageReference Include="Markdown.ColorCode" Version="2.3.0" />
+    <PackageReference Include="AWSSDK.Bedrock" Version="4.0.9" />
+    <PackageReference Include="AWSSDK.BedrockAgent" Version="4.0.4.2" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="4.0.4.11" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="4.0.3" />
+    <PackageReference Include="AWSSDK.EC2" Version="4.0.26.1" />
+    <PackageReference Include="AWSSDK.OpenSearchServerless" Version="4.0.1.1" />
+    <PackageReference Include="AWSSDK.OpenSearchService" Version="4.0.2.1" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.6.3" />
+    <PackageReference Include="Markdig" Version="0.41.3" />
+    <PackageReference Include="Markdown.ColorCode" Version="3.0.0" />
     <PackageReference Include="MudBlazor" Version="6.21.0" />
-    <PackageReference Include="OpenSearch.Client" Version="1.7.1" />
-    <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.7.1" />
-    <PackageReference Include="PdfPig" Version="0.1.8" />
-    <PackageReference Include="System.Memory.Data" Version="8.0.0" />
+    <PackageReference Include="OpenSearch.Client" Version="1.8.0" />
+    <PackageReference Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.8.0" />
+    <PackageReference Include="PdfPig" Version="0.1.11" />
+    <PackageReference Include="System.Memory.Data" Version="9.0.8" />
   </ItemGroup>
 
 </Project>

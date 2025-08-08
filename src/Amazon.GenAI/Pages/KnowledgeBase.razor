@@ -16,9 +16,9 @@
 
 <div class="input-wrapper">
     <Prompt Model="MessageHistory"
-            OnPromptChanged="PromptChanged"
-            BuiltinPrompt="@BuiltinPrompt"
-            Status="Status">
+    OnPromptChanged="PromptChanged"
+    BuiltinPrompt="@BuiltinPrompt"
+    Status="Status">
     </Prompt>
 </div>
 
@@ -34,7 +34,7 @@
 
         _knowledgeBase = _knowledgeBases.FirstOrDefault(x => x != null &&
                                                              x.Name.StartsWith(Constants.KnowledgeBaseName, StringComparison.OrdinalIgnoreCase));
-        
+
         await base.OnInitializedAsync();
     }
 
@@ -49,23 +49,55 @@
 
         try
         {
-            var request = new RetrieveAndGenerateRequest
+            // var request = new RetrieveAndGenerateRequest
+            //     {
+            //         Input = new RetrieveAndGenerateInput { Text = prompt },
+            //         RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
+            //         {
+            //             Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
+            //             KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
+            //             {
+            //                 KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
+            //                 ModelArn = Constants.TextModelId,
+            //             }
+            //         }
+            //     };
+
+            //var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
+
+            var agentrequest = new InvokeAgentRequest
                 {
-                    Input = new RetrieveAndGenerateInput { Text = prompt },
-                    RetrieveAndGenerateConfiguration = new RetrieveAndGenerateConfiguration
-                    {
-                        Type = RetrieveAndGenerateType.KNOWLEDGE_BASE,
-                        KnowledgeBaseConfiguration = new KnowledgeBaseRetrieveAndGenerateConfiguration
-                        {
-                            KnowledgeBaseId = _knowledgeBase?.KnowledgeBaseId,
-                            ModelArn = Constants.TextModelId,
-                        }
-                    }
+                    AgentId = Constants.AgentId,
+                    AgentAliasId = Constants.AgentAliasId,
+                    SessionId = "test",
+                    InputText = prompt
                 };
 
-            var result = await AgentRuntimeClient!.RetrieveAndGenerateAsync(request);
+            var result = await AgentRuntimeClient.InvokeAgentAsync(agentrequest);
 
-            await MessageHistory.AddAiMessage(result.Output.Text!);
+            var response = string.Empty;
+
+            await foreach(var chunkEvent in result.Completion)
+            {
+                var payloadchunk = new PayloadPart();
+                var returnControlPayload = new ReturnControlPayload();
+
+                if (chunkEvent is PayloadPart)
+                {
+                    payloadchunk = (PayloadPart)chunkEvent;
+                    if (payloadchunk.Bytes != null)
+                    {
+                        var chunkText = System.Text.Encoding.UTF8.GetString(payloadchunk.Bytes.ToArray());
+                        response += chunkText;
+                    }
+                }
+                else if (chunkEvent is ReturnControlPayload)
+                {
+                    returnControlPayload = (ReturnControlPayload)chunkEvent;
+                }
+            }
+
+            await MessageHistory.AddAiMessage(response);
         }
         catch (AmazonBedrockAgentRuntimeException ex)
         {

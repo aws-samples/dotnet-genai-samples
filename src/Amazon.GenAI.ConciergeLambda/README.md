@@ -7,7 +7,6 @@ A serverless concierge service built with AWS Lambda and Bedrock Agent that hand
 - **Bedrock Agent Integration**: Function resolver for Amazon Bedrock Agent
 - **Cab Booking Management**: Create and manage cab bookings with DynamoDB storage
 - **Event Notifications**: SNS notifications for booking events
-- **Structured Logging**: AWS Lambda Powertools for .NET logging and tracing
 
 ## Architecture
 

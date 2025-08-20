@@ -340,4 +340,8 @@ ASALocalRun/
 
 
 # End of https://www.gitignore.io/api/csharp
-src/Amazon.GenAI.MCP/.DS_Store
+.DS_Store
+
+# SAM working folder
+
+*.aws-sam/

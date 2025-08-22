@@ -4,5 +4,5 @@ namespace Amazon.GenAI.ConciergeLambda.Services;
 
 public interface IConciergeService
 {
-    Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, DateTime? bookingTillDate = null);
+    Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null);
 }

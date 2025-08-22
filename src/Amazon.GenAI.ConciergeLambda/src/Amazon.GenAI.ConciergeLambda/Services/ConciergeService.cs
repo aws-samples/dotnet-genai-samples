@@ -22,7 +22,7 @@ public class ConciergeService : IConciergeService
         _snsTopicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN") ?? throw new InvalidOperationException("SNS_TOPIC_ARN environment variable is required");
     }
 
-    public async Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, DateTime? bookingTillDate = null)
+    public async Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null)
     {
         var bookingId = Guid.NewGuid();
         var currentDateTime = DateTime.UtcNow;
@@ -34,8 +34,9 @@ public class ConciergeService : IConciergeService
             BookingDate = currentDateTime.ToString("yyyy/MM/dd"),
             Status = BookingStatus.Submitted,
             GuestName = guestName,
-            BookingFromDate = bookingFromDate.ToString("yyyy/MM/dd"),
-            BookingTillDate = tillDate.ToString("yyyy/MM/dd")
+            BookingFromDate = bookingFromDate.ToString("yyyy/MM/dd HH:mm:ss"),
+            BookingTillDate = tillDate.ToString("yyyy/MM/dd HH:mm:ss"),
+            Seater = seater
         };
 
         // Insert into DynamoDB
@@ -49,7 +50,8 @@ public class ConciergeService : IConciergeService
                 ["Status"] = new AttributeValue { S = booking.Status.ToString() },
                 ["GuestName"] = new AttributeValue { S = booking.GuestName },
                 ["BookingFromDate"] = new AttributeValue { S = booking.BookingFromDate },
-                ["BookingTillDate"] = new AttributeValue { S = booking.BookingTillDate }
+                ["BookingTillDate"] = new AttributeValue { S = booking.BookingTillDate },
+                ["Seater"] = new AttributeValue { S = booking.Seater.ToString() }
             }
         };
 

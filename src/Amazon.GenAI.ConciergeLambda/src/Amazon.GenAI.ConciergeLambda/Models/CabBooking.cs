@@ -8,4 +8,5 @@ public class CabBooking
     public string GuestName { get; set; } = string.Empty;
     public string BookingFromDate { get; set; } = string.Empty;
     public string BookingTillDate { get; set; } = string.Empty;
+    public Seater Seater { get; set; }
 }

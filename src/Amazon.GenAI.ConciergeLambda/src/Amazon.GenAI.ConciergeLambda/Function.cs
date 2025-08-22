@@ -1,5 +1,6 @@
 using Amazon;
 using Amazon.DynamoDBv2;
+using Amazon.GenAI.ConciergeLambda.Models;
 using Amazon.GenAI.ConciergeLambda.Services;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.Serialization.SystemTextJson;
@@ -44,24 +45,48 @@ public class Function
     private void RegisterTools()
     {
         _resolver.Tool("CreateCabBooking", "Creates a new CAB booking for a guest",
-            async (string guestName, string bookingFromDate, string? bookingTillDate, IConciergeService conciergeService, ILambdaContext context) =>
+            async (string guestName, string bookingFromDate, string seater, string? bookingTillDate, IConciergeService conciergeService, ILambdaContext context) =>
             {
                 context.Logger.LogLine($"Creating CAB booking for guest: {guestName}");
-                
+
                 if (!DateTime.TryParse(bookingFromDate, out var fromDate))
                 {
                     return "Error: Invalid booking from date format";
                 }
-                
+
+                if (!Enum.TryParse<Seater>(seater, true, out var seaterEnum))
+                {
+                    return "Error: Invalid seater type. Valid options are: TwoSeater, FourSeater, SevenSeater, NineSeater";
+                }
+
                 DateTime? tillDate = null;
                 if (!string.IsNullOrEmpty(bookingTillDate) && DateTime.TryParse(bookingTillDate, out var parsedTillDate))
                 {
                     tillDate = parsedTillDate;
                 }
+
+                var bookingId = await conciergeService.CreateCabBookingAsync(guestName, fromDate, seaterEnum, tillDate);
                 
-                var bookingId = await conciergeService.CreateCabBookingAsync(guestName, fromDate, tillDate);
-                return $"CAB booking created successfully with ID: {bookingId}";
+                var seaterDisplay = seaterEnum switch
+                {
+                    Seater.TwoSeater => "2-Seater",
+                    Seater.FourSeater => "4-Seater",
+                    Seater.SevenSeater => "7-Seater",
+                    Seater.NineSeater => "9-Seater",
+                    _ => seaterEnum.ToString()
+                };
+
+                return $"CAB booking created successfully!\n" +
+                       $"Booking ID: {bookingId}\n" +
+                       $"Guest Name: {guestName}\n" +
+                       $"From Date: {fromDate:yyyy/MM/dd HH:mm:ss}\n" +
+                       $"Till Date: {(tillDate ?? fromDate):yyyy/MM/dd}\n" +
+                       $"Seater Type: {seaterDisplay}";
             });
+
+            //TODO: Dining Reservation - Real API call to create a dining reservation
+            
+            //TODO: Maintenance Request - Real API call to create a maintenance request
     }
 
     public async Task<BedrockFunctionResponse> FunctionHandler(BedrockFunctionRequest input, ILambdaContext context)

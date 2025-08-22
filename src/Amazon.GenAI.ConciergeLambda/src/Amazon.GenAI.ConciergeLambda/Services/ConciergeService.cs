@@ -18,7 +18,7 @@ public class ConciergeService : IConciergeService
     {
         _dynamoDbClient = dynamoDbClient;
         _snsClient = snsClient;
-        _tableName = Environment.GetEnvironmentVariable("DYNAMODB_TABLE_NAME") ?? "CabBookings";
+        _tableName = Environment.GetEnvironmentVariable("CAB_BOOKING") ?? "CabBookings";
         _snsTopicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN") ?? throw new InvalidOperationException("SNS_TOPIC_ARN environment variable is required");
     }
 

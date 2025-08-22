@@ -33,6 +33,18 @@ Resources:
         - AttributeName: BookingId
           KeyType: HASH
 
+  DiningReservationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DiningReservations
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: ReservationId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ReservationId
+          KeyType: HASH
+
   CabBookingEventsTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -47,7 +59,8 @@ Resources:
       Role: !GetAtt ConciergeFunctionRole.Arn
       Environment:
         Variables:
-          DYNAMODB_TABLE_NAME: !Ref CabBookingsTable
+          CAB_BOOKING: !Ref CabBookingsTable
+          DINING_RESERVATION: !Ref DiningReservationsTable
           SNS_TOPIC_ARN: !Ref CabBookingEventsTopic
 
   ConciergeFunctionRole:
@@ -88,7 +101,9 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
-                Resource: !GetAtt CabBookingsTable.Arn
+                Resource: 
+                  - !GetAtt CabBookingsTable.Arn
+                  - !GetAtt DiningReservationsTable.Arn
         - PolicyName: SNSAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -124,6 +139,12 @@ Outputs:
     Value: !Ref CabBookingsTable
     Export:
       Name: !Sub '${AWS::StackName}-CabBookingsTable'
+
+  DiningReservationsTableName:
+    Description: Name of the DynamoDB table for dining reservations
+    Value: !Ref DiningReservationsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-DiningReservationsTable'
 
   CabBookingEventsTopicArn:
     Description: ARN of the SNS topic for CAB booking events

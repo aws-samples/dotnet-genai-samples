@@ -32,6 +32,7 @@ public class Function
         
         // Register application services
         services.AddSingleton<IConciergeService, ConciergeService>();
+        services.AddSingleton<IDiningService, DiningService>();
         
         services.AddBedrockResolver();
 
@@ -84,8 +85,46 @@ public class Function
                        $"Seater Type: {seaterDisplay}";
             });
 
-            //TODO: Dining Reservation - Real API call to create a dining reservation
-            
+        _resolver.Tool("CreateDiningReservation", "Creates a new dining reservation at Octank Dine",
+            async (string guestName, string reservationDateTime, int numberOfGuests, string? mealType, IDiningService diningService, ILambdaContext context) =>
+            {
+                context.Logger.LogLine($"Creating dining reservation for guest: {guestName}");
+
+                if (!DateTime.TryParse(reservationDateTime, out var dateTime))
+                {
+                    return "Error: Invalid reservation date/time format";
+                }
+
+                MealType? mealTypeEnum = null;
+                if (!string.IsNullOrEmpty(mealType))
+                {
+                    if (!Enum.TryParse<MealType>(mealType, true, out var parsedMealType))
+                    {
+                        return "Error: Invalid meal type. Valid options are: Lunch, Dinner";
+                    }
+                    mealTypeEnum = parsedMealType;
+                }
+
+                try
+                {
+                    var reservationId = await diningService.CreateDiningReservationAsync(guestName, dateTime, numberOfGuests, mealTypeEnum);
+                    
+                    var finalMealType = mealTypeEnum?.ToString() ?? (dateTime.Hour >= 12 && dateTime.Hour < 16 ? "Lunch" : "Dinner");
+
+                    return $"Dining reservation created successfully!\n" +
+                           $"Reservation ID: {reservationId}\n" +
+                           $"Guest Name: {guestName}\n" +
+                           $"Restaurant: Octank Dine\n" +
+                           $"Date & Time: {dateTime:yyyy/MM/dd HH:mm:ss}\n" +
+                           $"Number of Guests: {numberOfGuests}\n" +
+                           $"Meal Type: {finalMealType}";
+                }
+                catch (ArgumentException ex)
+                {
+                    return $"Error: {ex.Message}";
+                }
+            });
+
             //TODO: Maintenance Request - Real API call to create a maintenance request
     }
 

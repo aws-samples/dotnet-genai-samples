@@ -45,6 +45,18 @@ Resources:
         - AttributeName: ReservationId
           KeyType: HASH
 
+  MaintenanceRequests:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MaintenanceRequests
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: RequestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: RequestId
+          KeyType: HASH
+
   CabBookingEventsTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -61,6 +73,7 @@ Resources:
         Variables:
           CAB_BOOKING: !Ref CabBookingsTable
           DINING_RESERVATION: !Ref DiningReservationsTable
+          MAINTENANCE_REQUEST: !Ref MaintenanceRequests
           SNS_TOPIC_ARN: !Ref CabBookingEventsTopic
 
   ConciergeFunctionRole:
@@ -104,6 +117,7 @@ Resources:
                 Resource: 
                   - !GetAtt CabBookingsTable.Arn
                   - !GetAtt DiningReservationsTable.Arn
+                  - !GetAtt MaintenanceRequests.Arn
         - PolicyName: SNSAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -145,6 +159,12 @@ Outputs:
     Value: !Ref DiningReservationsTable
     Export:
       Name: !Sub '${AWS::StackName}-DiningReservationsTable'
+
+  MaintenanceRequestsName:
+    Description: Name of the DynamoDB table for maintenance requests
+    Value: !Ref MaintenanceRequests
+    Export:
+      Name: !Sub '${AWS::StackName}-MaintenanceRequests'
 
   CabBookingEventsTopicArn:
     Description: ARN of the SNS topic for CAB booking events

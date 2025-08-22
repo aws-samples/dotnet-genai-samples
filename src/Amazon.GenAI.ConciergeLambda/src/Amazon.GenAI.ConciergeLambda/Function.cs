@@ -33,6 +33,7 @@ public class Function
         // Register application services
         services.AddSingleton<IConciergeService, ConciergeService>();
         services.AddSingleton<IDiningService, DiningService>();
+        services.AddSingleton<IMaintenanceService, MaintenanceService>();
         
         services.AddBedrockResolver();
 
@@ -125,7 +126,59 @@ public class Function
                 }
             });
 
+        _resolver.Tool("CreateMaintenanceRequest", "Creates a new room maintenance request",
+            async (string guestName, string roomNumber, string issueType, string issueDescription, string? priority, IMaintenanceService maintenanceService, ILambdaContext context) =>
+            {
+                context.Logger.LogLine($"Creating maintenance request for guest: {guestName}");
+
+                if (!Enum.TryParse<IssueType>(issueType, true, out var issueTypeEnum))
+                {
+                    return "Error: Invalid issue type. Valid options are: Plumbing, Electrical, AirConditioning, Cleaning, Furniture, Other";
+                }
+
+                Priority? priorityEnum = null;
+                if (!string.IsNullOrEmpty(priority))
+                {
+                    if (!Enum.TryParse<Priority>(priority, true, out var parsedPriority))
+                    {
+                        return "Error: Invalid priority. Valid options are: Low, Medium, High, Urgent";
+                    }
+                    priorityEnum = parsedPriority;
+                }
+
+                try
+                {
+                    var requestId = await maintenanceService.CreateMaintenanceRequestAsync(guestName, roomNumber, issueTypeEnum, issueDescription, priorityEnum);
+                    
+                    var finalPriority = priorityEnum?.ToString() ?? GetDefaultPriorityDisplay(issueTypeEnum);
+
+                    return $"Maintenance request created successfully!\n" +
+                           $"Request ID: {requestId}\n" +
+                           $"Guest Name: {guestName}\n" +
+                           $"Room Number: {roomNumber}\n" +
+                           $"Issue Type: {issueTypeEnum}\n" +
+                           $"Issue Description: {issueDescription}\n" +
+                           $"Priority: {finalPriority}\n" +
+                           $"Request Date: {DateTime.UtcNow:yyyy/MM/dd HH:mm:ss}";
+                }
+                catch (ArgumentException ex)
+                {
+                    return $"Error: {ex.Message}";
+                }
+            });
+
             //TODO: Maintenance Request - Real API call to create a maintenance request
+    }
+
+    private static string GetDefaultPriorityDisplay(IssueType issueType)
+    {
+        return issueType switch
+        {
+            IssueType.Plumbing or IssueType.Electrical => "High",
+            IssueType.AirConditioning => "Medium",
+            IssueType.Cleaning or IssueType.Furniture or IssueType.Other => "Low",
+            _ => "Low"
+        };
     }
 
     public async Task<BedrockFunctionResponse> FunctionHandler(BedrockFunctionRequest input, ILambdaContext context)

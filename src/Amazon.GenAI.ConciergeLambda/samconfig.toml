@@ -18,7 +18,7 @@ confirm_changeset = true
 resolve_s3 = true
 s3_prefix = "AmazonGenAIConciergeLambda"
 region = "us-east-1"
-profile = "admin"
+profile = "concierge"
 image_repositories = []
 parameter_overrides = "BedrockAgentId=\"\""
 

@@ -167,14 +167,6 @@ public class Function
                 }
             });
 
-        _resolver.Tool("GetHotelSpecialDeals", "Gets current special deals and offers available for hotels",
-            async (ILambdaContext context) =>
-            {
-                context.Logger.LogLine("Retrieving current hotel special deals");
-                
-                return "The following hotel special deals are currently available: — Monday Staycation Special: 20% off room rates (Mondays only) — Last Minute Getaway: 15% off same-day bookings (Tuesdays only) — Extended Stay Discount: 20% off 3-night stays (Wednesdays only) — Suite Upgrade: Complimentary upgrade to executive suite (Thursdays only) — Weekend Getaway Package: 10% off 2-night stays (Fridays only)";
-            });
-
             //TODO: Maintenance Request - Real API call to create a maintenance request
     }
 

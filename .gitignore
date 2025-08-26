@@ -338,6 +338,12 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
+# SAM Build
+.aws-sam/
+
+# DS_Store files
+**/*.DS_Store
+
 
 # End of https://www.gitignore.io/api/csharp
 .DS_Store

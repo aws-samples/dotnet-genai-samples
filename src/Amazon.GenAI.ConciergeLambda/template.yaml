@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Lambda Powertools .NET Bedrock Agent Function Resolver Sample
+
+Parameters:
+  BedrockAgentId:
+    Type: String
+    Description: The ID of the Bedrock Agent that will invoke this function
+    Default: ""
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: dotnet8
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        POWERTOOLS_SERVICE_NAME: ConciergeFunction
+        POWERTOOLS_LOG_LEVEL: INFO
+
+Resources:
+  CabBookingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CabBookings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: BookingId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: BookingId
+          KeyType: HASH
+
+  DiningReservationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DiningReservations
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: ReservationId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ReservationId
+          KeyType: HASH
+
+  MaintenanceRequests:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MaintenanceRequests
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: RequestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: RequestId
+          KeyType: HASH
+
+  CabBookingEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: cab-booking-events
+
+  ConciergeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/Amazon.GenAI.ConciergeLambda/
+      Handler: Amazon.GenAI.ConciergeLambda::Amazon.GenAI.ConciergeLambda.Function::FunctionHandler
+      Description: Concierge Agent Function Resolver using AWS Lambda Powertools for .NET
+      Role: !GetAtt ConciergeFunctionRole.Arn
+      Environment:
+        Variables:
+          CAB_BOOKING: !Ref CabBookingsTable
+          DINING_RESERVATION: !Ref DiningReservationsTable
+          MAINTENANCE_REQUEST: !Ref MaintenanceRequests
+          SNS_TOPIC_ARN: !Ref CabBookingEventsTopic
+
+  ConciergeFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service:
+                - bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: '*'
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: 
+                  - !GetAtt CabBookingsTable.Arn
+                  - !GetAtt DiningReservationsTable.Arn
+                  - !GetAtt MaintenanceRequests.Arn
+        - PolicyName: SNSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref CabBookingEventsTopic
+
+  BedrockAgentFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ConciergeFunction
+      Action: lambda:InvokeFunction
+      Principal: bedrock.amazonaws.com
+      SourceArn: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*'
+
+Outputs:
+  BedrockAgentFunctionArn:
+    Description: ARN of the Concierge Agent Function
+    Value: !GetAtt ConciergeFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ConciergeFunctionArn'
+  
+  BedrockAgentFunctionName:
+    Description: Name of the Concierge Agent Function
+    Value: !Ref ConciergeFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-ConciergeFunctionName'
+
+  CabBookingsTableName:
+    Description: Name of the DynamoDB table for CAB bookings
+    Value: !Ref CabBookingsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-CabBookingsTable'
+
+  DiningReservationsTableName:
+    Description: Name of the DynamoDB table for dining reservations
+    Value: !Ref DiningReservationsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-DiningReservationsTable'
+
+  MaintenanceRequestsName:
+    Description: Name of the DynamoDB table for maintenance requests
+    Value: !Ref MaintenanceRequests
+    Export:
+      Name: !Sub '${AWS::StackName}-MaintenanceRequests'
+
+  CabBookingEventsTopicArn:
+    Description: ARN of the SNS topic for CAB booking events
+    Value: !Ref CabBookingEventsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-CabBookingEventsTopic'

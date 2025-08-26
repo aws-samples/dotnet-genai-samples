@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.KbLambda", "Am
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI.ConciergeLambda", "Amazon.GenAI.ConciergeLambda\src\Amazon.GenAI.ConciergeLambda\Amazon.GenAI.ConciergeLambda.csproj", "{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HotelDealsLambda", "Amazon.GenAI.Reservation.Lambda\src\HotelDealsLambda\HotelDealsLambda.csproj", "{B2C3D4E5-F6G7-8901-2345-678901BCDEFG}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shareholder-Letters", "Shareholder-Letters", "{9A916789-3720-47CD-BFF5-E50CFD32DD01}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ShareholderLetters", "ShareholderLetters", "{932EABA6-97B9-4EF5-992C-CEFB3768D013}"
@@ -49,6 +51,10 @@ Global
 		{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F6G7-8901-2345-678901BCDEFG}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6G7-8901-2345-678901BCDEFG}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6G7-8901-2345-678901BCDEFG}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6G7-8901-2345-678901BCDEFG}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

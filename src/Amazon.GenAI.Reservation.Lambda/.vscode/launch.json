@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Lambda Function",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/Amazon.GenAI.Reservation.Lambda/src/HotelDealsLambda/bin/Debug/net8.0/HotelDealsLambda.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Amazon.GenAI.Reservation.Lambda/src/HotelDealsLambda",
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "env": {
+        "HOTEL_BOOKINGS_TABLE": "HotelBookings",
+        "POWERTOOLS_SERVICE_NAME": "HotelDealsFunction",
+        "POWERTOOLS_LOG_LEVEL": "DEBUG"
+      },
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "SAM Local Debug",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    }
+  ]
+}

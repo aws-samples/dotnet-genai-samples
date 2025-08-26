@@ -1,0 +1,19 @@
+{
+  "messageVersion": "1.0",
+  "agent": {
+    "name": "HotelAgent",
+    "version": "1.0",
+    "id": "test-agent-id"
+  },
+  "inputText": "Get available rooms for 2024-12-25",
+  "sessionId": "test-session-123",
+  "actionGroup": "HotelActions",
+  "function": "GetAvailableRooms",
+  "parameters": [
+    {
+      "name": "date",
+      "type": "string",
+      "value": "2024-12-25"
+    }
+  ]
+}

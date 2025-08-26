@@ -340,3 +340,8 @@ ASALocalRun/
 
 
 # End of https://www.gitignore.io/api/csharp
+.DS_Store
+
+# SAM working folder
+
+*.aws-sam/

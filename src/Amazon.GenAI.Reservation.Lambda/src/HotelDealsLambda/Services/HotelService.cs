@@ -5,24 +5,46 @@ namespace HotelDealsLambda.Services;
 public interface IHotelService
 {
     Task<string> GetSpecialDealsAsync();
-    Task<List<Room>> GetAvailableRoomsAsync(DateTime date);
-    Task<Booking> BookRoomAsync(string roomNumber, DateTime date, decimal price);
+    Task<List<Room>> GetAvailableRoomsAsync(DateTime date, int guests);
+    Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string guestName);
 }
 
+/// <summary>
+/// Hotel Service Implementation
+/// 
+/// IMPORTANT: This is a demonstration implementation using in-memory data.
+/// 
+/// For production use, replace this with integration to:
+/// - Hotel Property Management Systems (PMS) 
+/// - Real-time inventory management systems
+/// - Rate and availability APIs from hotel chains
+/// - Payment processing systems (Stripe, Square, etc.)
+/// - Database systems (DynamoDB, RDS) for persistent storage
+/// 
+/// Example integrations:
+/// - AWS RDS for reservation data
+/// - DynamoDB for room inventory and pricing
+/// - External APIs for real-time availability
+/// - SQS/SNS for booking confirmations and notifications
+/// </summary>
 public class HotelService : IHotelService
 {
+    // NOTE: In-memory room data for demonstration purposes only.
+    // In production, this data would be retrieved from:
+    // - Hotel reservation systems (Opera PMS, Amadeus, Sabre)
+    // - Real-time inventory APIs
+    // - Database systems (DynamoDB, RDS)
+    // - Channel management systems
     private readonly List<Room> _rooms = new()
     {
-        new Room { RoomNumber = "101", RoomType = "Standard", Price = 100, Description = "Cozy standard room with a queen-sized bed." },
-        new Room { RoomNumber = "102", RoomType = "Standard", Price = 100, Description = "Spacious standard room with two double beds." },
-        new Room { RoomNumber = "103", RoomType = "Deluxe", Price = 150, Description = "Luxurious deluxe room with a king-sized bed and a view." },
-        new Room { RoomNumber = "104", RoomType = "Suite", Price = 200, Description = "Elegant suite with a separate living area and bedroom." },
-        new Room { RoomNumber = "105", RoomType = "Standard", Price = 90, Description = "Comfortable standard room with modern amenities." },
-        new Room { RoomNumber = "106", RoomType = "Deluxe", Price = 155, Description = "Deluxe room with premium furnishings and city view." },
-        new Room { RoomNumber = "107", RoomType = "Standard", Price = 95, Description = "Well-appointed standard room with garden view." },
-        new Room { RoomNumber = "108", RoomType = "Suite", Price = 220, Description = "Luxury suite with jacuzzi and panoramic view." },
-        new Room { RoomNumber = "109", RoomType = "Deluxe", Price = 160, Description = "Deluxe room with luxurious bathroom and balcony." },
-        new Room { RoomNumber = "110", RoomType = "Standard", Price = 85, Description = "Budget-friendly standard room with essential amenities." }
+        new Room { RoomType = "Standard King", Price = 129, MaxGuests = 2, Description = "Comfortable room with one king bed", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning"} },
+        new Room { RoomType = "Standard Double", Price = 139, MaxGuests = 4, Description = "Spacious room with two double beds", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Mini Fridge"} },
+        new Room { RoomType = "Deluxe King", Price = 179, MaxGuests = 2, Description = "Premium room with king bed and city view", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Mini Fridge", "Work Desk"} },
+        new Room { RoomType = "Junior Suite", Price = 249, MaxGuests = 4, Description = "Suite with separate seating area and king bed", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Mini Fridge", "Work Desk", "Sofa Bed"} },
+        new Room { RoomType = "Executive Suite", Price = 349, MaxGuests = 6, Description = "Luxury suite with separate bedroom and living room", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Full Kitchen", "Work Desk", "Sofa Bed", "Balcony"} },
+        new Room { RoomType = "Family Room", Price = 199, MaxGuests = 6, Description = "Large room with bunk beds and queen bed", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Mini Fridge", "Microwave"} },
+        new Room { RoomType = "Accessible King", Price = 129, MaxGuests = 2, Description = "ADA compliant room with king bed", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Roll-in Shower"} },
+        new Room { RoomType = "Presidential Suite", Price = 599, MaxGuests = 8, Description = "Luxury presidential suite with multiple bedrooms", Amenities = new List<string> {"Free WiFi", "Coffee Maker", "Air Conditioning", "Full Kitchen", "Work Desk", "Dining Area", "Balcony", "Jacuzzi"} }
     };
 
     public Task<string> GetSpecialDealsAsync()
@@ -30,24 +52,37 @@ public class HotelService : IHotelService
         return Task.FromResult("The following hotel special deals are currently available: — Monday Staycation Special: 20% off room rates (Mondays only) — Last Minute Getaway: 15% off same-day bookings (Tuesdays only) — Extended Stay Discount: 20% off 3-night stays (Wednesdays only) — Suite Upgrade: Complimentary upgrade to executive suite (Thursdays only) — Weekend Getaway Package: 10% off 2-night stays (Fridays only)");
     }
 
-    public Task<List<Room>> GetAvailableRoomsAsync(DateTime date)
+    public Task<List<Room>> GetAvailableRoomsAsync(DateTime date, int guests)
     {
-        return Task.FromResult(_rooms.Where(r => r.IsAvailable).ToList());
+        // NOTE: In production, this method would:
+        // - Query real-time availability from PMS systems
+        // - Check room inventory in database (DynamoDB/RDS)
+        // - Apply dynamic pricing based on demand
+        // - Consider existing reservations and blocked dates
+        // - Integrate with channel managers for multi-property availability
+        return Task.FromResult(_rooms.Where(r => r.IsAvailable && r.MaxGuests >= guests).ToList());
     }
 
-    public Task<Booking> BookRoomAsync(string roomNumber, DateTime date, decimal price)
+    public Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string guestName)
     {
-        var room = _rooms.FirstOrDefault(r => r.RoomNumber == roomNumber);
+        var room = _rooms.FirstOrDefault(r => r.RoomType == roomType && r.IsAvailable && r.MaxGuests >= guests);
         if (room == null)
-            throw new ArgumentException($"Room {roomNumber} not found");
+            throw new ArgumentException($"{roomType} room not available for {guests} guests");
 
+        var nights = (checkOut - checkIn).Days;
+        var totalPrice = room.Price * nights;
+        
         var booking = new Booking
         {
             BookingId = Guid.NewGuid().ToString(),
-            RoomNumber = roomNumber,
+            ConfirmationNumber = $"HTL{Random.Shared.Next(100000, 999999)}",
             RoomType = room.RoomType,
-            Price = price,
-            BookingDate = date,
+            PricePerNight = room.Price,
+            TotalPrice = totalPrice,
+            CheckInDate = checkIn,
+            CheckOutDate = checkOut,
+            Guests = guests,
+            GuestName = guestName,
             Description = room.Description
         };
 

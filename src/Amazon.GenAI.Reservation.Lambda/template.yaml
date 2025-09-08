@@ -1,12 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Hotel Deals and Reservation Lambda Function
-
-Parameters:
-  BedrockAgentId:
-    Type: String
-    Description: The ID of the Bedrock Agent that will invoke this function
-    Default: ""
+Description: Hotel Reservation Lambda Function
 
 Globals:
   Function:
@@ -17,34 +11,19 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        POWERTOOLS_SERVICE_NAME: HotelDealsFunction
+        POWERTOOLS_SERVICE_NAME: HotelReservationFunction
         POWERTOOLS_LOG_LEVEL: INFO
 
 Resources:
-  HotelBookingsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: HotelBookings
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: BookingId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: BookingId
-          KeyType: HASH
-
-  HotelDealsFunction:
+  HotelReservationFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/HotelDealsLambda/
       Handler: HotelDealsLambda::HotelDealsLambda.Function::FunctionHandler
-      Description: Hotel Deals and Reservation Function using AWS Lambda Powertools for .NET
-      Role: !GetAtt HotelDealsFunctionRole.Arn
-      Environment:
-        Variables:
-          HOTEL_BOOKINGS_TABLE: !Ref HotelBookingsTable
+      Description: Hotel Reservation Function using AWS Lambda Powertools for .NET
+      Role: !GetAtt HotelReservationFunctionRole.Arn
 
-  HotelDealsFunctionRole:
+  HotelReservationFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -72,41 +51,24 @@ Resources:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
                 Resource: '*'
-        - PolicyName: DynamoDBAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
-                  - dynamodb:UpdateItem
-                  - dynamodb:DeleteItem
-                Resource: !GetAtt HotelBookingsTable.Arn
 
   BedrockAgentFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref HotelDealsFunction
+      FunctionName: !Ref HotelReservationFunction
       Action: lambda:InvokeFunction
       Principal: bedrock.amazonaws.com
       SourceArn: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*'
 
 Outputs:
-  HotelDealsFunctionArn:
-    Description: ARN of the Hotel Deals Function
-    Value: !GetAtt HotelDealsFunction.Arn
+  HotelReservationFunctionArn:
+    Description: ARN of the Hotel Reservation Function
+    Value: !GetAtt HotelReservationFunction.Arn
     Export:
-      Name: !Sub '${AWS::StackName}-HotelDealsFunctionArn'
+      Name: !Sub '${AWS::StackName}-HotelReservationFunctionArn'
   
-  HotelDealsFunctionName:
-    Description: Name of the Hotel Deals Function
-    Value: !Ref HotelDealsFunction
+  HotelReservationFunctionName:
+    Description: Name of the Hotel Reservation Function
+    Value: !Ref HotelReservationFunction
     Export:
-      Name: !Sub '${AWS::StackName}-HotelDealsFunctionName'
-
-  HotelBookingsTableName:
-    Description: Name of the DynamoDB table for hotel bookings
-    Value: !Ref HotelBookingsTable
-    Export:
-      Name: !Sub '${AWS::StackName}-HotelBookingsTable'
+      Name: !Sub '${AWS::StackName}-HotelReservationFunctionName'

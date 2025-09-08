@@ -3,7 +3,7 @@
 version = 0.1
 
 [default.global.parameters]
-stack_name = "HotelDealsLambda"
+stack_name = "HotelReservationLambda"
 
 [default.build.parameters]
 cached = true
@@ -16,11 +16,12 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
-s3_prefix = "HotelDealsLambda"
+s3_prefix = "HotelReservationLambda"
 region = "us-east-1"
-profile = "admin"
+profile = "reInventAccount"
 image_repositories = []
-parameter_overrides = "BedrockAgentId=\"\""
+disable_rollback = true
+
 
 [default.package.parameters]
 resolve_s3 = true

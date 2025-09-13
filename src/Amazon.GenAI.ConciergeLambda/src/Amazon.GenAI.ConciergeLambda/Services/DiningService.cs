@@ -7,6 +7,11 @@ using System.Text.Json;
 
 namespace Amazon.GenAI.ConciergeLambda.Services;
 
+public interface IDiningService
+{
+    Task<Guid> CreateDiningReservationAsync(string guestName, DateTime reservationDateTime, int numberOfGuests, MealType? mealType = null);
+}
+
 public class DiningService : IDiningService
 {
     private readonly IAmazonDynamoDB _dynamoDbClient;
@@ -37,7 +42,7 @@ public class DiningService : IDiningService
         }
 
         var hour = reservationDateTime.Hour;
-        
+
         // Validate operating hours and infer meal type
         MealType inferredMealType;
         if (hour >= 12 && hour < 16)

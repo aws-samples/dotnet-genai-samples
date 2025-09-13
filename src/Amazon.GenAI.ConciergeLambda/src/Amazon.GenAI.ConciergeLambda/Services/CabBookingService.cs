@@ -7,14 +7,14 @@ using System.Text.Json;
 
 namespace Amazon.GenAI.ConciergeLambda.Services;
 
-public class ConciergeService : IConciergeService
+public class CabBookingService : ICabBookingService
 {
     private readonly IAmazonDynamoDB _dynamoDbClient;
     private readonly IAmazonSimpleNotificationService _snsClient;
     private readonly string _tableName;
     private readonly string _snsTopicArn;
 
-    public ConciergeService(IAmazonDynamoDB dynamoDbClient, IAmazonSimpleNotificationService snsClient)
+    public CabBookingService(IAmazonDynamoDB dynamoDbClient, IAmazonSimpleNotificationService snsClient)
     {
         _dynamoDbClient = dynamoDbClient;
         _snsClient = snsClient;

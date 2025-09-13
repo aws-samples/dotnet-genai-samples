@@ -31,7 +31,7 @@ public class Function
         services.AddSingleton<IAmazonSimpleNotificationService>(provider => new AmazonSimpleNotificationServiceClient(regionEndpoint));
         
         // Register application services
-        services.AddSingleton<IConciergeService, ConciergeService>();
+        services.AddSingleton<ICabBookingService, CabBookingService>();
         services.AddSingleton<IDiningService, DiningService>();
         services.AddSingleton<IMaintenanceService, MaintenanceService>();
         
@@ -47,7 +47,7 @@ public class Function
     private void RegisterTools()
     {
         _resolver.Tool("CreateCabBooking", "Creates a new CAB booking for a guest",
-            async (string guestName, string bookingFromDate, string seater, string? bookingTillDate, IConciergeService conciergeService, ILambdaContext context) =>
+            async (string guestName, string bookingFromDate, string seater, string? bookingTillDate, ICabBookingService cabBookingService, ILambdaContext context) =>
             {
                 context.Logger.LogLine($"Creating CAB booking for guest: {guestName}");
 
@@ -67,7 +67,7 @@ public class Function
                     tillDate = parsedTillDate;
                 }
 
-                var bookingId = await conciergeService.CreateCabBookingAsync(guestName, fromDate, seaterEnum, tillDate);
+                var bookingId = await cabBookingService.CreateCabBookingAsync(guestName, fromDate, seaterEnum, tillDate);
                 
                 var seaterDisplay = seaterEnum switch
                 {

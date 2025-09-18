@@ -8,6 +8,7 @@ public class Room
     public int MaxGuests { get; set; }
     public bool IsAvailable { get; set; } = true;
     public List<string> Amenities { get; set; } = new();
+    public string Location { get; set; } = string.Empty;
 }
 
 public class Booking
@@ -22,4 +23,5 @@ public class Booking
     public int Guests { get; set; }
     public string GuestName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
 }

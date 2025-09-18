@@ -18,6 +18,7 @@ Resources:
   HotelReservationFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: HotelReservationFunction
       CodeUri: src/HotelDealsLambda/
       Handler: HotelDealsLambda::HotelDealsLambda.Function::FunctionHandler
       Description: Hotel Reservation Function using AWS Lambda Powertools for .NET

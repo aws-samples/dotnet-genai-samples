@@ -8,6 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace Amazon.GenAI.ConciergeLambda.Services;
 
+public interface IMaintenanceService
+{
+    Task<Guid> CreateMaintenanceRequestAsync(string guestName, string roomNumber, IssueType issueType, string issueDescription, Priority? priority = null);
+}
+
 public class MaintenanceService : IMaintenanceService
 {
     private readonly IAmazonDynamoDB _dynamoDbClient;

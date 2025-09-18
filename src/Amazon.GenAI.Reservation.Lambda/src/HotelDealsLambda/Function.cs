@@ -45,10 +45,10 @@ public class Function
                 return await hotelService.GetSpecialDealsAsync();
             });
 
-        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date and guest count",
-            async (string date, int guests, IHotelService hotelService, ILambdaContext context) =>
+        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, guest count, and hotel location",
+            async (string date, int guests, string location, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Getting available rooms for date: {date}, guests: {guests}");
+                context.Logger.LogLine($"Getting available rooms for date: {date}, guests: {guests}, location: {location}");
 
                 if (!DateTime.TryParse(date, out var bookingDate))
                 {
@@ -60,23 +60,28 @@ public class Function
                     return "Error: Guest count must be between 1 and 8 guests.";
                 }
 
-                var rooms = await hotelService.GetAvailableRoomsAsync(bookingDate, guests);
+                if (string.IsNullOrWhiteSpace(location))
+                {
+                    return "Error: Hotel location is required. Available locations: Chicago, San Francisco, London.";
+                }
+
+                var rooms = await hotelService.GetAvailableRoomsAsync(bookingDate, guests, location);
                 
                 if (!rooms.Any())
                 {
-                    return "No rooms are currently available for the selected date and guest count.";
+                    return $"No rooms are currently available for the selected date and guest count in {location}.";
                 }
 
                 var roomList = string.Join(" — ", rooms.Select(r => 
                     $"{r.RoomType} (${r.Price}/night, sleeps {r.MaxGuests}): {r.Description}"));
 
-                return $"Here are the available rooms on {date} for {guests} guest(s): — {roomList}";
+                return $"Here are the available rooms on {date} for {guests} guest(s) in {location}: — {roomList}";
             });
 
-        _resolver.Tool("BookHotelRoom", "Books a hotel room for specific dates, room type, and guest count",
-            async (string roomType, string checkInDate, string checkOutDate, int guests, string guestName, IHotelService hotelService, ILambdaContext context) =>
+        _resolver.Tool("BookHotelRoom", "Books a hotel room for specific dates, room type, guest count, and hotel location",
+            async (string roomType, string checkInDate, string checkOutDate, int guests, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for {guests} guests under name {guestName}");
+                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for {guests} guests under name {guestName} in {location}");
 
                 if (!DateTime.TryParse(checkInDate, out var checkIn))
                 {
@@ -103,11 +108,16 @@ public class Function
                     return "Error: Guest name is required for the reservation.";
                 }
 
+                if (string.IsNullOrWhiteSpace(location))
+                {
+                    return "Error: Hotel location is required. Available locations: Chicago, San Francisco, London.";
+                }
+
                 try
                 {
                     var nights = (checkOut - checkIn).Days;
-                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, guests, guestName);
-                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} room for {guestName} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {guests} guest(s). Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
+                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, guests, guestName, location);
+                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} room for {guestName} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {guests} guest(s) at Octank Hotels {location}. Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
                 }
                 catch (ArgumentException ex)
                 {

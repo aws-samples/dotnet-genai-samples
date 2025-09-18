@@ -48,16 +48,35 @@ public class Function
         _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, number of guests, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
             async (string date, string guests, string location, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Getting available rooms for date: {date}, guests: {guests}, location: {location}");
+                context.Logger.LogLine($"Getting available rooms for date: {date}, guests: '{guests}', location: {location}");
 
                 if (!DateTime.TryParse(date, out var bookingDate))
                 {
                     return "Error: Invalid date format. Please use YYYY-MM-DD format.";
                 }
 
-                if (!int.TryParse(guests, out var guestCount) || guestCount <= 0 || guestCount > 8)
+                // Enhanced guest count validation with debugging
+                if (string.IsNullOrWhiteSpace(guests))
                 {
-                    return "Error: Guest count must be a number between 1 and 8 guests.";
+                    context.Logger.LogLine("Guest count is null or empty");
+                    return "Error: Guest count is required. Please specify the number of guests (1-8).";
+                }
+
+                guests = guests.Trim(); // Remove any whitespace
+                context.Logger.LogLine($"Trimmed guests value: '{guests}'");
+                
+                if (!int.TryParse(guests, out var guestCount))
+                {
+                    context.Logger.LogLine($"Failed to parse guest count: '{guests}'");
+                    return $"Error: Invalid guest count '{guests}'. Please provide a valid number between 1 and 8.";
+                }
+                
+                context.Logger.LogLine($"Parsed guest count: {guestCount}");
+                
+                if (guestCount <= 0 || guestCount > 8)
+                {
+                    context.Logger.LogLine($"Guest count out of range: {guestCount}");
+                    return $"Error: Guest count must be between 1 and 8. You provided: {guestCount}.";
                 }
 
                 if (string.IsNullOrWhiteSpace(location))
@@ -81,7 +100,7 @@ public class Function
         _resolver.Tool("BookHotelRoom", "Books, reserves, or makes a reservation for a hotel room for specific dates, room type, number of guests, guest name, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
             async (string roomType, string checkInDate, string checkOutDate, string guests, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for {guests} guests under name {guestName} in {location}");
+                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for '{guests}' guests under name {guestName} in {location}");
 
                 if (!DateTime.TryParse(checkInDate, out var checkIn))
                 {
@@ -98,9 +117,28 @@ public class Function
                     return "Error: Check-out date must be after check-in date.";
                 }
 
-                if (!int.TryParse(guests, out var guestCount) || guestCount <= 0 || guestCount > 8)
+                // Enhanced guest count validation with debugging
+                if (string.IsNullOrWhiteSpace(guests))
                 {
-                    return "Error: Guest count must be a number between 1 and 8 guests.";
+                    context.Logger.LogLine("Guest count is null or empty for booking");
+                    return "Error: Guest count is required. Please specify the number of guests (1-8).";
+                }
+
+                guests = guests.Trim(); // Remove any whitespace
+                context.Logger.LogLine($"Trimmed guests value for booking: '{guests}'");
+                
+                if (!int.TryParse(guests, out var guestCount))
+                {
+                    context.Logger.LogLine($"Failed to parse guest count for booking: '{guests}'");
+                    return $"Error: Invalid guest count '{guests}'. Please provide a valid number between 1 and 8.";
+                }
+                
+                context.Logger.LogLine($"Parsed guest count for booking: {guestCount}");
+                
+                if (guestCount <= 0 || guestCount > 8)
+                {
+                    context.Logger.LogLine($"Guest count out of range for booking: {guestCount}");
+                    return $"Error: Guest count must be between 1 and 8. You provided: {guestCount}.";
                 }
 
                 if (string.IsNullOrWhiteSpace(guestName))

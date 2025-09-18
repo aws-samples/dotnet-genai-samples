@@ -141,14 +141,14 @@
                     MaxResults = 5
                 });
 
-            var OctankAgent = agents.AgentSummaries.FirstOrDefault(x => x.AgentName.ToLower().Contains("octank"));
+            var OctankAgent = agents.AgentSummaries.FirstOrDefault(x => x.AgentName.ToLower().Equals("octankhotelagent"));
 
             var agentAliases = await AgentClient.ListAgentAliasesAsync(new ListAgentAliasesRequest
                 {
                     AgentId = OctankAgent?.AgentId,
                 });
 
-            var aliasSummaries = agentAliases.AgentAliasSummaries.FirstOrDefault(x => x.AgentAliasName.ToLower().Contains("octank"));
+            var aliasSummaries = agentAliases.AgentAliasSummaries.FirstOrDefault(x => x.AgentAliasName.ToLower().Equals("octank-staging"));
 
             Constants.AgentId = OctankAgent?.AgentId ?? string.Empty;
             Constants.AgentAliasId = aliasSummaries?.AgentAliasId ?? string.Empty;

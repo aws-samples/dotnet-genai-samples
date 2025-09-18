@@ -18,7 +18,7 @@ confirm_changeset = true
 resolve_s3 = true
 s3_prefix = "HotelReservationLambda"
 region = "us-east-1"
-profile = "reInventAccount"
+profile = "default"
 image_repositories = []
 disable_rollback = true
 

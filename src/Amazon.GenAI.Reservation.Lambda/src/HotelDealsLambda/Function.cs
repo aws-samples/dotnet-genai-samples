@@ -45,8 +45,8 @@ public class Function
                 return await hotelService.GetSpecialDealsAsync();
             });
 
-        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, guest count, and hotel location",
-            async (string date, int guests, string location, IHotelService hotelService, ILambdaContext context) =>
+        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, number of guests, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
+            async (string date, string guests, string location, IHotelService hotelService, ILambdaContext context) =>
             {
                 context.Logger.LogLine($"Getting available rooms for date: {date}, guests: {guests}, location: {location}");
 
@@ -55,17 +55,17 @@ public class Function
                     return "Error: Invalid date format. Please use YYYY-MM-DD format.";
                 }
 
-                if (guests <= 0 || guests > 8)
+                if (!int.TryParse(guests, out var guestCount) || guestCount <= 0 || guestCount > 8)
                 {
-                    return "Error: Guest count must be between 1 and 8 guests.";
+                    return "Error: Guest count must be a number between 1 and 8 guests.";
                 }
 
                 if (string.IsNullOrWhiteSpace(location))
                 {
-                    return "Error: Hotel location is required. Available locations: Chicago, San Francisco, London.";
+                    return "Error: Hotel location is required. Please specify one of these locations: Chicago, San Francisco, or London.";
                 }
 
-                var rooms = await hotelService.GetAvailableRoomsAsync(bookingDate, guests, location);
+                var rooms = await hotelService.GetAvailableRoomsAsync(bookingDate, guestCount, location);
                 
                 if (!rooms.Any())
                 {
@@ -75,11 +75,11 @@ public class Function
                 var roomList = string.Join(" — ", rooms.Select(r => 
                     $"{r.RoomType} (${r.Price}/night, sleeps {r.MaxGuests}): {r.Description}"));
 
-                return $"Here are the available rooms on {date} for {guests} guest(s) in {location}: — {roomList}";
+                return $"Here are the available rooms on {date} for {guestCount} guest(s) in {location}: — {roomList}";
             });
 
-        _resolver.Tool("BookHotelRoom", "Books a hotel room for specific dates, room type, guest count, and hotel location",
-            async (string roomType, string checkInDate, string checkOutDate, int guests, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
+        _resolver.Tool("BookHotelRoom", "Books, reserves, or makes a reservation for a hotel room for specific dates, room type, number of guests, guest name, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
+            async (string roomType, string checkInDate, string checkOutDate, string guests, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
             {
                 context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for {guests} guests under name {guestName} in {location}");
 
@@ -98,9 +98,9 @@ public class Function
                     return "Error: Check-out date must be after check-in date.";
                 }
 
-                if (guests <= 0 || guests > 8)
+                if (!int.TryParse(guests, out var guestCount) || guestCount <= 0 || guestCount > 8)
                 {
-                    return "Error: Guest count must be between 1 and 8 guests.";
+                    return "Error: Guest count must be a number between 1 and 8 guests.";
                 }
 
                 if (string.IsNullOrWhiteSpace(guestName))
@@ -110,14 +110,14 @@ public class Function
 
                 if (string.IsNullOrWhiteSpace(location))
                 {
-                    return "Error: Hotel location is required. Available locations: Chicago, San Francisco, London.";
+                    return "Error: Hotel location is required. Please specify one of these locations: Chicago, San Francisco, or London.";
                 }
 
                 try
                 {
                     var nights = (checkOut - checkIn).Days;
-                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, guests, guestName, location);
-                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} room for {guestName} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {guests} guest(s) at Octank Hotels {location}. Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
+                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, guestCount, guestName, location);
+                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} room for {guestName} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {guestCount} guest(s) at Octank Hotels {location}. Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
                 }
                 catch (ArgumentException ex)
                 {

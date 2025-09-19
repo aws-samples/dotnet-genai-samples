@@ -98,9 +98,9 @@ public class Function
             });
 
         _resolver.Tool("BookHotelRoom", "Books, reserves, or makes a reservation for a hotel room for specific dates, room type, number of guests, guest name, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
-            async (string roomType, string checkInDate, string checkOutDate, IHotelService hotelService, ILambdaContext context, string guests = "2", string guestName = "", string location = "") =>
+            async (string roomType, string checkInDate, string checkOutDate, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for '{guests}' guests under name {guestName} in {location}");
+                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for guest {guestName} in {location}");
 
                 if (!DateTime.TryParse(checkInDate, out var checkIn))
                 {
@@ -117,29 +117,9 @@ public class Function
                     return "Error: Check-out date must be after check-in date.";
                 }
 
-                // Enhanced guest count validation with debugging and default value
-                if (string.IsNullOrWhiteSpace(guests))
-                {
-                    context.Logger.LogLine("Guest count is null or empty for booking, using default value of 2");
-                    guests = "2";
-                }
-
-                guests = guests.Trim(); // Remove any whitespace
-                context.Logger.LogLine($"Trimmed guests value for booking: '{guests}'");
-                
-                if (!int.TryParse(guests, out var guestCount))
-                {
-                    context.Logger.LogLine($"Failed to parse guest count for booking: '{guests}', using default value of 2");
-                    guestCount = 2;
-                }
-                
-                context.Logger.LogLine($"Parsed guest count for booking: {guestCount}");
-                
-                if (guestCount <= 0 || guestCount > 8)
-                {
-                    context.Logger.LogLine($"Guest count out of range for booking: {guestCount}, using default value of 2");
-                    guestCount = 2;
-                }
+                // Use default guest count of 2
+                var guestCount = 2;
+                context.Logger.LogLine($"Using default guest count: {guestCount}");
 
                 if (string.IsNullOrWhiteSpace(guestName))
                 {

@@ -46,7 +46,7 @@ public class Function
             });
 
         _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, number of guests, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
-            async (string date, string guests = "2", string location = "", IHotelService hotelService, ILambdaContext context) =>
+            async (string date, IHotelService hotelService, ILambdaContext context, string guests = "2", string location = "") =>
             {
                 context.Logger.LogLine($"Getting available rooms for date: {date}, guests: '{guests}', location: {location}");
 
@@ -98,7 +98,7 @@ public class Function
             });
 
         _resolver.Tool("BookHotelRoom", "Books, reserves, or makes a reservation for a hotel room for specific dates, room type, number of guests, guest name, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
-            async (string roomType, string checkInDate, string checkOutDate, string guests = "2", string guestName = "", string location = "", IHotelService hotelService, ILambdaContext context) =>
+            async (string roomType, string checkInDate, string checkOutDate, IHotelService hotelService, ILambdaContext context, string guests = "2", string guestName = "", string location = "") =>
             {
                 context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for '{guests}' guests under name {guestName} in {location}");
 
@@ -217,16 +217,8 @@ public class Function
             context.Logger.LogLine($"Exception in FunctionHandler: {ex.GetType().Name}: {ex.Message}");
             context.Logger.LogLine($"Exception stack trace: {ex.StackTrace}");
             
-            return new BedrockFunctionResponse
-            {
-                Response = new BedrockFunctionResponseBody
-                {
-                    TEXT = new BedrockFunctionResponseText
-                    {
-                        Body = $"Error: An unexpected error occurred. Please try again."
-                    }
-                }
-            };
+            // Return a simple error response since we can't construct the complex response object
+            throw new Exception($"Function execution failed: {ex.Message}");
         }
     }
 }

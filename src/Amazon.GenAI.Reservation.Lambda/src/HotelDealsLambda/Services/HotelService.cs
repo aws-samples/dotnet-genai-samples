@@ -6,7 +6,7 @@ public interface IHotelService
 {
     Task<string> GetSpecialDealsAsync();
     Task<List<Room>> GetAvailableRoomsAsync(DateTime date, int guests, string location);
-    Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string guestName, string location);
+    Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string location);
 }
 
 /// <summary>
@@ -85,7 +85,7 @@ public class HotelService : IHotelService
             string.Equals(r.Location, location, StringComparison.OrdinalIgnoreCase)).ToList());
     }
 
-    public Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string guestName, string location)
+    public Task<Booking> BookRoomAsync(string roomType, DateTime checkIn, DateTime checkOut, int guests, string location)
     {
         var room = _rooms.FirstOrDefault(r => r.RoomType == roomType && r.IsAvailable && r.MaxGuests >= guests &&
             string.Equals(r.Location, location, StringComparison.OrdinalIgnoreCase));
@@ -105,7 +105,6 @@ public class HotelService : IHotelService
             CheckInDate = checkIn,
             CheckOutDate = checkOut,
             Guests = guests,
-            GuestName = guestName,
             Description = room.Description,
             Location = room.Location
         };

@@ -45,8 +45,8 @@ public class Function
                 return await hotelService.GetSpecialDealsAsync();
             });
 
-        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific date, number of guests, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
-            async (string date, IHotelService hotelService, ILambdaContext context, string guests = "2", string location = "") =>
+        _resolver.Tool("GetAvailableRooms", "Gets available hotel rooms for a specific Octank hotel location, date and guest count. The hotel location options are Chicago, San Francisco, or London.",
+            async (string location, string date, string guests, IHotelService hotelService, ILambdaContext context) =>
             {
                 context.Logger.LogLine($"Getting available rooms for date: {date}, guests: '{guests}', location: {location}");
 
@@ -97,10 +97,10 @@ public class Function
                 return $"Here are the available rooms on {date} for {guestCount} guest(s) in {location}: — {roomList}";
             });
 
-        _resolver.Tool("BookHotelRoom", "Books, reserves, or makes a reservation for a hotel room for specific dates, room type, number of guests, guest name, and hotel location. Always ask for the hotel location (Chicago, San Francisco, or London).",
-            async (string roomType, string checkInDate, string checkOutDate, string guestName, string location, IHotelService hotelService, ILambdaContext context) =>
+        _resolver.Tool("BookHotelRoom", "Book a hotel room at one of the Octank hotel locations (Chicago, San Francisco, or London) for specific check-in date, check-out date, number of guests, and room type.",
+            async (string location, int NumberOfGuests, string checkInDate, string checkOutDate, string roomType, IHotelService hotelService, ILambdaContext context) =>
             {
-                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} for guest {guestName} in {location}");
+                context.Logger.LogLine($"Booking {roomType} room from {checkInDate} to {checkOutDate} in {location}");
 
                 if (!DateTime.TryParse(checkInDate, out var checkIn))
                 {
@@ -117,15 +117,17 @@ public class Function
                     return "Error: Check-out date must be after check-in date.";
                 }
 
-                // Use default guest count of 2
-                var guestCount = 2;
-                context.Logger.LogLine($"Using default guest count: {guestCount}");
-
-                if (string.IsNullOrWhiteSpace(guestName))
+                if (NumberOfGuests <= 0)
                 {
-                    context.Logger.LogLine("Guest name is missing for booking");
-                    return "Error: Guest name is required for the reservation.";
+                    context.Logger.LogLine($"Using default guest count value of 2");
+                    NumberOfGuests = 2;
                 }
+
+                //if (string.IsNullOrWhiteSpace(guestName))
+                //{
+                //    context.Logger.LogLine("Guest name is missing for booking");
+                //    return "Error: Guest name is required for the reservation.";
+                //}
 
                 if (string.IsNullOrWhiteSpace(location))
                 {
@@ -149,7 +151,7 @@ public class Function
 
                 try
                 {
-                    context.Logger.LogLine($"Attempting to book room: {roomType}, {checkIn:yyyy-MM-dd} to {checkOut:yyyy-MM-dd}, {guestCount} guests, {guestName}, {location}");
+                    context.Logger.LogLine($"Attempting to book room: {roomType}, {checkIn:yyyy-MM-dd} to {checkOut:yyyy-MM-dd}, {NumberOfGuests} guests, {location}");
                     
                     var nights = (checkOut - checkIn).Days;
                     context.Logger.LogLine($"Calculated nights: {nights}");
@@ -160,10 +162,10 @@ public class Function
                         return "Error: Check-out date must be after check-in date.";
                     }
                     
-                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, guestCount, guestName, location);
+                    var booking = await hotelService.BookRoomAsync(roomType, checkIn, checkOut, NumberOfGuests, location);
                     context.Logger.LogLine($"Booking successful: {booking.ConfirmationNumber}");
                     
-                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} room for {guestName} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {guestCount} guest(s) at Octank Hotels {location}. Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
+                    return $"Perfect! I have booked a {booking.RoomType.ToLower()} from {checkInDate} to {checkOutDate} ({nights} night(s)) for {NumberOfGuests} guest(s) at Octank Hotels {location}. Your confirmation number is {booking.ConfirmationNumber}. The total cost is ${booking.TotalPrice}. Please let me know if you need anything else!";
                 }
                 catch (ArgumentException ex)
                 {

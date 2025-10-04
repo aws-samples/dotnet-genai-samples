@@ -9,7 +9,7 @@ namespace Amazon.GenAI.ConciergeLambda.Services;
 
 public interface IDiningService
 {
-    Task<Guid> CreateDiningReservationAsync(string guestName, DateTime reservationDateTime, int numberOfGuests, MealType? mealType = null);
+    Task<string> CreateDiningReservationAsync(string guestName, DateTime reservationDateTime, int numberOfGuests, MealType? mealType = null);
 }
 
 public class DiningService : IDiningService
@@ -27,7 +27,7 @@ public class DiningService : IDiningService
         _snsTopicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN") ?? throw new InvalidOperationException("SNS_TOPIC_ARN environment variable is required");
     }
 
-    public async Task<Guid> CreateDiningReservationAsync(string guestName, DateTime reservationDateTime, int numberOfGuests, MealType? mealType = null)
+    public async Task<string> CreateDiningReservationAsync(string guestName, DateTime reservationDateTime, int numberOfGuests, MealType? mealType = null)
     {
         // Validate future date/time
         if (reservationDateTime <= DateTime.UtcNow)
@@ -59,7 +59,7 @@ public class DiningService : IDiningService
         }
 
         var finalMealType = mealType ?? inferredMealType;
-        var reservationId = Guid.NewGuid();
+        var reservationId = $"DB{Random.Shared.Next(100000, 999999)}"; //Guid.NewGuid();
 
         var reservation = new DiningReservation
         {

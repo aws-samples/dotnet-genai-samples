@@ -2,7 +2,7 @@ namespace Amazon.GenAI.ConciergeLambda.Models;
 
 public class MaintenanceRequest
 {
-    public Guid RequestId { get; set; }
+    public required string RequestId { get; set; }
     public string GuestName { get; set; } = string.Empty;
     public string RoomNumber { get; set; } = string.Empty;
     public IssueType IssueType { get; set; }

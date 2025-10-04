@@ -9,7 +9,7 @@ namespace Amazon.GenAI.ConciergeLambda.Services;
 
 public interface ICabBookingService
 {
-    Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null);
+    Task<string> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null);
 }
 
 public class CabBookingService : ICabBookingService
@@ -27,9 +27,9 @@ public class CabBookingService : ICabBookingService
         _snsTopicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN") ?? throw new InvalidOperationException("SNS_TOPIC_ARN environment variable is required");
     }
 
-    public async Task<Guid> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null)
+    public async Task<string> CreateCabBookingAsync(string guestName, DateTime bookingFromDate, Seater seater, DateTime? bookingTillDate = null)
     {
-        var bookingId = Guid.NewGuid();
+        var bookingId = $"CB{Random.Shared.Next(100000, 999999)}"; //Guid.NewGuid();
         var currentDateTime = DateTime.UtcNow;
         var tillDate = bookingTillDate ?? bookingFromDate;
 

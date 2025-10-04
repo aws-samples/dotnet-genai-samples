@@ -10,7 +10,7 @@ namespace Amazon.GenAI.ConciergeLambda.Services;
 
 public interface IMaintenanceService
 {
-    Task<Guid> CreateMaintenanceRequestAsync(string guestName, string roomNumber, IssueType issueType, string issueDescription, Priority? priority = null);
+    Task<string> CreateMaintenanceRequestAsync(string guestName, string roomNumber, IssueType issueType, string issueDescription, Priority? priority = null);
 }
 
 public class MaintenanceService : IMaintenanceService
@@ -28,7 +28,7 @@ public class MaintenanceService : IMaintenanceService
         _snsTopicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN") ?? throw new InvalidOperationException("SNS_TOPIC_ARN environment variable is required");
     }
 
-    public async Task<Guid> CreateMaintenanceRequestAsync(string guestName, string roomNumber, IssueType issueType, string issueDescription, Priority? priority = null)
+    public async Task<string> CreateMaintenanceRequestAsync(string guestName, string roomNumber, IssueType issueType, string issueDescription, Priority? priority = null)
     {
         // Validate room number (exactly 3 digits, 100-999)
         if (!Regex.IsMatch(roomNumber, @"^[1-9]\d{2}$"))
@@ -44,7 +44,7 @@ public class MaintenanceService : IMaintenanceService
 
         // Auto-assign priority if not provided
         var finalPriority = priority ?? GetDefaultPriority(issueType);
-        var requestId = Guid.NewGuid();
+        var requestId = $"MB{Random.Shared.Next(100000, 999999)}"; //Guid.NewGuid();
         var requestDate = DateTime.UtcNow;
 
         var request = new MaintenanceRequest

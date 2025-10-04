@@ -78,12 +78,7 @@ public class Function
                     _ => seaterEnum.ToString()
                 };
 
-                return $"CAB booking created successfully!\n" +
-                       $"Booking ID: {bookingId}\n" +
-                       $"Guest Name: {guestName}\n" +
-                       $"From Date: {fromDate:yyyy/MM/dd HH:mm:ss}\n" +
-                       $"Till Date: {(tillDate ?? fromDate):yyyy/MM/dd}\n" +
-                       $"Seater Type: {seaterDisplay}";
+                return $"Perfect! I have booked a {seaterDisplay} CAB starting from {fromDate} to {(tillDate ?? fromDate)} for {guestName}. Your confirmation number is {bookingId}. Please let me know if you need anything else!";
             });
 
         _resolver.Tool("CreateDiningReservation", "Creates a new dining reservation at Octank Dine",
@@ -112,13 +107,7 @@ public class Function
                     
                     var finalMealType = mealTypeEnum?.ToString() ?? (dateTime.Hour >= 12 && dateTime.Hour < 16 ? "Lunch" : "Dinner");
 
-                    return $"Dining reservation created successfully!\n" +
-                           $"Reservation ID: {reservationId}\n" +
-                           $"Guest Name: {guestName}\n" +
-                           $"Restaurant: Octank Dine\n" +
-                           $"Date & Time: {dateTime:yyyy/MM/dd HH:mm:ss}\n" +
-                           $"Number of Guests: {numberOfGuests}\n" +
-                           $"Meal Type: {finalMealType}";
+                    return $"Perfect! I have reserved a table for {guestName} with {numberOfGuests} guests on {dateTime}. Enjoy your {finalMealType}. Your reservation number is {reservationId}. Please let me know if you need anything else!";
                 }
                 catch (ArgumentException ex)
                 {
@@ -152,14 +141,7 @@ public class Function
                     
                     var finalPriority = priorityEnum?.ToString() ?? GetDefaultPriorityDisplay(issueTypeEnum);
 
-                    return $"Maintenance request created successfully!\n" +
-                           $"Request ID: {requestId}\n" +
-                           $"Guest Name: {guestName}\n" +
-                           $"Room Number: {roomNumber}\n" +
-                           $"Issue Type: {issueTypeEnum}\n" +
-                           $"Issue Description: {issueDescription}\n" +
-                           $"Priority: {finalPriority}\n" +
-                           $"Request Date: {DateTime.UtcNow:yyyy/MM/dd HH:mm:ss}";
+                    return $"Perfect! I have create maintenance request for {guestName} in room number {roomNumber} having {issueTypeEnum} with {finalPriority}. We will address your issue at earliest. You can note your maintenace request number: {requestId}. Please let me know if you need anything else!";
                 }
                 catch (ArgumentException ex)
                 {

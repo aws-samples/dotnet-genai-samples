@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 namespace Amazon.GenAI.Abstractions.Bedrock;
-public static class AnthropicClaude3
+public static class AnthropicClaudeSonnet
 {
     /// <summary>
     /// Creates the request body JSON for the Anthropic model based on the provided prompt and settings.

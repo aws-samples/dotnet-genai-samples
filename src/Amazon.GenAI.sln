@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.10.34607.79
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11109.219 d18.0-oob
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Amazon.GenAI", "Amazon.GenAI\Amazon.GenAI.csproj", "{0456AADF-DDC6-4069-8C91-B1347C02F25B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amazon.GenAI.Concierge.Lambda", "Amazon.GenAI.Concierge.Lambda\src\Amazon.GenAI.ConciergeLambda\Amazon.GenAI.Concierge.Lambda.csproj", "{F1A488B9-7CE1-E314-0231-21FE6900F4DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amazon.GenAI.Reservation.Lambda", "Amazon.GenAI.Reservation.Lambda\src\HotelDealsLambda\Amazon.GenAI.Reservation.Lambda.csproj", "{67BF22BA-D486-5467-1049-5457A0B32C76}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0456AADF-DDC6-4069-8C91-B1347C02F25B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1A488B9-7CE1-E314-0231-21FE6900F4DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1A488B9-7CE1-E314-0231-21FE6900F4DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1A488B9-7CE1-E314-0231-21FE6900F4DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1A488B9-7CE1-E314-0231-21FE6900F4DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67BF22BA-D486-5467-1049-5457A0B32C76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67BF22BA-D486-5467-1049-5457A0B32C76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67BF22BA-D486-5467-1049-5457A0B32C76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67BF22BA-D486-5467-1049-5457A0B32C76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

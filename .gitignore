@@ -351,3 +351,4 @@ ASALocalRun/
 # SAM working folder
 
 *.aws-sam/
+src/global.json

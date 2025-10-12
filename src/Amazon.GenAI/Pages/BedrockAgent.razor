@@ -141,7 +141,7 @@
                     MaxResults = 5
                 });
 
-            var OctankAgent = agents.AgentSummaries.FirstOrDefault(x => x.AgentName.ToLower().Equals("octankhotelagent"));
+            var OctankAgent = agents.AgentSummaries.FirstOrDefault(x => x.AgentName.ToLower().Equals("octank-hotel-agent"));
 
             var agentAliases = await AgentClient.ListAgentAliasesAsync(new ListAgentAliasesRequest
                 {

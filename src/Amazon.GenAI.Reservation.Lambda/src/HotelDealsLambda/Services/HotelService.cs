@@ -109,7 +109,7 @@ public class HotelService : IHotelService
             Location = room.Location
         };
 
-        room.IsAvailable = false;
+        room.IsAvailable = true;
         return Task.FromResult(booking);
     }
 }

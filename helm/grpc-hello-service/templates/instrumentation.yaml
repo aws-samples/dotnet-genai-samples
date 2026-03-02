@@ -1,0 +1,37 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: dotnet-instrumentation
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  exporter:
+    endpoint: {{ .Values.instrumentation.otlpEndpoint }}
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: always_on
+  dotnet:
+    image: {{ .Values.instrumentation.dotnetImage }}
+    env:
+      - name: OTEL_SERVICE_NAME
+        value: {{ .Values.instrumentation.serviceName }}
+      - name: OTEL_METRICS_EXPORTER
+        value: otlp
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: {{ .Values.instrumentation.otlpEndpoint }}
+      - name: OTEL_DOTNET_AUTO_METRICS_ASPNETCORE_INSTRUMENTATION_ENABLED
+        value: "true"
+      - name: OTEL_DOTNET_AUTO_METRICS_HTTPCLIENT_INSTRUMENTATION_ENABLED
+        value: "true"
+      - name: OTEL_DOTNET_AUTO_METRICS_NETRUNTIME_INSTRUMENTATION_ENABLED
+        value: "true"
+      - name: OTEL_LOG_LEVEL
+        value: debug
+      - name: OTEL_DOTNET_AUTO_LOG_DIRECTORY
+        value: /tmp
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: grpc

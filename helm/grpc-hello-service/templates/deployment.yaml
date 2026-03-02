@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: grpc-hello-service
+  template:
+    metadata:
+      labels:
+        app: grpc-hello-service
+      annotations:
+        instrumentation.opentelemetry.io/inject-dotnet: "true"
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.grpc.port }}
+              protocol: TCP
+          livenessProbe:
+            grpc:
+              port: {{ .Values.grpc.port }}
+              service: ""
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 5
+          readinessProbe:
+            grpc:
+              port: {{ .Values.grpc.port }}
+              service: ""
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}

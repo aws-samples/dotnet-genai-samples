@@ -1,0 +1,214 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "http.server.request.duration", {"stat": "Average", "region": "us-west-2", "visible": false}],
+          ["...", {"region": "us-west-2", "visible": false}],
+          ["...", {"region": "us-west-2", "stat": "p99", "visible": false}],
+          [".", ".", "http.route", "/greet.Greeter/SayHello", "OTelLib", "Microsoft.AspNetCore.Hosting", {"region": "us-west-2", "label": "/greet.Greeter/SayHello p99", "stat": "p99"}],
+          ["...", {"region": "us-west-2", "label": "/greet.Greeter/SayHello p50"}],
+          ["...", {"region": "us-west-2", "label": "/greet.Greeter/SayHello Avg", "stat": "Average"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Response Time (Duration)",
+        "period": 60,
+        "yAxis": {
+          "left": {
+            "label": "Milliseconds"
+          }
+        },
+        "stat": "p50"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "http.server.request.duration", {"label": "Total Requests", "visible": false}],
+          [".", ".", "http.request.method", "POST", "network.protocol.version", "2", "http.route", "/greet.Greeter/SayHello", "url.scheme", "http", "OTelLib", "Microsoft.AspNetCore.Hosting", "http.response.status_code", "200", {"label": "Total Requests"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Requests Per Second",
+        "period": 60,
+        "yAxis": {
+          "left": {
+            "label": "Count"
+          }
+        },
+        "stat": "SampleCount"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "http.server.request.duration", {"label": "200 OK", "visible": false}],
+          [".", ".", "http.request.method", "POST", "network.protocol.version", "2", "http.route", "/greet.Greeter/SayHello", "url.scheme", "http", "OTelLib", "Microsoft.AspNetCore.Hosting", "http.response.status_code", "200", {"label": "200 OK"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "HTTP Status Codes",
+        "period": 60,
+        "stat": "SampleCount"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 0,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "http.server.active_requests", {"stat": "Average", "visible": false}],
+          [".", ".", "http.request.method", "POST", "url.scheme", "http", "OTelLib", "Microsoft.AspNetCore.Hosting", {"stat": "Average", "label": "Active Requests"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Active Requests",
+        "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "kestrel.active_connections", {"stat": "Average", "visible": false}],
+          [".", ".", "server.port", "8080", "OTelLib", "Microsoft.AspNetCore.Server.Kestrel", {"stat": "Average", "label": "Active Connections"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Active Connections",
+        "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "kestrel.connection.duration", {"stat": "Average", "visible": false}],
+          [".", ".", "server.port", "8080", "OTelLib", "Microsoft.AspNetCore.Server.Kestrel", {"stat": "Average", "label": "Connection Duration"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Connection Duration",
+        "period": 60,
+        "yAxis": {
+          "left": {
+            "label": "Seconds"
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "process.cpu.time", {"visible": false, "region": "us-west-2"}],
+          [".", ".", "OTelLib", "OpenTelemetry.Instrumentation.Process", {"label": "CPU Time", "region": "us-west-2", "stat": "Average"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "CPU Time",
+        "period": 60,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 6,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "process.memory.usage", {"stat": "Average", "visible": false}],
+          [".", ".", "OTelLib", "OpenTelemetry.Instrumentation.Process", {"stat": "Average"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Memory Usage",
+        "period": 60,
+        "yAxis": {
+          "left": {
+            "label": "Bytes"
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "process.runtime.dotnet.gc.collections.count", {"visible": false}],
+          [".", ".", "OTelLib", "OpenTelemetry.Instrumentation.Runtime"]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "GC Collections",
+        "period": 60,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 12,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["GrpcHelloService", "aspnetcore.routing.match_attempts", {"region": "us-west-2", "visible": false}],
+          [".", ".", "http.route", "/greet.Greeter/SayHello", "OTelLib", "Microsoft.AspNetCore.Routing", {"region": "us-west-2"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-west-2",
+        "title": "Routing Match Attempts",
+        "period": 60,
+        "stat": "Sum"
+      }
+    }
+  ]
+}

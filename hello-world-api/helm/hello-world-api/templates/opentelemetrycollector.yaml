@@ -1,0 +1,34 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: adot-collector
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  mode: {{ .Values.collector.mode }}
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:{{ .Values.collector.otlpPort }}
+    processors:
+      batch:
+        timeout: 10s
+    exporters:
+      awsemf:
+        region: {{ .Values.collector.cloudwatch.region }}
+        namespace: {{ .Values.collector.cloudwatch.namespace }}
+        log_group_name: /metrics/{{ .Values.collector.cloudwatch.namespace }}
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:{{ .Values.collector.healthCheckPort }}
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [awsemf]

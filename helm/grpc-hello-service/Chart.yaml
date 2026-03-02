@@ -1,0 +1,5 @@
+apiVersion: v2
+name: grpc-hello-service
+description: A Helm chart for deploying a .NET 8 gRPC hello-world service with ADOT instrumentation
+version: 0.1.0
+appVersion: "1.0.0"

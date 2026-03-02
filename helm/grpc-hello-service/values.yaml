@@ -1,0 +1,35 @@
+namespace: grpc-hello-service
+replicaCount: 1
+
+image:
+  repository: 123456789012.dkr.ecr.us-west-2.amazonaws.com/grpc-hello-service
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
+
+grpc:
+  port: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+instrumentation:
+  serviceName: grpc-hello-service
+  otlpEndpoint: "http://adot-collector-collector:4317"
+  dotnetImage: "public.ecr.aws/aws-observability/adot-autoinstrumentation-dotnet:v1.11.1"
+
+collector:
+  mode: daemonset
+  healthCheckPort: 13133
+  otlpPort: 4317
+  cloudwatch:
+    region: us-east-1
+    namespace: GrpcHelloService

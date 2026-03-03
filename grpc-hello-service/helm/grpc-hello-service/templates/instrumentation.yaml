@@ -12,6 +12,7 @@ spec:
   propagators:
     - tracecontext
     - baggage
+    - xray
   sampler:
     type: always_on
   dotnet:

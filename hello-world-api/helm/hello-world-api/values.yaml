@@ -28,9 +28,12 @@ instrumentation:
   dotnetImage: "public.ecr.aws/aws-observability/adot-autoinstrumentation-dotnet:v1.11.1"
 
 collector:
-  mode: daemonset
+  mode: deployment
+  replicas: 2
   healthCheckPort: 13133
   otlpPort: 4317
   cloudwatch:
-    region: us-east-1
+    region: us-west-2
     namespace: HelloWorldApi
+  xray:
+    region: us-west-2

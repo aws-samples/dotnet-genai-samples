@@ -29,6 +29,8 @@ spec:
         value: "true"
       - name: OTEL_DOTNET_AUTO_METRICS_NETRUNTIME_INSTRUMENTATION_ENABLED
         value: "true"
+      - name: OTEL_DOTNET_AUTO_TRACES_GRPCNETCLIENT_INSTRUMENTATION_ENABLED
+        value: "true"
       - name: OTEL_LOG_LEVEL
         value: debug
       - name: OTEL_DOTNET_AUTO_LOG_DIRECTORY

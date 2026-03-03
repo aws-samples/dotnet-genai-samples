@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   mode: {{ .Values.collector.mode }}
+  replicas: {{ .Values.collector.replicas }}
   config: |
     receivers:
       otlp:
@@ -22,6 +23,8 @@ spec:
         region: {{ .Values.collector.cloudwatch.region }}
         namespace: {{ .Values.collector.cloudwatch.namespace }}
         log_group_name: /metrics/{{ .Values.collector.cloudwatch.namespace }}
+      awsxray:
+        region: {{ .Values.collector.xray.region }}
     extensions:
       health_check:
         endpoint: 0.0.0.0:{{ .Values.collector.healthCheckPort }}
@@ -32,3 +35,7 @@ spec:
           receivers: [otlp]
           processors: [batch]
           exporters: [awsemf]
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [awsxray]

@@ -34,6 +34,12 @@ internal class Program
 
         builder.Services.AddSingleton<BrowserService>();
 
+        builder.Services.AddHttpClient("StrandsAgent", client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:5100");
+            client.Timeout = TimeSpan.FromMinutes(3);
+        });
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif

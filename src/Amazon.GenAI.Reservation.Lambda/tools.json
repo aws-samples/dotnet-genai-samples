@@ -1,0 +1,77 @@
+[
+  {
+    "name": "GetHotelSpecialDeals",
+    "description": "Gets current special deals and offers available for Octank hotels",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "GetAvailableRooms",
+    "description": "Gets available hotel rooms for a specific Octank hotel location, date and guest count. The hotel location options are Chicago, San Francisco, or London.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "Hotel location. Must be one of: Chicago, San Francisco, or London"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date to check availability in YYYY-MM-DD format"
+        },
+        "guests": {
+          "type": "string",
+          "description": "Number of guests (1-8). Defaults to 2 if not specified"
+        }
+      },
+      "required": ["location", "date"]
+    }
+  },
+  {
+    "name": "BookHotelRoom",
+    "description": "Book a hotel room at one of the Octank hotel locations (Chicago, San Francisco, or London) for specific check-in date, check-out date, number of guests, and room type.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "Hotel location. Must be one of: Chicago, San Francisco, or London"
+        },
+        "NumberOfGuests": {
+          "type": "integer",
+          "description": "Number of guests for the reservation"
+        },
+        "checkInDate": {
+          "type": "string",
+          "description": "Check-in date in YYYY-MM-DD format"
+        },
+        "checkOutDate": {
+          "type": "string",
+          "description": "Check-out date in YYYY-MM-DD format"
+        },
+        "roomType": {
+          "type": "string",
+          "description": "Type of room to book (e.g., Standard, Deluxe, Suite)"
+        }
+      },
+      "required": ["location", "NumberOfGuests", "checkInDate", "checkOutDate", "roomType"]
+    }
+  },
+  {
+    "name": "SearchHotelKnowledgeBase",
+    "description": "Search the Octank Hotels knowledge base for information about hotel amenities, policies, FAQs, services, and general hotel information for Chicago, San Francisco, and London locations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query about hotel information, amenities, policies, or services"
+        }
+      },
+      "required": ["query"]
+    }
+  }
+]

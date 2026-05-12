@@ -1,0 +1,246 @@
+@page "/reservation-agent"
+@using System.Text
+@using System.Text.Json
+@using Markdig
+@inject IHttpClientFactory HttpClientFactory
+@inject MarkdownPipeline Pipeline
+@inject IJSRuntime JS
+
+<div class="ra-page">
+    <header class="ra-header">
+        <span class="ra-logo">🏨</span>
+        <div>
+            <h1>Octank Hotels</h1>
+            <p>AI-Powered Reservation Assistant</p>
+        </div>
+    </header>
+
+    <div class="ra-chat" id="raChatMessages">
+        @if (_messages.Count == 0)
+        {
+            <div class="ra-welcome">
+                <h2>Welcome to Octank Hotels</h2>
+                <p>I can help you find deals, check availability, and book rooms in Chicago, San Francisco, and London.</p>
+                <div class="ra-suggestions">
+                    <button class="ra-chip" @onclick='() => Send("What special deals do you have?")'>🏷️ Special deals</button>
+                    <button class="ra-chip" @onclick='() => Send("Check room availability in Chicago")'>🔍 Check availability</button>
+                    <button class="ra-chip" @onclick='() => Send("I want to book a room in San Francisco")'>📅 Book a room</button>
+                </div>
+            </div>
+        }
+
+        @foreach (var msg in _messages)
+        {
+            <div class="ra-msg ra-msg-@msg.Role">
+                <div class="ra-bubble ra-bubble-@msg.Role">
+                    @if (msg.Role == "assistant")
+                    {
+                        @((MarkupString)Markdown.ToHtml(msg.Text, Pipeline))
+                    }
+                    else
+                    {
+                        <p>@msg.Text</p>
+                    }
+                </div>
+                <span class="ra-time">@msg.Time.ToString("h:mm tt")</span>
+            </div>
+        }
+
+        @if (_thinking)
+        {
+            <div class="ra-msg ra-msg-assistant">
+                <div class="ra-bubble ra-bubble-assistant ra-thinking">
+                    <span class="ra-dot"></span><span class="ra-dot"></span><span class="ra-dot"></span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <form class="ra-input" @onsubmit="HandleSubmit">
+        <input @bind="_input" @bind:event="oninput" placeholder="Ask about rooms, deals, or reservations..." disabled="@_thinking" />
+        <button type="submit" disabled="@(_thinking || string.IsNullOrWhiteSpace(_input))">Send</button>
+    </form>
+</div>
+
+<style>
+    /* Scope everything under .ra-page to avoid conflicts */
+    .ra-page {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 20px);
+        max-width: 900px;
+        margin: 0 auto;
+        font-family: 'Roboto', sans-serif;
+        padding: 10px 0;
+    }
+    .ra-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #1a237e, #4a148c);
+        color: #fff;
+        border-radius: 12px 12px 0 0;
+    }
+    .ra-header .ra-logo { font-size: 2.2rem; }
+    .ra-header h1 { margin: 0; font-size: 1.3rem; font-weight: 500; }
+    .ra-header p { margin: 0; font-size: 0.8rem; opacity: 0.8; }
+
+    .ra-chat {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f5f5f5;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ra-welcome {
+        text-align: center;
+        padding: 40px 20px;
+        color: #555;
+    }
+    .ra-welcome h2 { margin: 0 0 8px; color: #1a237e; font-size: 1.4rem; }
+    .ra-welcome p { margin: 0 0 24px; font-size: 0.95rem; }
+    .ra-suggestions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .ra-chip {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .ra-chip:hover { background: #e8eaf6; border-color: #1a237e; }
+
+    .ra-msg { display: flex; flex-direction: column; }
+    .ra-msg-user { align-items: flex-end; }
+    .ra-msg-assistant { align-items: flex-start; }
+
+    .ra-bubble {
+        max-width: 75%;
+        padding: 10px 16px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+    .ra-bubble p { margin: 0; }
+    .ra-bubble-user {
+        background: #1a237e;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+    .ra-bubble-assistant {
+        background: #fff;
+        color: #333;
+        border: 1px solid #e0e0e0;
+        border-bottom-left-radius: 4px;
+    }
+    .ra-bubble-assistant p { margin: 0 0 6px; }
+    .ra-bubble-assistant p:last-child { margin: 0; }
+
+    .ra-time { font-size: 0.7rem; color: #999; margin-top: 2px; padding: 0 4px; }
+
+    .ra-thinking { display: flex; gap: 4px; padding: 14px 20px; }
+    .ra-dot {
+        width: 8px; height: 8px;
+        background: #999;
+        border-radius: 50%;
+        animation: ra-bounce 1.2s infinite;
+    }
+    .ra-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ra-dot:nth-child(3) { animation-delay: 0.4s; }
+    @@keyframes ra-bounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-6px); }
+    }
+
+    .ra-input {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #fff;
+        border-top: 1px solid #e0e0e0;
+        border-radius: 0 0 12px 12px;
+    }
+    .ra-input input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        outline: none;
+    }
+    .ra-input input:focus { border-color: #1a237e; }
+    .ra-input button {
+        padding: 10px 24px;
+        background: #1a237e;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+    .ra-input button:disabled { opacity: 0.5; cursor: default; }
+    .ra-input button:not(:disabled):hover { background: #283593; }
+</style>
+
+@code {
+    private string _input = "";
+    private bool _thinking;
+    private readonly List<ChatMsg> _messages = new();
+
+    private record ChatMsg(string Role, string Text, DateTime Time);
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_input)) return;
+        await Send(_input);
+    }
+
+    private async Task Send(string text)
+    {
+        _input = "";
+        _messages.Add(new("user", text, DateTime.Now));
+        _thinking = true;
+        StateHasChanged();
+        await ScrollToBottom();
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("StrandsAgent");
+            var history = _messages
+                .Where(m => m != _messages.Last())
+                .Select(m => new { role = m.Role, content = m.Text })
+                .ToList();
+            var payload = new StringContent(
+                JsonSerializer.Serialize(new { message = text, history }),
+                Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync("/chat", payload);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonDocument.Parse(json);
+            var reply = result.RootElement.GetProperty("response").GetString() ?? "No response";
+            _messages.Add(new("assistant", reply, DateTime.Now));
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new("assistant", $"Sorry, I couldn't process your request. ({ex.Message})", DateTime.Now));
+        }
+
+        _thinking = false;
+        StateHasChanged();
+        await ScrollToBottom();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await Task.Delay(50);
+        await JS.InvokeVoidAsync("eval", "document.getElementById('raChatMessages')?.scrollTo({top:999999,behavior:'smooth'})");
+    }
+}

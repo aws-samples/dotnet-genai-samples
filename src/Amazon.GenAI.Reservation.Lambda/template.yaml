@@ -13,6 +13,7 @@ Globals:
       Variables:
         POWERTOOLS_SERVICE_NAME: HotelReservationFunction
         POWERTOOLS_LOG_LEVEL: INFO
+        KB_ID: "A6SAJPAFQU"
 
 Resources:
   HotelReservationFunction:
@@ -20,7 +21,7 @@ Resources:
     Properties:
       FunctionName: HotelReservationFunction
       CodeUri: src/HotelDealsLambda/
-      Handler: HotelDealsLambda::HotelDealsLambda.Function::FunctionHandler
+      Handler: HotelReservationLambda::HotelReservationLambda.Function::FunctionHandler
       Description: Hotel Reservation Function using AWS Lambda Powertools for .NET
       Role: !GetAtt HotelReservationFunctionRole.Arn
 
@@ -51,6 +52,7 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
+                  - bedrock:Retrieve
                 Resource: '*'
 
   BedrockAgentFunctionPermission:

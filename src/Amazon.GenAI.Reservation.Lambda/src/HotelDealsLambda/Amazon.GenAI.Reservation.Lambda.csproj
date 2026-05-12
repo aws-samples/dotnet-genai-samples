@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
+    <AssemblyName>HotelReservationLambda</AssemblyName>
+    <RootNamespace>HotelReservationLambda</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -13,8 +15,6 @@
     <PackageReference Include="Amazon.Lambda.Core" Version="2.5.0" />
     <PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.10.0" />
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.1" />
-    <PackageReference Include="AWS.Lambda.Powertools.EventHandler.Resolvers.BedrockAgentFunction" Version="1.0.1" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.4.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="AWSSDK.BedrockAgentRuntime" Version="3.7.414.0" />
   </ItemGroup>
 </Project>

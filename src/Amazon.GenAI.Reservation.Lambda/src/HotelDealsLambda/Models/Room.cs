@@ -1,4 +1,4 @@
-namespace HotelDealsLambda.Models;
+namespace HotelReservationLambda.Models;
 
 public class Room
 {

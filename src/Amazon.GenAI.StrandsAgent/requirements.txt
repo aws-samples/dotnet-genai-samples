@@ -1,0 +1,4 @@
+flask>=3.0
+strands-agents>=1.0
+mcp>=1.0
+requests>=2.31

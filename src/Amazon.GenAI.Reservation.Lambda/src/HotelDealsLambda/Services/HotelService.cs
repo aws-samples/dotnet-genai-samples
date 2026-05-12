@@ -1,6 +1,6 @@
-using HotelDealsLambda.Models;
+using HotelReservationLambda.Models;
 
-namespace HotelDealsLambda.Services;
+namespace HotelReservationLambda.Services;
 
 public interface IHotelService
 {

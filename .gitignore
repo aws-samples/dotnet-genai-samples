@@ -352,3 +352,6 @@ ASALocalRun/
 
 *.aws-sam/
 src/global.json
+.venv/
+venv/
+__pycache__/

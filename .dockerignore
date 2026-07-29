@@ -1,0 +1,32 @@
+# Visual Studio files
+.vs/
+.vscode/
+
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Test results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db

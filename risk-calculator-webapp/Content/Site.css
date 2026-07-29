@@ -1,0 +1,842 @@
+/* CSS for Risk Calculator Web Forms Application - Classic 2008-2012 Style */
+
+/* Reset and Base Styles - IE6/7/8 Compatible */
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f0f0f0;
+    color: #000000;
+    line-height: 1.4;
+    font-size: 12px;
+}
+
+/* Main Layout Table - Classic Table-Based Layout */
+.app-layout {
+    width: 1000px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    table-layout: fixed; /* Critical for consistent column widths */
+}
+
+.app-header {
+    width: 100%;
+    background-color: #003366;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='); /* IE6 fix */
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#003366', endColorstr='#0066cc'); /* IE6-9 */
+    background: -webkit-gradient(linear, left top, right bottom, from(#003366), to(#0066cc)); /* Old Webkit */
+    background: -moz-linear-gradient(-45deg, #003366, #0066cc); /* FF3.6+ */
+    color: #ffffff;
+    padding: 15px 20px;
+    border-bottom: 2px solid #0066cc;
+}
+
+.app-sidebar {
+    width: 160px;
+    background-color: #e6e6e6;
+    border-right: 1px solid #cccccc;
+    padding: 0;
+    vertical-align: top;
+}
+
+.app-main {
+    width: 838px; /* 1000px - 160px - 2px for borders */
+    padding: 20px;
+    background-color: #ffffff;
+    vertical-align: top;
+}
+
+/* Clearfix for IE6/7 */
+.clearfix {
+    zoom: 1;
+}
+.clearfix:after {
+    content: ".";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+
+.app-footer {
+    clear: both;
+    width: 100%;
+    background-color: #666666;
+    color: #ffffff;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 11px;
+    border-top: 1px solid #999999;
+}
+
+/* Legacy Container (fallback) */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+header h1 {
+    color: #2c3e50;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 300;
+}
+
+header h2 {
+    color: #34495e;
+    font-size: 2em;
+    margin-bottom: 10px;
+    font-weight: 400;
+}
+
+header h3 {
+    color: #7f8c8d;
+    font-size: 1.2em;
+    font-weight: 300;
+}
+
+/* Classic Sidebar Navigation - No Flexbox */
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.sidebar-nav-item {
+    margin: 0;
+    border-bottom: 1px solid #d0d0d0;
+}
+
+.sidebar-nav-link {
+    display: block;
+    padding: 10px 12px;
+    color: #333333;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 10px;
+    border-left: 3px solid #e6e6e6;
+    background-color: #f5f5f5;
+}
+
+.sidebar-nav-link:hover,
+.sidebar-nav-link.active {
+    background-color: #ffffff;
+    color: #000000;
+    border-left-color: #0066cc;
+    text-decoration: none;
+}
+
+.sidebar-nav-icon {
+    width: 16px;
+    height: 16px;
+    float: left;
+    margin-right: 8px;
+    margin-top: 1px;
+}
+
+.sidebar-nav-text {
+    font-size: 11px;
+    display: block;
+}
+
+/* Legacy Navigation (fallback) */
+.navigation {
+    margin-bottom: 30px;
+}
+
+.nav-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.nav-table td {
+    padding: 15px;
+    text-align: center;
+    border: 1px solid #e1e8ed;
+    transition: all 0.3s ease;
+}
+
+.nav-table td:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link {
+    display: block;
+    color: #2c3e50;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1em;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.bottom-nav {
+    margin-top: 30px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #e1e8ed;
+}
+
+/* Classic Table-Based Card System */
+.card {
+    background-color: #ffffff;
+    border: 2px solid #cccccc;
+    margin-bottom: 15px;
+    width: 100%;
+    overflow: hidden; /* Prevent content overflow */
+    word-wrap: break-word; /* Break long words */
+}
+
+.card-header {
+    background-color: #e6e6e6;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f0f0f0', endColorstr='#e0e0e0');
+    padding: 12px 15px;
+    border-bottom: 1px solid #cccccc;
+}
+
+.card-title {
+    margin: 0;
+    color: #000000;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.card-subtitle {
+    margin: 3px 0 0 0;
+    color: #666666;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.card-footer {
+    background-color: #f5f5f5;
+    padding: 10px 15px;
+    border-top: 1px solid #cccccc;
+    font-size: 11px;
+    color: #666666;
+}
+
+/* Classic Table Layout for Dashboard */
+.dashboard-grid {
+    width: 100%;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    table-layout: fixed; /* Prevent content overflow */
+}
+
+.dashboard-table td {
+    width: 50%;
+    vertical-align: top;
+    padding: 10px;
+}
+
+.stats-grid {
+    width: 100%;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.stats-table td {
+    width: 50%;
+    padding: 5px;
+}
+
+.stat-card {
+    background-color: #003366;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#003366', endColorstr='#0066cc');
+    color: #ffffff;
+    padding: 15px;
+    text-align: center;
+    border: 1px solid #000066;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.stat-label {
+    font-size: 10px;
+    font-weight: normal;
+}
+
+/* Content */
+.content {
+    margin-bottom: 30px;
+}
+
+/* Classic Forms */
+.form-panel {
+    background-color: #f5f5f5;
+    padding: 20px;
+    margin-bottom: 15px;
+    border: 1px solid #cccccc;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 3px;
+    font-weight: bold;
+    color: #000000;
+    font-size: 11px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #999999;
+    font-size: 11px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.form-control:focus {
+    border-color: #0066cc;
+    background-color: #ffffcc;
+}
+
+/* Classic Buttons with IE6/7/8 Support */
+.btn {
+    padding: 6px 12px;
+    border: 1px solid #999999;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.btn-primary {
+    background-color: #0066cc;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#0080ff', endColorstr='#0066cc');
+    color: #ffffff;
+    border-color: #004499;
+}
+
+.btn-primary:hover {
+    background-color: #004499;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#0066cc', endColorstr='#004499');
+}
+
+.btn-secondary {
+    background-color: #999999;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#bbbbbb', endColorstr='#999999');
+    color: #ffffff;
+    border-color: #666666;
+}
+
+.btn-secondary:hover {
+    background-color: #666666;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#999999', endColorstr='#666666');
+}
+
+.btn-danger {
+    background-color: #cc0000;
+    background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff3333', endColorstr='#cc0000');
+    color: #ffffff;
+    border-color: #990000;
+}
+
+.btn-danger:hover {
+    background-color: #990000;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#cc0000', endColorstr='#990000');
+}
+
+/* Results */
+.results-panel {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e1e8ed;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.results-table td {
+    padding: 12px;
+    border: 1px solid #e1e8ed;
+}
+
+.results-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.results-table tr:first-child {
+    background-color: #ecf0f1;
+    font-weight: bold;
+}
+
+/* Portfolio Grid */
+.portfolio-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.grid-header {
+    background-color: #34495e;
+    color: white;
+    padding: 15px;
+    text-align: left;
+}
+
+.grid-row, .grid-alt-row {
+    padding: 12px;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.grid-alt-row {
+    background-color: #f8f9fa;
+}
+
+/* Risk Levels */
+.risk-level {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.risk-level.low {
+    background-color: #d5f4e6;
+    color: #27ae60;
+}
+
+.risk-level.medium {
+    background-color: #fef9e7;
+    color: #f39c12;
+}
+
+.risk-level.high {
+    background-color: #fadbd8;
+    color: #e74c3c;
+}
+
+/* Portfolio Summary */
+.portfolio-summary {
+    background-color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.summary-table {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.summary-table td {
+    padding: 8px 0;
+}
+
+.summary-value {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Alerts */
+.alerts-controls {
+    margin-bottom: 20px;
+    text-align: right;
+}
+
+.no-alerts-panel {
+    text-align: center;
+    padding: 40px;
+}
+
+.alerts-list-panel {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-left-color: #bee5eb;
+    color: #0c5460;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-left-color: #ffeaa7;
+    color: #856404;
+}
+
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-time {
+    font-size: 0.9em;
+    color: #6c757d;
+    font-weight: normal;
+}
+
+.alert-stats {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #e1e8ed;
+}
+
+/* Error Messages */
+.error-message {
+    color: #e74c3c;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
+
+.error-panel {
+    margin-top: 20px;
+}
+
+/* Simulation */
+.simulation-controls {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.simulation-info {
+    background-color: #e8f4fd;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.chart-placeholder {
+    background-color: #f8f9fa;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    margin-top: 20px;
+    border: 2px dashed #bdc3c7;
+    color: #7f8c8d;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e8ed;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* ASCX Control Specific Styles */
+.var-calculation-control {
+    margin-bottom: 20px;
+}
+
+.monte-carlo-control {
+    margin-bottom: 20px;
+}
+
+.portfolio-grid-control {
+    margin-bottom: 20px;
+}
+
+/* Welcome Message and Feature Highlights */
+.welcome-message {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 4px solid #3498db;
+}
+
+.feature-highlights {
+    margin-top: 15px;
+}
+
+.feature-highlights ul {
+    margin-left: 20px;
+}
+
+.feature-highlights li {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+/* Calculation Statistics */
+.calculation-stats {
+    background-color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.stats-table {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.stats-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid #bdc3c7;
+}
+
+.stats-table td:first-child {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+/* Portfolio Insights */
+.portfolio-insights {
+    background-color: #e8f4fd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.insights-table {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.insights-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid #bdc3c7;
+}
+
+.insights-table td:first-child {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+/* Simulation Statistics */
+.simulation-statistics {
+    background-color: #fef9e7;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 4px solid #f39c12;
+}
+
+/* Control Headers */
+.portfolio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+.portfolio-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+/* History Grid */
+.history-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.history-grid td {
+    padding: 8px;
+    font-size: 0.9em;
+}
+
+/* Alert Items */
+.alert-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #fff3cd;
+    border-radius: 4px;
+    border-left: 4px solid #ffeaa7;
+}
+
+/* Enhanced Form Controls */
+.form-control:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+/* State Management Indicators */
+.session-info {
+    background-color: #d1ecf1;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #bee5eb;
+    font-size: 0.9em;
+}
+
+.viewstate-info {
+    background-color: #d4edda;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #c3e6cb;
+    font-size: 0.9em;
+}
+
+/* Classic Button Groups */
+.btn-group {
+    margin-top: 15px;
+    zoom: 1; /* IE6/7 hasLayout trigger */
+}
+
+.btn-group:after {
+    content: ".";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+
+.btn-group .btn {
+    float: left;
+    margin-right: 8px;
+    width: auto;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: "Loading...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* IE6/7/8 Specific Hacks and Fixes */
+* html .app-layout { /* IE6 */
+    width: 1000px;
+}
+
+*+html .app-layout { /* IE7 */
+    width: 1000px;
+}
+
+/* IE6 Double Margin Bug Fix */
+* html .app-sidebar {
+    width: 158px; /* Account for border issues */
+}
+
+*+html .app-sidebar { /* IE7 */
+    width: 158px;
+}
+
+* html .app-main { /* IE6 */
+    width: 836px; /* Account for border/padding */
+}
+
+*+html .app-main { /* IE7 */
+    width: 836px;
+}
+
+/* IE6 PNG Transparency Fix */
+.sidebar-nav-icon {
+    behavior: url(iepngfix.htc); /* IE6 PNG fix if available */
+}
+
+/* Ensure Fixed Width Layout - No Responsive for IE6/7/8 */
+.container {
+    width: 960px; /* Fixed width for older browsers */
+    margin: 10px auto;
+    padding: 15px;
+}
+
+/* IE Table Layout Fixes */
+* html .dashboard-table { /* IE6 */
+    width: expression(this.parentNode.offsetWidth + 'px');
+}
+
+*+html .dashboard-table { /* IE7 */
+    width: 100%;
+}
+
+/* Classic Fixed Layout - No Mobile Support */
+.fixed-layout {
+    width: 1000px;
+    margin: 0 auto;
+}
+
+/* Button State Management for IE6 */
+.btn {
+    position: relative;
+}
+
+/* IE6 Hover Fix */
+.btn:hover {
+    position: relative;
+}

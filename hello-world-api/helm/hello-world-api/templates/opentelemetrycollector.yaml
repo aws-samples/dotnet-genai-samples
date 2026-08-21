@@ -9,6 +9,7 @@ metadata:
 spec:
   mode: {{ .Values.collector.mode }}
   replicas: {{ .Values.collector.replicas }}
+  serviceAccount: {{ .Values.collector.serviceAccount.name }}
   config:
     receivers:
       otlp:

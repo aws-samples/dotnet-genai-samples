@@ -1,6 +1,6 @@
 # dotnet-adot-instrumentation
 
-Two .NET 8 microservices demonstrating AWS Distro for OpenTelemetry (ADOT) auto-instrumentation on EKS:
+Two .NET 10 microservices demonstrating AWS Distro for OpenTelemetry (ADOT) auto-instrumentation on EKS:
 
 - `grpc-hello-service` — a gRPC backend service
 - `hello-world-api` — a REST API that calls the gRPC service

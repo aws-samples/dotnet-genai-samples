@@ -32,6 +32,9 @@ collector:
   replicas: 2
   healthCheckPort: 13133
   otlpPort: 4317
+  serviceAccount:
+    name: adot-collector-collector
+    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/eksctl-my-cluster-addon-iamserviceaccount-hel-Role1-bm1Dxo5TZJ3S"
   cloudwatch:
     region: us-west-2
     namespace: HelloWorldApi

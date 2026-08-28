@@ -31,6 +31,9 @@ collector:
   replicas: 2
   healthCheckPort: 13133
   otlpPort: 4317
+  serviceAccount:
+    name: adot-collector-collector
+    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/eksctl-my-cluster-addon-iamserviceaccount-grp-Role1-eSsyi8FkcrFy"
   cloudwatch:
     region: us-west-2
     namespace: GrpcHelloService

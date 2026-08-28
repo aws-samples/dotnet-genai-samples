@@ -1,24 +1,24 @@
-# Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-
-# Copy project file and restore dependencies
-COPY GrpcHelloService.csproj .
-RUN dotnet restore
-
-# Copy remaining source and publish
-COPY . .
-RUN dotnet publish -c Release -o /app/publish --no-restore
-
-# Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-
-COPY --from=build /app/publish .
-
-# Run as non-root user (built-in 'app' user in aspnet 8.0 images)
-USER app
-
 EXPOSE 8080
 
+ENV ASPNETCORE_URLS=http://+:8080
+
+USER app
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG configuration=Release
+WORKDIR /src
+COPY ["grpc-hello-service/GrpcHelloService.csproj", "grpc-hello-service/"]
+RUN dotnet restore "grpc-hello-service/GrpcHelloService.csproj"
+COPY . .
+WORKDIR "/src/grpc-hello-service"
+RUN dotnet build "GrpcHelloService.csproj" -c $configuration -o /app/build
+
+FROM build AS publish
+ARG configuration=Release
+RUN dotnet publish "GrpcHelloService.csproj" -c $configuration -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "GrpcHelloService.dll"]

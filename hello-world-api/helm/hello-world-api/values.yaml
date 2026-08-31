@@ -2,7 +2,7 @@ namespace: hello-world-api
 replicaCount: 1
 
 image:
-  repository: 123456789012.dkr.ecr.us-west-2.amazonaws.com/hello-world-api
+  repository: "{ACCOUNT_ID}.dkr.ecr.{AWS_REGION}.amazonaws.com/hello-world-api"
   tag: latest
   pullPolicy: Always
 
@@ -34,7 +34,7 @@ collector:
   otlpPort: 4317
   serviceAccount:
     name: adot-collector-collector
-    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/eksctl-my-cluster-addon-iamserviceaccount-hel-Role1-bm1Dxo5TZJ3S"
+    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/ADOTCollectorRole"
   cloudwatch:
     region: us-west-2
     namespace: HelloWorldApi

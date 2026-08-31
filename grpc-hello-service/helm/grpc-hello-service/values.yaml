@@ -2,7 +2,7 @@ namespace: grpc-hello-service
 replicaCount: 1
 
 image:
-  repository: 123456789012.dkr.ecr.us-west-2.amazonaws.com/grpc-hello-service
+  repository: "{ACCOUNT_ID}.dkr.ecr.{AWS_REGION}.amazonaws.com/grpc-hello-service"
   tag: latest
   pullPolicy: Always
 
@@ -33,7 +33,7 @@ collector:
   otlpPort: 4317
   serviceAccount:
     name: adot-collector-collector
-    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/eksctl-my-cluster-addon-iamserviceaccount-grp-Role1-eSsyi8FkcrFy"
+    roleArn: "arn:aws:iam::{ACCOUNT_ID}:role/ADOTCollectorRole"
   cloudwatch:
     region: us-west-2
     namespace: GrpcHelloService

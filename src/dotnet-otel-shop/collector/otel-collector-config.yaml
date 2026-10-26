@@ -1,0 +1,62 @@
+# OpenTelemetry Collector config for AWS.
+# Works with the AWS Distro for OpenTelemetry (ADOT) collector or otelcol-contrib.
+#   traces  -> AWS X-Ray
+#   metrics -> CloudWatch metrics (via Embedded Metric Format)
+#   logs    -> CloudWatch Logs
+# Set AWS_REGION (and credentials, or an instance/task role) for the collector.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+  resourcedetection:
+    detectors: [env, ec2, ecs]
+    timeout: 2s
+    override: false
+
+exporters:
+  awsxray:
+    # Span attributes promoted to searchable X-Ray annotations.
+    indexed_attributes: [shop.session.id, order.id, checkout.failure_reason, demo.customer_tier]
+
+  awsemf:
+    namespace: DotnetShop
+    log_group_name: /aws/otel/dotnet-shop/metrics
+    dimension_rollup_option: NoDimensionRollup
+    resource_to_telemetry_conversion:
+      enabled: true   # makes service.name usable as a dimension
+    metric_declarations:
+      # Business metrics from the Shop.Api meter.
+      - dimensions: [[service.name], [service.name, reason], [service.name, product.category]]
+        metric_name_selectors: ["^shop\\."]
+      # Request latency per route.
+      - dimensions: [[service.name, http.route, http.response.status_code]]
+        metric_name_selectors: ["^http\\.server\\.request\\.duration$"]
+
+  awscloudwatchlogs:
+    log_group_name: /dotnet-shop/app
+    log_stream_name: otel-logs
+
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [awsxray, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [awsemf]
+    logs:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [awscloudwatchlogs]

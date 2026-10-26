@@ -1,0 +1,62 @@
+{
+  "agent": {
+    "region": "us-east-1",
+    "metrics_collection_interval": 60,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "namespace": "DotnetShop",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "totalcpu": true
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      },
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    }
+  },
+  "traces": {
+    "traces_collected": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/shop-logs/shop-api*.log",
+            "log_group_name": "/dotnet-shop/api",
+            "log_stream_name": "{hostname}",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/shop-logs/shop-web*.log",
+            "log_group_name": "/dotnet-shop/web",
+            "log_stream_name": "{hostname}",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/shop-logs/shopper-journey*.log",
+            "log_group_name": "/dotnet-shop/journey",
+            "log_stream_name": "{hostname}",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}

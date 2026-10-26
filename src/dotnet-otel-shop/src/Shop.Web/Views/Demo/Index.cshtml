@@ -1,0 +1,74 @@
+@model DemoResult?
+@{
+    ViewData["Title"] = "Telemetry Demo";
+    var buttons = new (string Signal, string Label, string Css, string Hint)[]
+    {
+        ("logs", "Write logs", "btn-primary", "Structured logs, levels, scopes"),
+        ("traces", "Create a trace", "btn-success", "Custom spans, attributes, events"),
+        ("metrics", "Record metrics", "btn-info", "Counter, histogram, gauge"),
+        ("error", "Cause an error", "btn-danger", "Failed span, error log, HTTP 500"),
+    };
+}
+<h1 class="h3">Telemetry Demo</h1>
+<p class="text-muted">Click a button to generate telemetry. The code for each is in
+    <code>src/Shop.Api/Demo/DemoEndpoints.cs</code>.</p>
+
+<div class="row g-3 mb-4">
+    @foreach (var b in buttons)
+    {
+        <div class="col-sm-6 col-lg-3">
+            <form asp-action="Run" method="post">
+                <input type="hidden" name="signal" value="@b.Signal" />
+                <button type="submit" class="btn @b.Css w-100 py-3">@b.Label</button>
+            </form>
+            <div class="small text-muted mt-1 text-center">@b.Hint</div>
+        </div>
+    }
+</div>
+
+<div class="card mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <div class="flex-grow-1">
+            <h2 class="h6 mb-1">Simulate shoppers</h2>
+            <div class="small text-muted">Each shopper browses, views products, fills a cart, and usually checks out.
+                This fills CloudWatch with realistic logs, metrics, and traces.</div>
+        </div>
+        <form asp-action="Simulate" method="post" class="d-flex gap-2">
+            <select name="shoppers" class="form-select" aria-label="Number of shoppers">
+                <option value="10">10 shoppers</option>
+                <option value="25" selected>25 shoppers</option>
+                <option value="50">50 shoppers</option>
+            </select>
+            <button type="submit" class="btn btn-dark text-nowrap">Run simulation</button>
+        </form>
+    </div>
+</div>
+
+@if (ViewData["Simulation"] is Shop.Web.Services.SimulationSummary sim)
+{
+    <div class="alert alert-info">
+        <strong>Simulation finished in @(sim.DurationMs / 1000.0) s:</strong>
+        @sim.Shoppers shoppers &middot; @sim.Orders orders &middot; @sim.Declined payments declined &middot;
+        @sim.Abandoned abandoned carts @(sim.Errors > 0 ? $"· {sim.Errors} errors" : "")
+        <div class="small mt-1">Try in Logs Insights: <code>stats count(*) by EventId.Name</code></div>
+    </div>
+}
+
+@if (Model is not null)
+{
+    <div class="card @(Model.Signal == "error" ? "border-danger" : "border-success")">
+        <div class="card-header fw-semibold">Result: @Model.Signal</div>
+        <div class="card-body">
+            <dl class="row mb-3">
+                <dt class="col-sm-3">Trace ID</dt>
+                <dd class="col-sm-9"><code>@Model.TraceId</code></dd>
+                <dt class="col-sm-3">X-Ray trace ID</dt>
+                <dd class="col-sm-9"><code>@Model.XRayTraceId</code></dd>
+            </dl>
+            <h2 class="h6">What happened</h2>
+            <ul>@foreach (var line in Model.WhatHappened) { <li>@line</li> }</ul>
+            <h2 class="h6">Where to look</h2>
+            <ul class="mb-0">@foreach (var line in Model.WhereToLook) { <li>@line</li> }</ul>
+        </div>
+    </div>
+}

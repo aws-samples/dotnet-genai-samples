@@ -1,0 +1,26 @@
+@model CatalogViewModel
+@{
+    ViewData["Title"] = Model.SelectedCategory ?? "All products";
+}
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-2">@ViewData["Title"]</h1>
+    <div>
+        <a class="btn btn-sm @(Model.SelectedCategory is null ? "btn-dark" : "btn-outline-dark")" asp-action="Index">All</a>
+        @foreach (var category in Model.Categories)
+        {
+            <a class="btn btn-sm ms-1 @(category == Model.SelectedCategory ? "btn-dark" : "btn-outline-dark")"
+               asp-action="Index" asp-route-category="@category">@category</a>
+        }
+    </div>
+</div>
+
+@if (Model.Products.Count == 0)
+{
+    <p class="text-muted">No products found.</p>
+}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
+    @foreach (var product in Model.Products)
+    {
+        <div class="col"><partial name="_ProductCard" model="product" /></div>
+    }
+</div>

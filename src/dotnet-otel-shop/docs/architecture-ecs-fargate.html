@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment 2: Amazon ECS on AWS Fargate</title>
+<style>
+  :root { --squid:#232F3E; --orange:#FF9900; --ink:#16191F; --muted:#545B64; --bg:#F2F3F3; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--squid); color:#fff; padding:22px 40px; border-bottom:4px solid var(--orange); }
+  header h1 { margin:0; font-size:26px; }
+  header p { margin:6px 0 0; color:#D5DBDB; font-size:15px; }
+  main { max-width:1280px; margin:0 auto; padding:28px 40px 48px; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.12); padding:24px; margin-bottom:24px; }
+  h2 { margin:0 0 14px; font-size:19px; color:var(--squid); border-left:4px solid var(--orange); padding-left:10px; }
+  svg { width:100%; height:auto; display:block; }
+  .legend { display:flex; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:26px; height:4px; border-radius:2px; margin-right:8px; vertical-align:middle; background:currentColor; }
+  .lt{color:#8C4FFF} .lm{color:#1D8102} .ll{color:#0073BB}
+  ol, ul { margin:0; padding-left:22px; line-height:1.6; } li { margin-bottom:6px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+  nav { font-size:14px; margin-bottom:16px; } nav a { color:#0073BB; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Deployment 2: Amazon ECS on AWS Fargate</h1>
+  <p>CloudWatch agent as a sidecar container in every task; Serilog writes JSON to stdout for the container log driver</p>
+</header>
+<main>
+<nav><a href="architecture-chalk-talk.html">Overview</a> · <a href="architecture-local-ec2.html">Deployment 1: Laptop / EC2</a> · <b>Deployment 2: Amazon ECS on AWS Fargate</b></nav>
+
+<section class="card">
+  <h2>Architecture</h2>
+  <svg viewBox="0 0 1200 760" role="img" aria-labelledby="d2t d2d" xmlns="http://www.w3.org/2000/svg">
+    <title id="d2t">.NET on Amazon ECS with AWS Fargate and a CloudWatch agent sidecar</title>
+    <desc id="d2d">Each ECS task contains a .NET application container and a CloudWatch agent sidecar container that share localhost and the task IAM role. The OpenTelemetry .NET SDK sends traces and metrics over OTLP to the sidecar, which forwards traces to AWS X-Ray and metrics to CloudWatch Metrics. Logs go from ILogger through Serilog, which adds trace and span IDs and writes JSON lines to stdout. The awslogs log driver provided by Amazon ECS ships stdout to CloudWatch Logs.</desc>
+    <defs>
+      <marker id="bT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8C4FFF"/></marker>
+      <marker id="bM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1D8102"/></marker>
+      <marker id="bL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0073BB"/></marker>
+      <marker id="bG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#545B64"/></marker>
+    </defs>
+    <style>
+      .t{font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif;fill:#16191F}
+      .h{font-size:16px;font-weight:700} .s{font-size:13px} .b{font-weight:700}
+      .xs{font-size:11.5px;fill:#545B64} .w{fill:#fff}
+    </style>
+
+    <!-- Cluster boundary -->
+    <rect x="20" y="20" width="800" height="664" rx="10" fill="#FAFAFA" stroke="#879596" stroke-dasharray="6 4"/>
+    <text x="40" y="46" class="t h">Amazon ECS cluster on AWS Fargate (private subnets)</text>
+
+    <!-- Services row -->
+    <rect x="40" y="60" width="370" height="38" rx="19" fill="#fff" stroke="#232F3E"/>
+    <text x="225" y="84" class="t s" text-anchor="middle"><tspan class="b">Storefront service</tspan> · behind an Application Load Balancer</text>
+    <rect x="430" y="60" width="370" height="38" rx="19" fill="#fff" stroke="#232F3E"/>
+    <text x="615" y="84" class="t s" text-anchor="middle"><tspan class="b">API service</tspan> · private, via ECS Service Connect</text>
+
+    <!-- Task -->
+    <rect x="40" y="112" width="760" height="556" rx="8" fill="#fff" stroke="#FF9900" stroke-width="2"/>
+    <rect x="40" y="112" width="760" height="34" rx="8" fill="#232F3E"/><rect x="40" y="134" width="760" height="12" fill="#232F3E"/>
+    <text x="56" y="135" class="t h w">ECS task (same layout for storefront and API tasks)</text>
+    <text x="56" y="166" class="t xs">Containers in a task share the localhost network and the task IAM role</text>
+
+    <!-- App container -->
+    <rect x="56" y="176" width="370" height="476" rx="8" fill="#fff" stroke="#232F3E" stroke-width="1.5"/>
+    <rect x="56" y="176" width="370" height="30" rx="8" fill="#545B64"/><rect x="56" y="196" width="370" height="10" fill="#545B64"/>
+    <text x="72" y="196" class="t s b w">Application container (.NET)</text>
+
+    <rect x="70" y="216" width="342" height="86" rx="6" fill="#F2F3F3" stroke="#D5DBDB"/>
+    <text x="82" y="236" class="t s b">Instrumentation</text>
+    <text x="82" y="255" class="t s">• ASP.NET Core, HttpClient, AWS SDK for .NET,</text>
+    <text x="94" y="272" class="t s">.NET runtime</text>
+    <text x="82" y="291" class="t s">• Custom ActivitySource, Meter, ILogger events</text>
+
+    <rect x="70" y="314" width="342" height="178" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="82" y="336" class="t s b">OpenTelemetry .NET SDK</text>
+    <text x="82" y="352" class="t xs">Resource: service.name, environment, ECS task attributes</text>
+    <rect x="84" y="364" width="130" height="48" rx="6" fill="#fff" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="149" y="384" class="t s b" text-anchor="middle">Tracer provider</text>
+    <text x="149" y="401" class="t xs" text-anchor="middle">spans, W3C context</text>
+    <rect x="258" y="368" width="140" height="40" rx="20" fill="#8C4FFF"/>
+    <text x="328" y="393" class="t s b w" text-anchor="middle">OTLP exporter</text>
+    <line x1="214" y1="388" x2="254" y2="388" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#bT)"/>
+    <rect x="84" y="428" width="130" height="48" rx="6" fill="#fff" stroke="#1D8102" stroke-width="2"/>
+    <text x="149" y="448" class="t s b" text-anchor="middle">Meter provider</text>
+    <text x="149" y="465" class="t xs" text-anchor="middle">counters, histograms</text>
+    <rect x="258" y="432" width="140" height="40" rx="20" fill="#1D8102"/>
+    <text x="328" y="457" class="t s b w" text-anchor="middle">OTLP exporter</text>
+    <line x1="214" y1="452" x2="254" y2="452" stroke="#1D8102" stroke-width="2.5" marker-end="url(#bM)"/>
+
+    <rect x="70" y="504" width="342" height="138" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="1.5"/>
+    <text x="82" y="524" class="t s b">Logging</text>
+    <rect x="84" y="540" width="90" height="48" rx="6" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <text x="129" y="561" class="t s b" text-anchor="middle">ILogger</text>
+    <text x="129" y="578" class="t xs" text-anchor="middle">structured</text>
+    <rect x="190" y="534" width="208" height="100" rx="6" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <text x="294" y="555" class="t s b" text-anchor="middle">Serilog</text>
+    <text x="294" y="573" class="t xs" text-anchor="middle">Enrich: trace ID, span ID,</text>
+    <text x="294" y="588" class="t xs" text-anchor="middle">X-Ray trace ID, service</text>
+    <text x="294" y="605" class="t xs" text-anchor="middle">JSON line formatter</text>
+    <text x="294" y="623" class="t s b" text-anchor="middle" style="fill:#0073BB">Console sink → stdout</text>
+    <line x1="174" y1="564" x2="186" y2="564" stroke="#0073BB" stroke-width="2.5" marker-end="url(#bL)"/>
+
+    <!-- Agent deployment callout -->
+    <rect x="456" y="176" width="328" height="142" rx="8" fill="#FFF7E8" stroke="#FF9900" stroke-width="2"/>
+    <text x="472" y="198" class="t s b">How the agent is deployed</text>
+    <text x="472" y="220" class="t s">• Sidecar container in every task</text>
+    <text x="472" y="240" class="t s">• Declared in the ECS task definition</text>
+    <text x="472" y="260" class="t s">• App container starts after the agent</text>
+    <text x="472" y="280" class="t s">• Config passed as an environment variable</text>
+    <text x="472" y="300" class="t s">• No hosts or agents to patch</text>
+
+    <!-- Sidecar -->
+    <rect x="456" y="334" width="328" height="166" rx="8" fill="#fff" stroke="#FF9900" stroke-width="2.5"/>
+    <rect x="456" y="334" width="328" height="30" rx="8" fill="#FF9900"/><rect x="456" y="354" width="328" height="10" fill="#FF9900"/>
+    <text x="620" y="354" class="t s b" text-anchor="middle">CloudWatch agent (sidecar container)</text>
+    <text x="620" y="388" class="t s b" text-anchor="middle">OTLP receiver on localhost</text>
+    <text x="620" y="406" class="t xs" text-anchor="middle">traces + metrics</text>
+    <text x="620" y="456" class="t xs" text-anchor="middle">batches and exports to CloudWatch</text>
+    <text x="620" y="474" class="t xs" text-anchor="middle">credentials: task IAM role</text>
+    <text x="620" y="490" class="t xs" text-anchor="middle">does not read logs in this setup</text>
+
+    <line x1="398" y1="388" x2="452" y2="388" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#bT)"/>
+    <line x1="398" y1="452" x2="452" y2="452" stroke="#1D8102" stroke-width="2.5" marker-end="url(#bM)"/>
+
+    <!-- Log driver -->
+    <rect x="456" y="532" width="328" height="104" rx="8" fill="#EAF4FB" stroke="#0073BB" stroke-width="2" stroke-dasharray="6 3"/>
+    <text x="620" y="556" class="t s b" text-anchor="middle">awslogs log driver</text>
+    <text x="620" y="574" class="t xs" text-anchor="middle">provided by Amazon ECS on AWS Fargate</text>
+    <text x="620" y="590" class="t xs" text-anchor="middle">captures container stdout</text>
+    <text x="620" y="606" class="t xs" text-anchor="middle">one log group per service</text>
+    <text x="620" y="624" class="t xs" text-anchor="middle">credentials: task execution role</text>
+    <line x1="398" y1="584" x2="452" y2="584" stroke="#0073BB" stroke-width="2.5" marker-end="url(#bL)"/>
+
+    <!-- CloudWatch -->
+    <rect x="860" y="20" width="320" height="664" rx="10" fill="#fff" stroke="#E7157B" stroke-width="2"/>
+    <rect x="860" y="20" width="320" height="40" rx="10" fill="#E7157B"/><rect x="860" y="48" width="320" height="12" fill="#E7157B"/>
+    <text x="1020" y="46" class="t h w" text-anchor="middle">Amazon CloudWatch</text>
+    <rect x="880" y="76" width="280" height="140" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="896" y="100" class="t s b">Correlated troubleshooting</text>
+    <text x="896" y="124" class="t s">• Trace → its logs, by trace ID</text>
+    <text x="896" y="146" class="t s">• Metric spike → example traces</text>
+    <text x="896" y="168" class="t s">• Service map: storefront → API</text>
+    <text x="908" y="186" class="t s">→ AWS services</text>
+    <text x="896" y="206" class="t s">• Dashboards and alarms</text>
+
+    <rect x="880" y="354" width="280" height="68" rx="6" fill="#F5EFFF" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="896" y="379" class="t s b">Traces: AWS X-Ray</text>
+    <text x="896" y="398" class="t xs">Trace map, Transaction Search</text>
+    <text x="896" y="412" class="t xs">Business attributes searchable</text>
+    <rect x="880" y="430" width="280" height="80" rx="6" fill="#EFF8EC" stroke="#1D8102" stroke-width="2"/>
+    <text x="896" y="453" class="t s b">Metrics: CloudWatch Metrics</text>
+    <text x="896" y="472" class="t xs">App and business metrics</text>
+    <text x="896" y="487" class="t xs">+ Container Insights: task-level</text>
+    <text x="896" y="501" class="t xs">CPU, memory, network</text>
+    <rect x="880" y="552" width="280" height="66" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2"/>
+    <text x="896" y="577" class="t s b">Logs: CloudWatch Logs</text>
+    <text x="896" y="596" class="t xs">JSON fields queryable in</text>
+    <text x="896" y="610" class="t xs">CloudWatch Logs Insights</text>
+
+    <line x1="784" y1="388" x2="876" y2="388" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#bT)"/>
+    <line x1="784" y1="452" x2="876" y2="452" stroke="#1D8102" stroke-width="2.5" marker-end="url(#bM)"/>
+    <line x1="784" y1="584" x2="876" y2="584" stroke="#0073BB" stroke-width="2.5" marker-end="url(#bL)"/>
+    <path d="M800,128 C840,128 840,480 876,480" stroke="#545B64" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#bG)"/>
+    <text x="842" y="300" class="t xs" text-anchor="middle" transform="rotate(90 842 300)">Container Insights</text>
+
+    <rect x="20" y="704" width="1160" height="44" rx="8" fill="#232F3E"/>
+    <text x="600" y="731" class="t s w" text-anchor="middle">Same container image as Deployment 1. Only configuration changes: logs go to stdout instead of a file, and the agent runs as a sidecar.</text>
+  </svg>
+  <div class="legend">
+    <span class="lt">Traces (OTLP)</span><span class="lm">Metrics (OTLP)</span><span class="ll">Logs (Serilog → stdout → log driver)</span>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Talk track</h2>
+    <ol>
+      <li><b>Agent as a sidecar:</b> the task definition adds a CloudWatch agent container next to each application container. They share localhost, so the app's OTLP setup is identical to the laptop and EC2.</li>
+      <li><b>Traces and metrics:</b> the OpenTelemetry .NET SDK exports over OTLP to the sidecar, which forwards to AWS X-Ray and CloudWatch Metrics using the task IAM role.</li>
+      <li><b>Logs:</b> Serilog still adds trace and span IDs and formats JSON, but writes to stdout instead of a file. Files inside a container are lost when the task stops.</li>
+      <li><b>Log delivery:</b> the awslogs log driver, provided by Amazon ECS, ships stdout to CloudWatch Logs. No agent needs to tail files.</li>
+      <li><b>Platform metrics:</b> Container Insights adds task-level CPU, memory, and network next to the application metrics.</li>
+    </ol>
+  </section>
+  <section class="card">
+    <h2>Design choices to discuss</h2>
+    <ul>
+      <li><b>Sidecar vs. shared agent:</b> AWS Fargate has no host to install an agent on, so the sidecar pattern places one agent with each task and scales with it.</li>
+      <li><b>stdout vs. file tailing:</b> stdout with the container log driver is the common container pattern. Customers who prefer the agent to collect logs can evaluate a shared task volume for the log file, or AWS FireLens for routing and filtering.</li>
+      <li><b>Agent choice:</b> the CloudWatch agent and the AWS Distro for OpenTelemetry (ADOT) collector both run as sidecars and accept OTLP. Customers can choose based on how much custom processing they need.</li>
+      <li><b>Lower-code option:</b> CloudWatch Application Signals with .NET auto-instrumentation is another approach for teams that want less SDK code.</li>
+    </ul>
+  </section>
+</div>
+</main>
+</body>
+</html>

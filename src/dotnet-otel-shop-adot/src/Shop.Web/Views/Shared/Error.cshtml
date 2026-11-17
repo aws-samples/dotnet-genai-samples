@@ -1,0 +1,12 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<h1 class="h3 text-danger">Something went wrong</h1>
+<p>We couldn't complete your request. Please try again in a moment.</p>
+@if (!string.IsNullOrEmpty(Model.TraceId))
+{
+    <p class="text-muted">Trace ID: <code>@Model.TraceId</code><br />
+       X-Ray trace ID: <code>@Model.XRayTraceId</code></p>
+}
+<a class="btn btn-outline-primary" asp-controller="Home" asp-action="Index">Back to home</a>

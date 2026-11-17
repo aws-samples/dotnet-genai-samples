@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment 1: Developer machine or Amazon EC2 (Windows)</title>
+<style>
+  :root { --squid:#232F3E; --orange:#FF9900; --ink:#16191F; --muted:#545B64; --bg:#F2F3F3; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--squid); color:#fff; padding:22px 40px; border-bottom:4px solid var(--orange); }
+  header h1 { margin:0; font-size:26px; }
+  header p { margin:6px 0 0; color:#D5DBDB; font-size:15px; }
+  main { max-width:1280px; margin:0 auto; padding:28px 40px 48px; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.12); padding:24px; margin-bottom:24px; }
+  h2 { margin:0 0 14px; font-size:19px; color:var(--squid); border-left:4px solid var(--orange); padding-left:10px; }
+  svg { width:100%; height:auto; display:block; }
+  .legend { display:flex; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:26px; height:4px; border-radius:2px; margin-right:8px; vertical-align:middle; background:currentColor; }
+  .lt{color:#8C4FFF} .lm{color:#1D8102} .ll{color:#0073BB}
+  ol, ul { margin:0; padding-left:22px; line-height:1.6; } li { margin-bottom:6px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+  nav { font-size:14px; margin-bottom:16px; } nav a { color:#0073BB; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Deployment 1: Developer machine or Amazon EC2 (Windows Server)</h1>
+  <p>One Amazon CloudWatch agent per host: OTLP for traces and metrics, file tailing for Serilog logs</p>
+</header>
+<main>
+<nav><a href="architecture-chalk-talk.html">Overview</a> · <b>Deployment 1: Laptop / EC2</b> · <a href="architecture-ecs-fargate.html">Deployment 2: Amazon ECS on AWS Fargate</a></nav>
+
+<section class="card">
+  <h2>Architecture</h2>
+  <svg viewBox="0 0 1200 700" role="img" aria-labelledby="d1t d1d" xmlns="http://www.w3.org/2000/svg">
+    <title id="d1t">.NET on a developer machine or Amazon EC2 with a host-installed CloudWatch agent</title>
+    <desc id="d1d">The .NET storefront and API processes use the OpenTelemetry .NET SDK to send traces and metrics over OTLP to a CloudWatch agent installed on the same host. Logs go from ILogger through Serilog, which adds trace and span IDs and writes JSON lines to rolling log files. The CloudWatch agent tails those files. The agent sends traces to AWS X-Ray, metrics to CloudWatch Metrics, and logs to CloudWatch Logs.</desc>
+    <defs>
+      <marker id="aT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8C4FFF"/></marker>
+      <marker id="aM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1D8102"/></marker>
+      <marker id="aL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0073BB"/></marker>
+    </defs>
+    <style>
+      .t{font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif;fill:#16191F}
+      .h{font-size:16px;font-weight:700} .s{font-size:13px} .b{font-weight:700}
+      .xs{font-size:11.5px;fill:#545B64} .w{fill:#fff}
+    </style>
+
+    <!-- Host boundary -->
+    <rect x="20" y="20" width="800" height="600" rx="10" fill="#FAFAFA" stroke="#879596" stroke-dasharray="6 4"/>
+    <text x="40" y="46" class="t h">Host: developer machine, or Amazon EC2 instance (Windows Server)</text>
+
+    <!-- App processes -->
+    <rect x="40" y="64" width="380" height="536" rx="8" fill="#fff" stroke="#232F3E" stroke-width="1.5"/>
+    <rect x="40" y="64" width="380" height="34" rx="8" fill="#232F3E"/><rect x="40" y="86" width="380" height="12" fill="#232F3E"/>
+    <text x="56" y="87" class="t h w">.NET processes: storefront + API</text>
+
+    <rect x="56" y="110" width="348" height="92" rx="6" fill="#F2F3F3" stroke="#D5DBDB"/>
+    <text x="68" y="130" class="t s b">Instrumentation</text>
+    <text x="68" y="150" class="t s">• ASP.NET Core, HttpClient, AWS SDK for .NET,</text>
+    <text x="80" y="168" class="t s">.NET runtime</text>
+    <text x="68" y="188" class="t s">• Custom ActivitySource, Meter, and ILogger events</text>
+
+    <!-- OTel SDK -->
+    <rect x="56" y="216" width="348" height="214" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="68" y="238" class="t s b">OpenTelemetry .NET SDK</text>
+    <text x="68" y="255" class="t xs">Resource: service.name, environment, EC2 attributes</text>
+    <rect x="70" y="270" width="140" height="52" rx="6" fill="#fff" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="140" y="292" class="t s b" text-anchor="middle">Tracer provider</text>
+    <text x="140" y="310" class="t xs" text-anchor="middle">spans, W3C context</text>
+    <rect x="252" y="276" width="140" height="40" rx="20" fill="#8C4FFF"/>
+    <text x="322" y="301" class="t s b w" text-anchor="middle">OTLP exporter</text>
+    <line x1="210" y1="296" x2="248" y2="296" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#aT)"/>
+    <rect x="70" y="350" width="140" height="52" rx="6" fill="#fff" stroke="#1D8102" stroke-width="2"/>
+    <text x="140" y="372" class="t s b" text-anchor="middle">Meter provider</text>
+    <text x="140" y="390" class="t xs" text-anchor="middle">counters, histograms</text>
+    <rect x="252" y="356" width="140" height="40" rx="20" fill="#1D8102"/>
+    <text x="322" y="381" class="t s b w" text-anchor="middle">OTLP exporter</text>
+    <line x1="210" y1="376" x2="248" y2="376" stroke="#1D8102" stroke-width="2.5" marker-end="url(#aM)"/>
+
+    <!-- Logging via Serilog -->
+    <rect x="56" y="444" width="348" height="144" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="1.5"/>
+    <text x="68" y="466" class="t s b">Logging</text>
+    <rect x="70" y="484" width="100" height="48" rx="6" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <text x="120" y="505" class="t s b" text-anchor="middle">ILogger</text>
+    <text x="120" y="522" class="t xs" text-anchor="middle">structured logs</text>
+    <rect x="196" y="476" width="196" height="102" rx="6" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <text x="294" y="497" class="t s b" text-anchor="middle">Serilog</text>
+    <text x="294" y="515" class="t xs" text-anchor="middle">Enrich: trace ID, span ID,</text>
+    <text x="294" y="530" class="t xs" text-anchor="middle">X-Ray trace ID, service</text>
+    <text x="294" y="548" class="t xs" text-anchor="middle">JSON line formatter</text>
+    <text x="294" y="566" class="t s b" text-anchor="middle" style="fill:#0073BB">Rolling file sink</text>
+    <line x1="170" y1="508" x2="192" y2="508" stroke="#0073BB" stroke-width="2.5" marker-end="url(#aL)"/>
+
+    <!-- Log files on disk -->
+    <path d="M440,488 h96 l24,18 v64 h-120 z" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <path d="M536,488 v18 h24" fill="none" stroke="#0073BB" stroke-width="2"/>
+    <text x="500" y="526" class="t s b" text-anchor="middle">JSON log files</text>
+    <text x="500" y="543" class="t xs" text-anchor="middle">on local disk</text>
+    <text x="500" y="558" class="t xs" text-anchor="middle">(rolling, one per app)</text>
+    <line x1="392" y1="528" x2="436" y2="528" stroke="#0073BB" stroke-width="2.5" marker-end="url(#aL)"/>
+    <text x="416" y="516" class="t xs" text-anchor="middle">write</text>
+
+    <!-- Agent deployment callout -->
+    <rect x="440" y="64" width="360" height="160" rx="8" fill="#FFF7E8" stroke="#FF9900" stroke-width="2"/>
+    <text x="456" y="88" class="t s b">How the agent is deployed</text>
+    <text x="456" y="110" class="t s">• One agent per host, next to the apps</text>
+    <text x="456" y="130" class="t s">• Windows service on EC2, daemon on a laptop</text>
+    <text x="456" y="150" class="t s">• Install and configure with AWS Systems Manager</text>
+    <text x="456" y="170" class="t s">• One config file: OTLP receivers + log files</text>
+    <text x="456" y="190" class="t s">• Apps send to localhost, with no AWS credentials</text>
+    <text x="456" y="210" class="t s">• On EC2, the agent uses the instance role</text>
+
+    <!-- CloudWatch agent -->
+    <rect x="590" y="236" width="210" height="364" rx="8" fill="#fff" stroke="#FF9900" stroke-width="2.5"/>
+    <rect x="590" y="236" width="210" height="34" rx="8" fill="#FF9900"/><rect x="590" y="258" width="210" height="12" fill="#FF9900"/>
+    <text x="695" y="259" class="t s b" text-anchor="middle">Amazon CloudWatch agent</text>
+    <rect x="606" y="282" width="178" height="112" rx="6" fill="#F2F3F3" stroke="#D5DBDB"/>
+    <text x="695" y="306" class="t s b" text-anchor="middle">OTLP receiver</text>
+    <text x="695" y="324" class="t xs" text-anchor="middle">traces + metrics</text>
+    <text x="695" y="340" class="t xs" text-anchor="middle">listens on localhost only</text>
+    <text x="695" y="356" class="t xs" text-anchor="middle">batches and exports</text>
+    <text x="695" y="420" class="t xs" text-anchor="middle">Same config file defines</text>
+    <text x="695" y="436" class="t xs" text-anchor="middle">receivers and the log files</text>
+    <text x="695" y="452" class="t xs" text-anchor="middle">to collect</text>
+    <rect x="606" y="480" width="178" height="70" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="1.5"/>
+    <text x="695" y="502" class="t s b" text-anchor="middle">Log file collector</text>
+    <text x="695" y="520" class="t xs" text-anchor="middle">tails the JSON log files</text>
+    <text x="695" y="536" class="t xs" text-anchor="middle">one log group per app</text>
+    <text x="695" y="572" class="t xs" text-anchor="middle">Credentials: EC2 instance role</text>
+    <text x="695" y="588" class="t xs" text-anchor="middle">(laptop: local AWS profile)</text>
+
+    <!-- App -> agent -->
+    <line x1="392" y1="296" x2="602" y2="296" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#aT)"/>
+    <line x1="392" y1="376" x2="602" y2="376" stroke="#1D8102" stroke-width="2.5" marker-end="url(#aM)"/>
+    <text x="500" y="288" class="t xs" text-anchor="middle">OTLP (traces)</text>
+    <text x="500" y="368" class="t xs" text-anchor="middle">OTLP (metrics)</text>
+    <line x1="560" y1="528" x2="602" y2="520" stroke="#0073BB" stroke-width="2.5" marker-end="url(#aL)"/>
+    <text x="580" y="548" class="t xs" text-anchor="middle">tail</text>
+
+    <!-- CloudWatch -->
+    <rect x="860" y="20" width="320" height="600" rx="10" fill="#fff" stroke="#E7157B" stroke-width="2"/>
+    <rect x="860" y="20" width="320" height="40" rx="10" fill="#E7157B"/><rect x="860" y="48" width="320" height="12" fill="#E7157B"/>
+    <text x="1020" y="46" class="t h w" text-anchor="middle">Amazon CloudWatch</text>
+    <rect x="880" y="76" width="280" height="140" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="896" y="100" class="t s b">Correlated troubleshooting</text>
+    <text x="896" y="124" class="t s">• Trace → its logs, by trace ID</text>
+    <text x="896" y="146" class="t s">• Metric spike → example traces</text>
+    <text x="896" y="168" class="t s">• Service map: storefront → API</text>
+    <text x="908" y="186" class="t s">→ AWS services</text>
+    <text x="896" y="206" class="t s">• Dashboards and alarms</text>
+
+    <rect x="880" y="262" width="280" height="66" rx="6" fill="#F5EFFF" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="896" y="287" class="t s b">Traces: AWS X-Ray</text>
+    <text x="896" y="306" class="t xs">Trace map, Transaction Search</text>
+    <text x="896" y="320" class="t xs">Business attributes searchable</text>
+    <rect x="880" y="344" width="280" height="66" rx="6" fill="#EFF8EC" stroke="#1D8102" stroke-width="2"/>
+    <text x="896" y="369" class="t s b">Metrics: CloudWatch Metrics</text>
+    <text x="896" y="388" class="t xs">App and business metrics,</text>
+    <text x="896" y="402" class="t xs">custom namespace</text>
+    <rect x="880" y="482" width="280" height="66" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2"/>
+    <text x="896" y="507" class="t s b">Logs: CloudWatch Logs</text>
+    <text x="896" y="526" class="t xs">JSON fields queryable in</text>
+    <text x="896" y="540" class="t xs">CloudWatch Logs Insights</text>
+
+    <line x1="784" y1="296" x2="876" y2="296" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#aT)"/>
+    <line x1="784" y1="376" x2="876" y2="376" stroke="#1D8102" stroke-width="2.5" marker-end="url(#aM)"/>
+    <line x1="784" y1="515" x2="876" y2="515" stroke="#0073BB" stroke-width="2.5" marker-end="url(#aL)"/>
+    <text x="830" y="288" class="t xs" text-anchor="middle">HTTPS</text>
+
+    <rect x="20" y="640" width="1160" height="44" rx="8" fill="#232F3E"/>
+    <text x="600" y="667" class="t s w" text-anchor="middle">The app only knows "localhost" and "a log file". The agent handles AWS credentials, batching, retries, and delivery.</text>
+  </svg>
+  <div class="legend">
+    <span class="lt">Traces (OTLP)</span><span class="lm">Metrics (OTLP)</span><span class="ll">Logs (Serilog → JSON file → agent tails)</span>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Talk track</h2>
+    <ol>
+      <li><b>Traces and metrics:</b> the OpenTelemetry .NET SDK exports over OTLP to the CloudWatch agent on the same host.</li>
+      <li><b>Logs:</b> application code logs through the standard ILogger. Serilog adds the current trace ID and span ID to each entry and writes one JSON object per line to a rolling log file.</li>
+      <li><b>Agent:</b> one CloudWatch agent per host receives OTLP and tails the log files. One config file covers all three signals.</li>
+      <li><b>Delivery:</b> the agent sends traces to AWS X-Ray, metrics to CloudWatch Metrics, and logs to CloudWatch Logs, using the instance role on EC2.</li>
+      <li><b>Correlation:</b> the trace ID in every log line links logs to the trace in CloudWatch.</li>
+    </ol>
+  </section>
+  <section class="card">
+    <h2>Why this design</h2>
+    <ul>
+      <li><b>Laptop to EC2 with no code changes:</b> the same agent and config pattern runs on a developer machine and on Amazon EC2.</li>
+      <li><b>Durable logs:</b> files on disk survive a brief agent restart; the agent resumes tailing where it left off.</li>
+      <li><b>Familiar operations:</b> Windows teams manage the agent like any other service, and AWS Systems Manager can roll it out across a fleet.</li>
+      <li><b>Option:</b> for a fully OTLP pipeline, customers can also evaluate sending logs over OTLP to the AWS Distro for OpenTelemetry (ADOT) collector.</li>
+    </ul>
+  </section>
+</div>
+</main>
+</body>
+</html>

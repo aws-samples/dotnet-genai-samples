@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Outfitters: .NET observability on AWS</title>
+<style>
+  :root {
+    --ink: #232F3E; --orange: #FF9900; --compute: #ED7100; --net: #8C4FFF;
+    --mgmt: #E7157B; --store: #7AA116; --cloud: #232F3E; --muted: #5F6B7A; --bg: #F2F3F3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: var(--ink); color: #fff; padding: 18px 40px; display: flex; align-items: baseline; gap: 18px; }
+  header h1 { margin: 0; font-size: 26px; font-weight: 700; }
+  header p { margin: 0; color: #D5DBDB; font-size: 16px; }
+  header .bar { width: 6px; align-self: stretch; background: var(--orange); border-radius: 2px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 20px 32px 32px; }
+  .stage { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.12); padding: 12px; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif; }
+  .legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px; }
+  .step { background: #fff; border-radius: 8px; padding: 12px 14px; border-top: 4px solid var(--orange); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .step b { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: var(--orange); color: var(--ink);
+            align-items: center; justify-content: center; margin-right: 8px; font-size: 14px; }
+  .step h3 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; }
+  .step p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"></div>
+  <h1>Cloud Outfitters: .NET observability on AWS</h1>
+  <p>.NET 10 &middot; AWS Distro for OpenTelemetry auto-instrumentation &middot; Amazon CloudWatch Application Signals</p>
+</header>
+<main>
+<div class="stage">
+<svg viewBox="0 0 1320 640" role="img" aria-labelledby="t d">
+  <title id="t">Architecture: storefront and API on Amazon ECS with AWS Fargate, telemetry to Amazon CloudWatch and AWS X-Ray</title>
+  <desc id="d">A shopper reaches an Application Load Balancer, which routes to the shop-web service. shop-web calls shop-api through ECS Service Connect. Each task has a CloudWatch agent sidecar that receives traces and metrics from ADOT auto-instrumentation and sends them to AWS X-Ray, CloudWatch Application Signals, CloudWatch metrics, and a CloudWatch dashboard. Container logs go to CloudWatch Logs. Images come from Amazon ECR.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#232F3E"/></marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E7157B"/></marker>
+    <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7AA116"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#879196"/></marker>
+  </defs>
+
+  <!-- Shopper -->
+  <g transform="translate(16,262)">
+    <rect width="110" height="96" rx="10" fill="#fff" stroke="#232F3E" stroke-width="2"/>
+    <circle cx="55" cy="30" r="13" fill="none" stroke="#232F3E" stroke-width="2.5"/>
+    <path d="M30,66 q25,-28 50,0" fill="none" stroke="#232F3E" stroke-width="2.5"/>
+    <text x="55" y="86" text-anchor="middle" font-size="14" font-weight="700">Shopper</text>
+  </g>
+
+  <!-- AWS Cloud -->
+  <rect x="160" y="14" width="1146" height="612" rx="6" fill="none" stroke="#232F3E" stroke-width="2"/>
+  <rect x="160" y="14" width="96" height="26" fill="#232F3E"/>
+  <text x="208" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">AWS Cloud</text>
+
+  <!-- Region / VPC -->
+  <rect x="178" y="54" width="716" height="556" rx="6" fill="none" stroke="#00A4A6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="190" y="74" font-size="13" font-weight="700" fill="#00A4A6">Region &middot; Amazon VPC</text>
+
+  <!-- Public subnet -->
+  <rect x="196" y="88" width="200" height="506" rx="6" fill="#F2F8F0" stroke="#7AA116" stroke-width="1.5"/>
+  <text x="208" y="108" font-size="12" font-weight="700" fill="#3F6B0F">Public subnets</text>
+
+  <g transform="translate(216,250)">
+    <rect width="160" height="120" rx="8" fill="#fff" stroke="#8C4FFF" stroke-width="2"/>
+    <rect width="160" height="8" rx="4" fill="#8C4FFF"/>
+    <circle cx="80" cy="44" r="18" fill="none" stroke="#8C4FFF" stroke-width="3"/>
+    <path d="M62,44 h36 M80,26 v36" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="80" y="88" text-anchor="middle" font-size="13" font-weight="700">Application</text>
+    <text x="80" y="104" text-anchor="middle" font-size="13" font-weight="700">Load Balancer</text>
+  </g>
+  <g transform="translate(216,470)">
+    <rect width="160" height="80" rx="8" fill="#fff" stroke="#8C4FFF" stroke-width="2"/>
+    <rect width="160" height="8" rx="4" fill="#8C4FFF"/>
+    <text x="80" y="40" text-anchor="middle" font-size="13" font-weight="700">NAT gateway</text>
+    <text x="80" y="60" text-anchor="middle" font-size="11" fill="#5F6B7A">outbound only</text>
+  </g>
+
+  <!-- Private subnet / ECS -->
+  <rect x="414" y="88" width="464" height="506" rx="6" fill="#EEF4FA" stroke="#147EBA" stroke-width="1.5"/>
+  <text x="426" y="108" font-size="12" font-weight="700" fill="#0B5A8A">Private subnets</text>
+  <rect x="430" y="118" width="432" height="460" rx="6" fill="none" stroke="#ED7100" stroke-width="2"/>
+  <rect x="430" y="118" width="250" height="24" fill="#ED7100"/>
+  <text x="442" y="135" font-size="12.5" font-weight="700" fill="#fff">Amazon ECS on AWS Fargate</text>
+
+  <!-- shop-web task -->
+  <g transform="translate(450,160)">
+    <rect width="392" height="170" rx="8" fill="#fff" stroke="#ED7100" stroke-width="2"/>
+    <text x="14" y="24" font-size="14" font-weight="700">shop-web task</text>
+    <text x="378" y="24" text-anchor="end" font-size="11" fill="#5F6B7A">storefront (ASP.NET Core MVC)</text>
+    <rect x="14" y="38" width="200" height="118" rx="6" fill="#FFF4E6" stroke="#ED7100"/>
+    <text x="114" y="62" text-anchor="middle" font-size="13" font-weight="700">web container</text>
+    <text x="114" y="82" text-anchor="middle" font-size="12">.NET 10 app</text>
+    <rect x="28" y="96" width="172" height="46" rx="5" fill="#ED7100"/>
+    <text x="114" y="115" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">ADOT auto-instrumentation</text>
+    <text x="114" y="132" text-anchor="middle" font-size="10.5" fill="#fff">no telemetry code in the app</text>
+    <rect x="244" y="38" width="134" height="118" rx="6" fill="#FDEEF5" stroke="#E7157B"/>
+    <text x="311" y="72" text-anchor="middle" font-size="12.5" font-weight="700">CloudWatch</text>
+    <text x="311" y="90" text-anchor="middle" font-size="12.5" font-weight="700">agent</text>
+    <text x="311" y="112" text-anchor="middle" font-size="11" fill="#5F6B7A">sidecar</text>
+    <line x1="214" y1="97" x2="242" y2="97" stroke="#E7157B" stroke-width="2.5" marker-end="url(#ao)"/>
+    <text x="229" y="88" text-anchor="middle" font-size="10" fill="#E7157B">OTLP</text>
+  </g>
+
+  <!-- shop-api task -->
+  <g transform="translate(450,390)">
+    <rect width="392" height="170" rx="8" fill="#fff" stroke="#ED7100" stroke-width="2"/>
+    <text x="14" y="24" font-size="14" font-weight="700">shop-api task</text>
+    <text x="378" y="24" text-anchor="end" font-size="11" fill="#5F6B7A">orders, carts, checkout (REST API)</text>
+    <rect x="14" y="38" width="200" height="118" rx="6" fill="#FFF4E6" stroke="#ED7100"/>
+    <text x="114" y="62" text-anchor="middle" font-size="13" font-weight="700">api container</text>
+    <text x="114" y="82" text-anchor="middle" font-size="12">.NET 10 app</text>
+    <rect x="28" y="96" width="172" height="46" rx="5" fill="#ED7100"/>
+    <text x="114" y="115" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">ADOT auto-instrumentation</text>
+    <text x="114" y="132" text-anchor="middle" font-size="10.5" fill="#fff">+ business metrics</text>
+    <rect x="244" y="38" width="134" height="118" rx="6" fill="#FDEEF5" stroke="#E7157B"/>
+    <text x="311" y="72" text-anchor="middle" font-size="12.5" font-weight="700">CloudWatch</text>
+    <text x="311" y="90" text-anchor="middle" font-size="12.5" font-weight="700">agent</text>
+    <text x="311" y="112" text-anchor="middle" font-size="11" fill="#5F6B7A">sidecar</text>
+    <line x1="214" y1="97" x2="242" y2="97" stroke="#E7157B" stroke-width="2.5" marker-end="url(#ao)"/>
+    <text x="229" y="88" text-anchor="middle" font-size="10" fill="#E7157B">OTLP</text>
+  </g>
+
+  <!-- request path -->
+  <line x1="130" y1="310" x2="214" y2="310" stroke="#232F3E" stroke-width="2.5" marker-end="url(#a)"/>
+  <text x="172" y="298" text-anchor="middle" font-size="11" font-weight="700">HTTP</text>
+  <path d="M376,300 C410,300 420,262 462,262" fill="none" stroke="#232F3E" stroke-width="2.5" marker-end="url(#a)"/>
+  <path d="M564,316 L564,428" fill="none" stroke="#232F3E" stroke-width="2.5" marker-end="url(#a)"/>
+  <rect x="574" y="356" width="150" height="38" rx="5" fill="#fff" stroke="#8C4FFF"/>
+  <text x="649" y="372" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5A2DB0">ECS Service Connect</text>
+  <text x="649" y="387" text-anchor="middle" font-size="10.5" fill="#5F6B7A">http://shop-api:8080</text>
+
+  <!-- step badges -->
+  <g font-size="13" font-weight="700" text-anchor="middle">
+    <circle cx="172" cy="330" r="12" fill="#FF9900"/><text x="172" y="335">1</text>
+    <circle cx="540" cy="372" r="12" fill="#FF9900"/><text x="540" y="377">2</text>
+    <circle cx="664" cy="216" r="12" fill="#FF9900"/><text x="664" y="221">3</text>
+  </g>
+
+  <!-- ECR -->
+  <g transform="translate(916,40)">
+    <rect width="118" height="64" rx="8" fill="#fff" stroke="#ED7100" stroke-width="2"/>
+    <text x="59" y="28" text-anchor="middle" font-size="13" font-weight="700">Amazon ECR</text>
+    <text x="59" y="47" text-anchor="middle" font-size="11" fill="#5F6B7A">images</text>
+  </g>
+
+  <!-- AWS dependencies called by shop-api -->
+  <g transform="translate(1046,40)">
+    <rect width="242" height="64" rx="8" fill="#fff" stroke="#7AA116" stroke-width="2"/>
+    <text x="121" y="26" text-anchor="middle" font-size="13" font-weight="700">Amazon S3 &amp; AWS Secrets Manager</text>
+    <text x="121" y="46" text-anchor="middle" font-size="11" fill="#5F6B7A">receipts &amp; payment key, traced by ADOT</text>
+  </g>
+  <path d="M842,430 L909,430 L909,116 L1167,116 L1167,106" fill="none" stroke="#7AA116" stroke-width="2.5" marker-end="url(#ak)"/>
+  <text x="1176" y="124" font-size="10.5" font-weight="700" fill="#3F6B0F">AWS SDK calls</text>
+
+  <!-- CloudWatch group -->
+  <rect x="916" y="128" width="372" height="482" rx="8" fill="#FDF3F8" stroke="#E7157B" stroke-width="2"/>
+  <text x="932" y="152" font-size="15" font-weight="700" fill="#B0084D">Amazon CloudWatch &amp; AWS X-Ray</text>
+
+  <g transform="translate(932,168)">
+    <rect width="340" height="78" rx="7" fill="#fff" stroke="#E7157B"/>
+    <text x="14" y="26" font-size="13.5" font-weight="700">Application Signals</text>
+    <text x="14" y="46" font-size="11.5" fill="#5F6B7A">service health, latency, errors and faults per</text>
+    <text x="14" y="62" font-size="11.5" fill="#5F6B7A">operation, service map, SLOs</text>
+  </g>
+  <g transform="translate(932,256)">
+    <rect width="340" height="64" rx="7" fill="#fff" stroke="#E7157B"/>
+    <text x="14" y="26" font-size="13.5" font-weight="700">AWS X-Ray traces</text>
+    <text x="14" y="46" font-size="11.5" fill="#5F6B7A">one trace from storefront click to order</text>
+  </g>
+  <g transform="translate(932,330)">
+    <rect width="340" height="64" rx="7" fill="#fff" stroke="#E7157B"/>
+    <text x="14" y="26" font-size="13.5" font-weight="700">Custom metrics</text>
+    <text x="14" y="46" font-size="11.5" fill="#5F6B7A">orders, revenue, checkout time, data access, runtime</text>
+  </g>
+  <g transform="translate(932,404)">
+    <rect width="340" height="64" rx="7" fill="#fff" stroke="#E7157B"/>
+    <text x="14" y="26" font-size="13.5" font-weight="700">CloudWatch Logs</text>
+    <text x="14" y="46" font-size="11.5" fill="#5F6B7A">structured JSON logs with trace IDs</text>
+  </g>
+  <g transform="translate(932,488)">
+    <rect width="340" height="104" rx="7" fill="#232F3E"/>
+    <rect width="340" height="8" rx="4" fill="#FF9900"/>
+    <text x="170" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">CloudWatch dashboard</text>
+    <text x="170" y="62" text-anchor="middle" font-size="12" fill="#D5DBDB">business &middot; service health &middot; runtime</text>
+    <text x="170" y="84" text-anchor="middle" font-size="12" fill="#D5DBDB">in one view</text>
+  </g>
+  <line x1="1102" y1="468" x2="1102" y2="486" stroke="#E7157B" stroke-width="2" marker-end="url(#ao)"/>
+
+  <!-- telemetry out -->
+  <path d="M828,250 C880,250 880,210 930,210" fill="none" stroke="#E7157B" stroke-width="2.5" marker-end="url(#ao)"/>
+  <path d="M828,265 C890,265 890,290 930,290" fill="none" stroke="#E7157B" stroke-width="2.5" marker-end="url(#ao)"/>
+  <path d="M828,480 C890,480 880,362 930,362" fill="none" stroke="#E7157B" stroke-width="2.5" marker-end="url(#ao)"/>
+  <path d="M828,495 C900,495 890,436 930,436" fill="none" stroke="#E7157B" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ao)"/>
+  <text x="886" y="520" text-anchor="middle" font-size="10.5" fill="#B0084D">container logs</text>
+  <g font-size="13" font-weight="700" text-anchor="middle">
+    <circle cx="884" cy="236" r="12" fill="#FF9900"/><text x="884" y="241">4</text>
+    <circle cx="1240" cy="540" r="12" fill="#FF9900"/><text x="1240" y="545">5</text>
+  </g>
+</svg>
+</div>
+
+<div class="legend">
+  <div class="step"><h3><b>1</b>Shopper places an order</h3><p>Requests reach the storefront through the load balancer. Application tasks stay in private subnets.</p></div>
+  <div class="step"><h3><b>2</b>Storefront calls the API</h3><p>ECS Service Connect lets the storefront call the API by name. Trace context flows with every call.</p></div>
+  <div class="step"><h3><b>3</b>Auto-instrumentation</h3><p>ADOT loads at startup through environment variables. The app code uses only built-in .NET APIs.</p></div>
+  <div class="step"><h3><b>4</b>Agent sidecar ships telemetry</h3><p>Each task's CloudWatch agent sends traces and metrics to CloudWatch and X-Ray. Calls to S3 and Secrets Manager are traced automatically.</p></div>
+  <div class="step"><h3><b>5</b>One place to observe</h3><p>Application Signals, traces, metrics, and logs come together on the CloudWatch dashboard.</p></div>
+</div>
+<footer>The same app and instrumentation also run on a developer laptop or Amazon EC2 (Windows). Only environment variables change.</footer>
+</main>
+</body>
+</html>

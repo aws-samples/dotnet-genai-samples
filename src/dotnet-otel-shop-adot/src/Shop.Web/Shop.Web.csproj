@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shop.Telemetry\Shop.Telemetry.csproj" />
+    <ProjectReference Include="..\Shop.Contracts\Shop.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ADOT .NET auto-instrumentation; configured by environment variables, not code. -->
+    <PackageReference Include="AWS.Distro.OpenTelemetry.AutoInstrumentation" Version="1.15.0" />
+    <!-- ADOT 1.15.0 is built on upstream auto-instrumentation 1.16.0. Its NuGet range allows
+         anything >= 1.7.0, so pin it or NuGet picks the oldest version. -->
+    <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.16.0" />
+    <!-- Workaround: the ADOT 1.15.0 NuGet package omits this assembly. See lib/adot-1.15.0/README.md. -->
+    <Reference Include="OpenTelemetry.Sampler.AWS">
+      <HintPath>..\..\lib\adot-1.15.0\OpenTelemetry.Sampler.AWS.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

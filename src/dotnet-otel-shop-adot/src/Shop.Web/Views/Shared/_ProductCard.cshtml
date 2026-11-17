@@ -1,0 +1,13 @@
+@model ProductDto
+<div class="card h-100 shadow-sm">
+    <img src="@Model.ImageUrl" class="card-img-top" alt="@Model.Name" loading="lazy" />
+    <div class="card-body d-flex flex-column">
+        <span class="badge bg-secondary align-self-start mb-2">@Model.Category</span>
+        <h5 class="card-title">@Model.Name</h5>
+        <p class="card-text text-muted small flex-grow-1">@Model.Description</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="fs-5 fw-semibold">@Model.Price.ToString("C")</span>
+            <a class="btn btn-primary btn-sm" asp-controller="Products" asp-action="Details" asp-route-id="@Model.Id">View</a>
+        </div>
+    </div>
+</div>

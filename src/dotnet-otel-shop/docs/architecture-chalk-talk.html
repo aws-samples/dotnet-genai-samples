@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observability for .NET on AWS with OpenTelemetry</title>
+<style>
+  :root {
+    --squid: #232F3E; --orange: #FF9900; --ink: #16191F; --muted: #545B64;
+    --bg: #F2F3F3; --card: #FFFFFF; --line: #D5DBDB;
+    --trace: #8C4FFF; --metric: #1D8102; --log: #0073BB;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background: var(--squid); color: #fff; padding: 22px 40px; border-bottom: 4px solid var(--orange); }
+  header h1 { margin: 0; font-size: 26px; font-weight: 700; }
+  header p { margin: 6px 0 0; color: #D5DBDB; font-size: 15px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 28px 40px 48px; }
+  .card { background: var(--card); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.12); padding: 24px; margin-bottom: 24px; }
+  h2 { margin: 0 0 14px; font-size: 19px; color: var(--squid); border-left: 4px solid var(--orange); padding-left: 10px; }
+  svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 26px; height: 4px; border-radius: 2px; margin-right: 8px; vertical-align: middle; background: currentColor; }
+  .lt { color: var(--trace); } .lm { color: var(--metric); } .ll { color: var(--log); }
+  ol, ul { margin: 0; padding-left: 22px; line-height: 1.6; }
+  li { margin-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  code { background: #EAEDED; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Observability for .NET applications on AWS with OpenTelemetry</h1>
+  <p>How traces, metrics, and logs flow from a .NET application into Amazon CloudWatch</p>
+</header>
+<main>
+
+<section class="card">
+  <h2>High-level architecture</h2>
+  <svg viewBox="0 0 1200 660" role="img" aria-labelledby="diagTitle diagDesc" xmlns="http://www.w3.org/2000/svg">
+    <title id="diagTitle">.NET OpenTelemetry to Amazon CloudWatch architecture</title>
+    <desc id="diagDesc">A .NET application instrumented with the OpenTelemetry .NET SDK sends traces and metrics over OTLP to a local telemetry agent, which forwards traces to AWS X-Ray and metrics to Amazon CloudWatch Metrics. Structured JSON logs carrying trace and span IDs are shipped to Amazon CloudWatch Logs. All three signals are correlated by trace ID in Amazon CloudWatch.</desc>
+    <defs>
+      <marker id="aT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8C4FFF"/></marker>
+      <marker id="aM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1D8102"/></marker>
+      <marker id="aL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0073BB"/></marker>
+      <marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#545B64"/></marker>
+    </defs>
+    <style>
+      .t { font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif; fill: #16191F; }
+      .h { font-size: 16px; font-weight: 700; }
+      .s { font-size: 13px; }
+      .xs { font-size: 11.5px; fill: #545B64; }
+      .w { fill: #fff; }
+    </style>
+
+    <!-- ===== Compute boundary ===== -->
+    <rect x="20" y="20" width="700" height="560" rx="10" fill="#FAFAFA" stroke="#879596" stroke-dasharray="6 4"/>
+    <text x="40" y="46" class="t h">AWS compute: Amazon ECS on AWS Fargate, Amazon EC2, or Amazon EKS</text>
+
+    <!-- ===== .NET application ===== -->
+    <rect x="40" y="64" width="400" height="496" rx="8" fill="#fff" stroke="#232F3E" stroke-width="1.5"/>
+    <rect x="40" y="64" width="400" height="34" rx="8" fill="#232F3E"/>
+    <rect x="40" y="86" width="400" height="12" fill="#232F3E"/>
+    <text x="56" y="87" class="t h w">.NET application (storefront + API)</text>
+
+    <!-- Instrumentation sources -->
+    <rect x="56" y="110" width="368" height="104" rx="6" fill="#F2F3F3" stroke="#D5DBDB"/>
+    <text x="68" y="132" class="t s" font-weight="700">Instrumentation</text>
+    <text x="68" y="153" class="t s">• Libraries: ASP.NET Core, HttpClient,</text>
+    <text x="80" y="170" class="t s">AWS SDK for .NET, .NET runtime</text>
+    <text x="68" y="189" class="t s">• Custom: ActivitySource (spans), Meter (metrics)</text>
+    <text x="68" y="207" class="t s">• ILogger (structured, source-generated logs)</text>
+
+    <!-- OTel SDK band -->
+    <rect x="56" y="228" width="368" height="316" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="68" y="250" class="t s" font-weight="700">OpenTelemetry .NET SDK</text>
+    <text x="68" y="267" class="xs t">Resource: service.name, environment, AWS resource attributes</text>
+
+    <!-- Traces provider -->
+    <rect x="70" y="282" width="150" height="56" rx="6" fill="#fff" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="145" y="306" class="t s" text-anchor="middle" font-weight="700">Tracer provider</text>
+    <text x="145" y="324" class="xs t" text-anchor="middle">spans + W3C context</text>
+    <rect x="262" y="290" width="148" height="40" rx="20" fill="#8C4FFF"/>
+    <text x="336" y="315" class="t s w" text-anchor="middle" font-weight="700">OTLP exporter</text>
+    <line x1="220" y1="310" x2="258" y2="310" stroke="#8C4FFF" stroke-width="2.5" marker-end="url(#aT)"/>
+
+    <!-- Metrics provider -->
+    <rect x="70" y="370" width="150" height="56" rx="6" fill="#fff" stroke="#1D8102" stroke-width="2"/>
+    <text x="145" y="394" class="t s" text-anchor="middle" font-weight="700">Meter provider</text>
+    <text x="145" y="412" class="xs t" text-anchor="middle">counters, histograms, gauges</text>
+    <rect x="262" y="378" width="148" height="40" rx="20" fill="#1D8102"/>
+    <text x="336" y="403" class="t s w" text-anchor="middle" font-weight="700">OTLP exporter</text>
+    <line x1="220" y1="398" x2="258" y2="398" stroke="#1D8102" stroke-width="2.5" marker-end="url(#aM)"/>
+
+    <!-- Logs provider -->
+    <rect x="70" y="458" width="150" height="56" rx="6" fill="#fff" stroke="#0073BB" stroke-width="2"/>
+    <text x="145" y="482" class="t s" text-anchor="middle" font-weight="700">Logger provider</text>
+    <text x="145" y="500" class="xs t" text-anchor="middle">trace + span IDs attached</text>
+    <rect x="262" y="466" width="148" height="40" rx="20" fill="#0073BB"/>
+    <text x="336" y="484" class="t s w" text-anchor="middle" font-weight="700">JSON log lines</text>
+    <text x="336" y="499" class="xs w" text-anchor="middle" style="fill:#fff">stdout or file</text>
+    <line x1="220" y1="486" x2="258" y2="486" stroke="#0073BB" stroke-width="2.5" marker-end="url(#aL)"/>
+
+    <!-- ===== Telemetry agent ===== -->
+    <rect x="490" y="270" width="210" height="170" rx="8" fill="#fff" stroke="#232F3E" stroke-width="1.5"/>
+    <rect x="490" y="270" width="210" height="34" rx="8" fill="#545B64"/>
+    <rect x="490" y="292" width="210" height="12" fill="#545B64"/>
+    <text x="595" y="293" class="t s w" text-anchor="middle" font-weight="700">Telemetry agent (sidecar / host)</text>
+    <text x="595" y="330" class="t s" text-anchor="middle" font-weight="700">Amazon CloudWatch agent</text>
+    <text x="595" y="348" class="xs t" text-anchor="middle">or AWS Distro for OpenTelemetry</text>
+    <text x="595" y="366" class="xs t" text-anchor="middle">(ADOT) collector</text>
+    <text x="595" y="392" class="t s" text-anchor="middle">OTLP receiver (local only)</text>
+    <text x="595" y="410" class="xs t" text-anchor="middle">batch · enrich · export</text>
+    <text x="595" y="428" class="xs t" text-anchor="middle">uses the task / instance role</text>
+
+    <!-- OTLP into agent -->
+    <path d="M410,310 H486" stroke="#8C4FFF" stroke-width="2.5" fill="none" marker-end="url(#aT)"/>
+    <path d="M410,398 H486" stroke="#1D8102" stroke-width="2.5" fill="none" marker-end="url(#aM)"/>
+    <text x="448" y="302" class="xs t" text-anchor="middle">OTLP</text>
+    <text x="448" y="390" class="xs t" text-anchor="middle">OTLP</text>
+
+    <!-- Log shipper -->
+    <rect x="490" y="462" width="210" height="64" rx="8" fill="#fff" stroke="#0073BB" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="595" y="485" class="t s" text-anchor="middle" font-weight="700">Log shipping</text>
+    <text x="595" y="502" class="xs t" text-anchor="middle">container log driver (stdout)</text>
+    <text x="595" y="517" class="xs t" text-anchor="middle">or CloudWatch agent (file tail)</text>
+    <path d="M410,486 H486" stroke="#0073BB" stroke-width="2.5" fill="none" marker-end="url(#aL)"/>
+
+    <!-- ===== Amazon CloudWatch ===== -->
+    <rect x="770" y="20" width="410" height="560" rx="10" fill="#fff" stroke="#E7157B" stroke-width="2"/>
+    <rect x="770" y="20" width="410" height="40" rx="10" fill="#E7157B"/>
+    <rect x="770" y="48" width="410" height="12" fill="#E7157B"/>
+    <text x="975" y="46" class="t h w" text-anchor="middle">Amazon CloudWatch</text>
+
+    <!-- Traces dest -->
+    <rect x="800" y="262" width="350" height="70" rx="6" fill="#F5EFFF" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="820" y="288" class="t s" font-weight="700">Traces: AWS X-Ray</text>
+    <text x="820" y="307" class="xs t">Trace map, Transaction Search, span analytics</text>
+    <text x="820" y="323" class="xs t">Business attributes indexed for search</text>
+
+    <!-- Metrics dest -->
+    <rect x="800" y="352" width="350" height="70" rx="6" fill="#EFF8EC" stroke="#1D8102" stroke-width="2"/>
+    <text x="820" y="378" class="t s" font-weight="700">Metrics: Amazon CloudWatch Metrics</text>
+    <text x="820" y="397" class="xs t">Custom namespace for app and business metrics</text>
+    <text x="820" y="413" class="xs t">Dashboards and alarms</text>
+
+    <!-- Logs dest -->
+    <rect x="800" y="452" width="350" height="70" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2"/>
+    <text x="820" y="478" class="t s" font-weight="700">Logs: Amazon CloudWatch Logs</text>
+    <text x="820" y="497" class="xs t">CloudWatch Logs Insights queries</text>
+    <text x="820" y="513" class="xs t">One JSON object per line, with trace and span IDs</text>
+
+    <!-- Agent -> CloudWatch -->
+    <path d="M700,310 C740,310 755,297 796,297" stroke="#8C4FFF" stroke-width="2.5" fill="none" marker-end="url(#aT)"/>
+    <path d="M700,398 C740,398 755,387 796,387" stroke="#1D8102" stroke-width="2.5" fill="none" marker-end="url(#aM)"/>
+    <path d="M700,494 C740,494 755,487 796,487" stroke="#0073BB" stroke-width="2.5" fill="none" marker-end="url(#aL)"/>
+
+    <!-- Correlation / experience -->
+    <rect x="800" y="80" width="350" height="160" rx="6" fill="#FFF7E8" stroke="#FF9900" stroke-width="1.5"/>
+    <text x="820" y="106" class="t s" font-weight="700">Unified troubleshooting experience</text>
+    <text x="820" y="130" class="t s">• Jump from a trace to its logs by trace ID</text>
+    <text x="820" y="152" class="t s">• Pivot from a metric spike to example traces</text>
+    <text x="820" y="174" class="t s">• Service map across storefront, API,</text>
+    <text x="832" y="192" class="t s">and AWS service calls</text>
+    <text x="820" y="214" class="t s">• Container and runtime health alongside</text>
+    <text x="832" y="232" class="t s">application signals</text>
+    <path d="M975,262 V244" stroke="#545B64" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aG)"/>
+
+    <!-- Correlation callout under app -->
+    <rect x="40" y="596" width="1140" height="48" rx="8" fill="#232F3E"/>
+    <text x="610" y="626" class="t s w" text-anchor="middle">One W3C trace ID ties it together: browser request → storefront → API → AWS SDK calls → async worker, plus every log line written along the way</text>
+  </svg>
+  <div class="legend">
+    <span class="lt">Traces (OTLP)</span>
+    <span class="lm">Metrics (OTLP)</span>
+    <span class="ll">Logs (structured JSON with trace context)</span>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Talk track</h2>
+    <ol>
+      <li><b>Instrument once, in standard form.</b> The OpenTelemetry .NET SDK captures incoming requests, outgoing HTTP calls, AWS SDK calls, and .NET runtime health, with no vendor-specific code in the application.</li>
+      <li><b>Add business context.</b> A custom ActivitySource and Meter add spans like checkout and payment, and metrics like orders placed and checkout failures.</li>
+      <li><b>Export over OTLP to a local agent.</b> Traces and metrics leave the process over OTLP to an agent running next to the app. The app holds no AWS credentials for telemetry; the agent uses the task or instance role.</li>
+      <li><b>Logs carry the trace.</b> Every structured log line includes the trace ID and span ID, so CloudWatch can link logs to the request that produced them.</li>
+      <li><b>Land in Amazon CloudWatch.</b> Traces go to AWS X-Ray, metrics to CloudWatch Metrics, and logs to CloudWatch Logs, all correlated by trace ID.</li>
+      <li><b>Same code everywhere.</b> The same application code runs locally, on Amazon EC2, Amazon ECS, or Amazon EKS. Only the agent deployment and log shipping change.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Design choices to discuss</h2>
+    <ul>
+      <li><b>Why an agent instead of exporting directly?</b> It keeps exporters and credentials out of the app, batches and retries outside the request path, and lets teams change destinations without redeploying code.</li>
+      <li><b>Logs as JSON vs. OTLP.</b> This design writes logs as structured JSON so existing log pipelines and Logs Insights queries keep working. Sending logs over OTLP through a collector is another option. Customers can choose based on their existing tooling.</li>
+      <li><b>CloudWatch agent vs. ADOT collector.</b> Both accept OTLP. Consider the CloudWatch agent for a simpler, CloudWatch-focused setup, and the ADOT collector when you need custom processing or multiple destinations.</li>
+      <li><b>Manual SDK vs. auto-instrumentation.</b> The SDK gives full control over spans and metrics. AWS also offers .NET auto-instrumentation with CloudWatch Application Signals for teams that want less code.</li>
+      <li><b>Async boundaries.</b> Trace context travels in queue message attributes, so the fulfillment worker continues the same trace as the checkout that triggered it.</li>
+    </ul>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Learn more</h2>
+  <ul>
+    <li>OpenTelemetry .NET: <code>https://opentelemetry.io/docs/languages/dotnet/</code></li>
+    <li>AWS Distro for OpenTelemetry: <code>https://aws-otel.github.io/</code></li>
+    <li>Amazon CloudWatch User Guide: <code>https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/</code></li>
+    <li>AWS Well-Architected Framework, Operational Excellence pillar: <code>https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/</code></li>
+  </ul>
+</section>
+
+</main>
+<footer>Sample application: Cloud Outfitters (.NET 8 storefront and API) · For discussion purposes</footer>
+</body>
+</html>

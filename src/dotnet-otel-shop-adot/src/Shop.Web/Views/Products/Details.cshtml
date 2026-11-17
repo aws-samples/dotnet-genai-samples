@@ -1,0 +1,27 @@
+@model ProductDto
+@{
+    ViewData["Title"] = Model.Name;
+}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Shop</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index" asp-route-category="@Model.Category">@Model.Category</a></li>
+        <li class="breadcrumb-item active">@Model.Name</li>
+    </ol>
+</nav>
+<div class="row g-5">
+    <div class="col-md-6">
+        <img src="@Model.ImageUrl" class="img-fluid rounded shadow-sm" alt="@Model.Name" />
+    </div>
+    <div class="col-md-6">
+        <h1 class="h2">@Model.Name</h1>
+        <p class="fs-3 fw-semibold">@Model.Price.ToString("C")</p>
+        <p>@Model.Description</p>
+        <p class="text-muted small">@(Model.Stock > 0 ? $"{Model.Stock} in stock" : "Out of stock")</p>
+        <form asp-controller="Cart" asp-action="Add" method="post" class="d-flex gap-2" style="max-width: 280px">
+            <input type="hidden" name="productId" value="@Model.Id" />
+            <input type="number" name="quantity" value="1" min="1" max="10" class="form-control" aria-label="Quantity" />
+            <button type="submit" class="btn btn-primary text-nowrap" disabled="@(Model.Stock == 0)">Add to cart</button>
+        </form>
+    </div>
+</div>

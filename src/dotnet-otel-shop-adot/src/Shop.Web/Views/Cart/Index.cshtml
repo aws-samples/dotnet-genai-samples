@@ -1,0 +1,42 @@
+@model CartDto
+@{
+    ViewData["Title"] = "Your cart";
+}
+<h1 class="h3 mb-4">Your cart</h1>
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">Your cart is empty.</p>
+    <a class="btn btn-primary" asp-controller="Products" asp-action="Index">Start shopping</a>
+}
+else
+{
+    <table class="table align-middle">
+        <thead>
+            <tr><th>Product</th><th class="text-end">Price</th><th class="text-center">Qty</th><th class="text-end">Total</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td><a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId">@item.Name</a></td>
+                    <td class="text-end">@item.UnitPrice.ToString("C")</td>
+                    <td class="text-center">@item.Quantity</td>
+                    <td class="text-end">@item.LineTotal.ToString("C")</td>
+                    <td class="text-end">
+                        <form asp-action="Remove" method="post">
+                            <input type="hidden" name="productId" value="@item.ProductId" />
+                            <button type="submit" class="btn btn-link btn-sm text-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr><th colspan="3" class="text-end">Subtotal</th><th class="text-end">@Model.Total.ToString("C")</th><th></th></tr>
+        </tfoot>
+    </table>
+    <div class="d-flex justify-content-between">
+        <a class="btn btn-outline-secondary" asp-controller="Products" asp-action="Index">Keep shopping</a>
+        <a class="btn btn-primary" asp-controller="Checkout" asp-action="Index">Checkout</a>
+    </div>
+}

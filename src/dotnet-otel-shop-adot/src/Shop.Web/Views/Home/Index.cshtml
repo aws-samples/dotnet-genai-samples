@@ -1,0 +1,24 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Home";
+}
+<div class="p-5 mb-4 bg-light rounded-3">
+    <h1 class="display-6 fw-bold">Gear for every trail and every commute</h1>
+    <p class="lead">Browse the catalog, add a few items, and check out. Every click is a trace.</p>
+    <a class="btn btn-primary btn-lg" asp-controller="Products" asp-action="Index">Shop all products</a>
+</div>
+
+<div class="mb-4">
+    @foreach (var category in Model.Categories)
+    {
+        <a class="btn btn-outline-secondary me-2 mb-2" asp-controller="Products" asp-action="Index" asp-route-category="@category">@category</a>
+    }
+</div>
+
+<h2 class="h4 mb-3">Featured</h2>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
+    @foreach (var product in Model.Featured)
+    {
+        <div class="col"><partial name="_ProductCard" model="product" /></div>
+    }
+</div>

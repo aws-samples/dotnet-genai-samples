@@ -1,0 +1,48 @@
+@model CheckoutViewModel
+@{
+    ViewData["Title"] = "Checkout";
+}
+<h1 class="h3 mb-4">Checkout</h1>
+<div class="row g-5">
+    <div class="col-md-7">
+        <form asp-action="Index" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" />
+                <span asp-validation-for="CustomerName" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ShippingAddress" class="form-label"></label>
+                <textarea asp-for="ShippingAddress" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+            </div>
+            <p class="text-muted small">Payment is simulated. About 1 in 10 payments is declined on purpose so you can see failures in your traces.</p>
+            <button type="submit" class="btn btn-primary btn-lg">Place order</button>
+        </form>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">Order summary</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var item in Model.Cart?.Items ?? [])
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@item.Name &times; @item.Quantity</span><span>@item.LineTotal.ToString("C")</span>
+                    </li>
+                }
+                <li class="list-group-item d-flex justify-content-between fw-semibold">
+                    <span>Total</span><span>@((Model.Cart?.Total ?? 0).ToString("C"))</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

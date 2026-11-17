@@ -19,10 +19,11 @@ public static class TelemetryExtensions
     /// Config (section "Telemetry"):
     ///   Exporter: "otlp" (default), "console", or "both"
     ///   AwsResourceDetector: "none" (default), "ec2", "ecs", or "eks"
-    /// Also enables the JSON log file (see FileLoggingExtensions, section "Logging:File").
+    /// Also enables JSON logs (see FileLoggingExtensions, sections "Logging:File" and "Logging:Console").
     ///
-    /// The OTLP exporter honors the standard OTEL_EXPORTER_OTLP_* environment
-    /// variables (default endpoint http://localhost:4317).
+    /// OTLP carries traces and metrics only; logs go out as JSON lines. The OTLP exporter
+    /// honors the standard OTEL_EXPORTER_OTLP_* environment variables (default endpoint
+    /// http://localhost:4317).
     /// </summary>
     public static WebApplicationBuilder AddShopTelemetry(
         this WebApplicationBuilder builder,
@@ -34,7 +35,7 @@ public static class TelemetryExtensions
         var useOtlp = exporter is "otlp" or "both";
         var useConsole = exporter is "console" or "both";
 
-        var otel = builder.Services.AddOpenTelemetry()
+        builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => ConfigureResource(resource, serviceName, builder.Environment, config))
             .WithTracing(tracing =>
             {
@@ -67,6 +68,7 @@ public static class TelemetryExtensions
                     .AddHttpClientInstrumentation(o => o.RecordException = true)
                     .AddAWSInstrumentation();
 
+                if (useOtlp) tracing.AddOtlpExporter();
                 if (useConsole) tracing.AddConsoleExporter();
             })
             .WithMetrics(metrics =>
@@ -78,10 +80,14 @@ public static class TelemetryExtensions
                     .AddRuntimeInstrumentation()
                     .AddAWSInstrumentation();
 
+                if (useOtlp) metrics.AddOtlpExporter();
                 if (useConsole) metrics.AddConsoleExporter();
             })
             .WithLogging(logging =>
             {
+                // No OTLP for logs: they leave the app as JSON lines (file or stdout), which the
+                // CloudWatch agent or the container log driver ships. Exporting them over OTLP too
+                // would send every log twice, or to a receiver that has no logs pipeline.
                 if (useConsole) logging.AddConsoleExporter();
             }, options =>
             {
@@ -89,10 +95,7 @@ public static class TelemetryExtensions
                 options.IncludeScopes = true;
             });
 
-        // One call configures OTLP for all three signals.
-        if (useOtlp) otel.UseOtlpExporter();
-
-        // JSON log file for the CloudWatch agent (or any log shipper) to tail.
+        // JSON logs for the CloudWatch agent to tail (file) or the container log driver to ship (stdout).
         builder.AddShopFileLogging(serviceName);
 
         return builder;

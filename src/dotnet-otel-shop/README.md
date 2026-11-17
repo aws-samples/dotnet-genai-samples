@@ -82,6 +82,29 @@ Jaeger, the .NET Aspire dashboard, or the collector in `collector/`.
 
 To clean up: `aws cloudformation delete-stack --stack-name dotnet-shop`. This deletes the tables and their data.
 
+## Deploy to ECS on Fargate
+
+```bash
+infra/deploy-ecs.sh    # prints the storefront URL when done
+```
+
+No Docker needed: the .NET SDK builds ARM64 images and pushes them to ECR (`infra/ecr.yaml`), then
+`infra/ecs-fargate.yaml` creates a VPC, an ECS cluster, and the two services.
+
+- **Access:** the storefront ALB accepts HTTP only from `ALLOWED_CIDR` (default: your current public IP /32).
+  shop-api has no public endpoint; shop-web reaches it as `http://shop-api:8080` through Service Connect.
+  If your IP changes, re-run the script (or set `ALLOWED_CIDR`).
+- **Traces and metrics:** each task runs a CloudWatch agent sidecar on `127.0.0.1:4317`, the same OTLP
+  setup as running locally. Traces go to X-Ray, metrics to the `DotnetShop` namespace.
+- **Logs:** files inside a container are lost when it stops, so the apps write the same JSON lines to stdout
+  (`Logging__Console__Json=true`, `Logging__File__Enabled=false`). The awslogs driver ships them to
+  `/dotnet-shop/ecs/web` and `/dotnet-shop/ecs/api`. The Logs Insights queries below work unchanged; for the
+  shopper journey, filter `category = "ShopperJourney"`.
+- **Cost:** the NAT gateway, ALB, and two Fargate tasks bill while the stack exists.
+
+To clean up: `aws cloudformation delete-stack --stack-name dotnet-shop-ecs`, then empty the two ECR
+repositories and delete `dotnet-shop-ecr`.
+
 ## What's instrumented
 
 | Signal | Source | Examples |
@@ -93,7 +116,7 @@ To clean up: `aws cloudformation delete-stack --stack-name dotnet-shop`. This de
 | Metrics | ASP.NET Core, HttpClient, .NET runtime | `http.server.request.duration`, GC, thread pool |
 | Metrics | AWS SDK | AWS SDK client metrics |
 | Metrics | Custom (`Shop.Api` Meter) | `shop.orders.placed`, `shop.order.value`, `shop.checkout.failures{reason}`, `shop.cart.items_added{product.category}`, `shop.orders.fulfilled` |
-| Logs | `ILogger` via OpenTelemetry, plus a JSON file (Serilog) | Every log carries `traceId`/`spanId` for correlation |
+| Logs | `ILogger` via Serilog, as JSON lines to a file (or stdout in containers) | Every log carries `traceId`/`spanId` for correlation |
 | All | Telemetry demo (`Shop.Demo` source/meter) | `DemoWorkflow` spans, `demo.button.clicks`, `demo.work.duration`, `demo.jobs.active`, `demo.queue.depth` |
 
 The storefront error page shows the trace ID, so you can paste it into X-Ray to find the failing request.

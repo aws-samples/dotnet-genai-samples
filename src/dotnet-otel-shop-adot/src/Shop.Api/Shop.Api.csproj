@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.109.1" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.102.6" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.100.20" />
+    <!-- Optional checkout integrations (Shop:Integrations): order receipts and the payment gateway key. -->
+    <PackageReference Include="AWSSDK.S3" Version="4.0.104.12" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.100.26" />
+    <!--
+      ADOT .NET auto-instrumentation. This is the only telemetry package the app needs:
+      it ships the CLR profiler, the OpenTelemetry SDK, every instrumentation library,
+      and the AWS plugin that produces Application Signals metrics. Nothing in Program.cs
+      configures it; it is switched on and configured by environment variables at startup
+      (see scripts/ and infra/ecs-fargate.yaml).
+    -->
+    <PackageReference Include="AWS.Distro.OpenTelemetry.AutoInstrumentation" Version="1.15.0" />
+    <!-- ADOT 1.15.0 is built on upstream auto-instrumentation 1.16.0. Its NuGet range allows
+         anything >= 1.7.0, so pin it or NuGet picks the oldest version. -->
+    <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.16.0" />
+    <!-- Workaround: the ADOT 1.15.0 NuGet package omits this assembly. See lib/adot-1.15.0/README.md. -->
+    <Reference Include="OpenTelemetry.Sampler.AWS">
+      <HintPath>..\..\lib\adot-1.15.0\OpenTelemetry.Sampler.AWS.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shop.Telemetry\Shop.Telemetry.csproj" />
+    <ProjectReference Include="..\Shop.Contracts\Shop.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

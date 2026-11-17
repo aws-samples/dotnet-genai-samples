@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>.NET with ADOT auto-instrumentation and CloudWatch Application Signals</title>
+<style>
+  :root { --squid:#232F3E; --orange:#FF9900; --pink:#E7157B; --ink:#16191F; --muted:#545B64; --bg:#F2F3F3; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--squid); color:#fff; padding:22px 40px; border-bottom:4px solid var(--orange); }
+  header h1 { margin:0; font-size:26px; }
+  header p { margin:6px 0 0; color:#D5DBDB; font-size:15px; }
+  main { max-width:1280px; margin:0 auto; padding:28px 40px 48px; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.12); padding:24px; margin-bottom:24px; }
+  h2 { margin:0 0 14px; font-size:19px; color:var(--squid); border-left:4px solid var(--orange); padding-left:10px; }
+  svg { width:100%; height:auto; display:block; }
+  .legend { display:flex; gap:26px; flex-wrap:wrap; margin-top:12px; font-size:14px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:26px; height:4px; border-radius:2px; margin-right:8px; vertical-align:middle; background:currentColor; }
+  .lt{color:#8C4FFF} .la{color:#E7157B} .lm{color:#1D8102} .ll{color:#0073BB}
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+  ol, ul { margin:0; padding-left:22px; line-height:1.6; } li { margin-bottom:6px; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #EAEDED; vertical-align:top; }
+  th { background:#F2F3F3; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:700; color:#fff; }
+  .b-adot { background:#FF9900; color:#16191F; } .b-as { background:#E7157B; }
+</style>
+</head>
+<body>
+<header>
+  <h1>.NET observability with ADOT auto-instrumentation and CloudWatch Application Signals</h1>
+  <p>Telemetry added at startup by configuration, then turned into service health, maps, and SLOs</p>
+</header>
+<main>
+
+<section class="card">
+  <h2>Architecture</h2>
+  <svg viewBox="0 0 1200 730" role="img" aria-labelledby="t d" xmlns="http://www.w3.org/2000/svg">
+    <title id="t">.NET application instrumented by ADOT with CloudWatch Application Signals</title>
+    <desc id="d">Environment variables set at launch load the ADOT .NET auto-instrumentation into the .NET process. The application code is unchanged and uses standard .NET APIs. ADOT captures traces and metrics and its AWS plugin adds Application Signals attributes and metrics. Serilog writes JSON logs with trace IDs. The CloudWatch agent, running on the host or as an ECS sidecar, receives Application Signals data, business metrics, and logs, and sends them to Amazon CloudWatch, where Application Signals shows services, operations, dependencies, and SLOs.</desc>
+    <defs>
+      <marker id="mT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8C4FFF"/></marker>
+      <marker id="mA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#E7157B"/></marker>
+      <marker id="mM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1D8102"/></marker>
+      <marker id="mL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0073BB"/></marker>
+      <marker id="mG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#545B64"/></marker>
+      <marker id="mO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#FF9900"/></marker>
+    </defs>
+    <style>
+      .t{font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif;fill:#16191F}
+      .h{font-size:16px;font-weight:700} .s{font-size:13px} .b{font-weight:700}
+      .xs{font-size:11.5px;fill:#545B64} .w{fill:#fff}
+    </style>
+
+    <!-- ================= Launch configuration ================= -->
+    <rect x="20" y="230" width="165" height="250" rx="8" fill="#FFF7E8" stroke="#FF9900" stroke-width="2" stroke-dasharray="6 3"/>
+    <text x="102" y="254" class="t s b" text-anchor="middle">Launch configuration</text>
+    <text x="102" y="270" class="t xs" text-anchor="middle">environment variables,</text>
+    <text x="102" y="284" class="t xs" text-anchor="middle">read at process start</text>
+    <text x="32" y="306" class="t xs">• Load ADOT at startup</text>
+    <text x="32" y="324" class="t xs">• Service name</text>
+    <text x="32" y="342" class="t xs">• Custom span and</text>
+    <text x="42" y="356" class="t xs">metric source names</text>
+    <text x="32" y="374" class="t xs">• Application Signals on</text>
+    <text x="32" y="392" class="t xs">• Where the agent is</text>
+    <line x1="32" y1="410" x2="173" y2="410" stroke="#FFD591"/>
+    <text x="102" y="430" class="t xs" text-anchor="middle">Set by: launch script,</text>
+    <text x="102" y="445" class="t xs" text-anchor="middle">Windows service, or</text>
+    <text x="102" y="460" class="t xs" text-anchor="middle">ECS task definition</text>
+    <path d="M185,350 H236" stroke="#FF9900" stroke-width="3" fill="none" marker-end="url(#mO)"/>
+
+    <!-- ================= Host boundary ================= -->
+    <rect x="200" y="20" width="610" height="620" rx="10" fill="#FAFAFA" stroke="#879596" stroke-dasharray="6 4"/>
+    <text x="218" y="44" class="t s b">Runs on: developer machine, Amazon EC2 (Windows Server), or an Amazon ECS task</text>
+
+    <!-- .NET process -->
+    <rect x="215" y="58" width="350" height="566" rx="8" fill="#fff" stroke="#232F3E" stroke-width="1.5"/>
+    <rect x="215" y="58" width="350" height="32" rx="8" fill="#232F3E"/><rect x="215" y="78" width="350" height="12" fill="#232F3E"/>
+    <text x="231" y="80" class="t h w">.NET process (storefront or API)</text>
+
+    <!-- App code -->
+    <rect x="230" y="102" width="320" height="112" rx="6" fill="#F2F3F3" stroke="#D5DBDB"/>
+    <text x="242" y="122" class="t s b">Your application code: unchanged</text>
+    <text x="242" y="142" class="t s">• Endpoints and controllers</text>
+    <text x="242" y="160" class="t s">• ActivitySource and Meter for business</text>
+    <text x="254" y="177" class="t s">spans and metrics (built into .NET)</text>
+    <text x="242" y="196" class="t s">• No OpenTelemetry setup code</text>
+    <path d="M390,214 V236" stroke="#545B64" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#mG)"/>
+    <text x="398" y="230" class="t xs">observed by</text>
+
+    <!-- ADOT -->
+    <rect x="230" y="240" width="320" height="236" rx="8" fill="#FFF7E8" stroke="#FF9900" stroke-width="3"/>
+    <rect x="230" y="240" width="320" height="34" rx="8" fill="#FF9900"/><rect x="230" y="262" width="320" height="12" fill="#FF9900"/>
+    <text x="246" y="263" class="t h">ADOT .NET auto-instrumentation</text>
+
+    <rect x="244" y="284" width="292" height="40" rx="6" fill="#fff" stroke="#FFB84D"/>
+    <text x="256" y="301" class="t s b">Loads before the app starts</text>
+    <text x="256" y="317" class="t xs">CLR profiler + startup hook, from configuration</text>
+
+    <rect x="244" y="332" width="292" height="50" rx="6" fill="#fff" stroke="#FFB84D"/>
+    <text x="256" y="350" class="t s b">OpenTelemetry SDK + instrumentation</text>
+    <text x="256" y="366" class="t xs">ASP.NET Core, HttpClient, AWS SDK for .NET,</text>
+    <text x="256" y="379" class="t xs">.NET runtime, plus your sources</text>
+
+    <rect x="244" y="390" width="292" height="76" rx="6" fill="#FDECF4" stroke="#E7157B" stroke-width="2"/>
+    <text x="256" y="408" class="t s b">AWS plugin for Application Signals</text>
+    <text x="256" y="425" class="t xs">• Tags each span with service, operation,</text>
+    <text x="266" y="439" class="t xs">and dependency</text>
+    <text x="256" y="455" class="t xs">• Computes volume, latency, errors, faults</text>
+
+    <!-- Serilog -->
+    <path d="M300,476 V500" stroke="#545B64" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#mG)"/>
+    <text x="308" y="493" class="t xs">current trace ID</text>
+    <rect x="230" y="504" width="320" height="106" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2"/>
+    <text x="242" y="526" class="t s b">Serilog: unchanged</text>
+    <text x="242" y="546" class="t s">• Adds trace ID and span ID to each log</text>
+    <text x="242" y="566" class="t s">• JSON lines to a file (laptop, EC2)</text>
+    <text x="254" y="584" class="t s">or to stdout (ECS)</text>
+
+    <!-- ================= CloudWatch agent ================= -->
+    <rect x="600" y="240" width="195" height="384" rx="8" fill="#fff" stroke="#FF9900" stroke-width="2"/>
+    <rect x="600" y="240" width="195" height="34" rx="8" fill="#545B64"/><rect x="600" y="262" width="195" height="12" fill="#545B64"/>
+    <text x="697" y="262" class="t s b w" text-anchor="middle">Amazon CloudWatch agent</text>
+    <text x="697" y="292" class="t xs" text-anchor="middle">host agent on EC2,</text>
+    <text x="697" y="306" class="t xs" text-anchor="middle">sidecar container on ECS</text>
+
+    <rect x="612" y="318" width="171" height="62" rx="6" fill="#FDECF4" stroke="#E7157B" stroke-width="2"/>
+    <text x="697" y="340" class="t s b" text-anchor="middle">Application Signals</text>
+    <text x="697" y="356" class="t s b" text-anchor="middle">receiver</text>
+    <text x="697" y="372" class="t xs" text-anchor="middle">traces + signals metrics</text>
+
+    <rect x="612" y="400" width="171" height="52" rx="6" fill="#EFF8EC" stroke="#1D8102" stroke-width="2"/>
+    <text x="697" y="422" class="t s b" text-anchor="middle">OTLP receiver</text>
+    <text x="697" y="440" class="t xs" text-anchor="middle">business metrics</text>
+
+    <rect x="612" y="520" width="171" height="70" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2" stroke-dasharray="5 3"/>
+    <text x="697" y="542" class="t s b" text-anchor="middle">Log collection</text>
+    <text x="697" y="559" class="t xs" text-anchor="middle">tails log files (EC2)</text>
+    <text x="697" y="574" class="t xs" text-anchor="middle">ECS: container log driver</text>
+    <text x="697" y="612" class="t xs" text-anchor="middle">uses instance or task role</text>
+
+    <!-- process -> agent -->
+    <path d="M550,349 H608" stroke="#E7157B" stroke-width="3" fill="none" marker-end="url(#mA)"/>
+    <path d="M550,426 H608" stroke="#1D8102" stroke-width="2.5" fill="none" marker-end="url(#mM)"/>
+    <path d="M550,555 H608" stroke="#0073BB" stroke-width="2.5" fill="none" marker-end="url(#mL)"/>
+
+    <!-- ================= Amazon CloudWatch ================= -->
+    <rect x="840" y="20" width="340" height="620" rx="10" fill="#fff" stroke="#E7157B" stroke-width="2"/>
+    <rect x="840" y="20" width="340" height="40" rx="10" fill="#232F3E"/><rect x="840" y="48" width="340" height="12" fill="#232F3E"/>
+    <text x="1010" y="46" class="t h w" text-anchor="middle">Amazon CloudWatch</text>
+
+    <!-- Application Signals hero -->
+    <rect x="856" y="72" width="308" height="226" rx="8" fill="#FDECF4" stroke="#E7157B" stroke-width="3"/>
+    <rect x="856" y="72" width="308" height="34" rx="8" fill="#E7157B"/><rect x="856" y="94" width="308" height="12" fill="#E7157B"/>
+    <text x="872" y="95" class="t h w">Application Signals</text>
+    <rect x="1054" y="79" width="100" height="20" rx="10" fill="#fff"/>
+    <text x="1104" y="93" class="t xs b" text-anchor="middle" style="fill:#E7157B">App Signals</text>
+    <text x="872" y="128" class="t s"><tspan class="b">Services:</tspan> storefront, API</text>
+    <text x="872" y="150" class="t s"><tspan class="b">Operations:</tspan> GET /Products/Details/{id},</text>
+    <text x="948" y="167" class="t s">POST /api/orders, ...</text>
+    <text x="872" y="189" class="t s"><tspan class="b">Dependencies:</tspan> storefront → API →</text>
+    <text x="872" y="206" class="t s">AWS services</text>
+    <text x="872" y="228" class="t s">• Volume, latency, errors, faults</text>
+    <text x="872" y="248" class="t s">• Service map</text>
+    <text x="872" y="268" class="t s">• SLOs, alarms, and one-click</text>
+    <text x="884" y="285" class="t s">pivots to traces and logs</text>
+
+    <!-- Supporting stores -->
+    <rect x="856" y="318" width="308" height="62" rx="6" fill="#F5EFFF" stroke="#8C4FFF" stroke-width="2"/>
+    <text x="872" y="342" class="t s b">Traces: AWS X-Ray</text>
+    <text x="872" y="362" class="t xs">Trace map, Transaction Search, span details</text>
+
+    <rect x="856" y="398" width="308" height="62" rx="6" fill="#EFF8EC" stroke="#1D8102" stroke-width="2"/>
+    <text x="872" y="422" class="t s b">Metrics: CloudWatch Metrics</text>
+    <text x="872" y="442" class="t xs">Business metrics in a custom namespace</text>
+
+    <rect x="856" y="520" width="308" height="70" rx="6" fill="#EAF4FB" stroke="#0073BB" stroke-width="2"/>
+    <text x="872" y="544" class="t s b">Logs: CloudWatch Logs</text>
+    <text x="872" y="562" class="t xs">JSON fields queryable in Logs Insights;</text>
+    <text x="872" y="577" class="t xs">linked to services by log group</text>
+
+    <!-- agent -> CloudWatch -->
+    <path d="M783,340 C820,340 820,190 852,190" stroke="#E7157B" stroke-width="3" fill="none" marker-end="url(#mA)"/>
+    <path d="M783,356 C820,356 822,349 852,349" stroke="#8C4FFF" stroke-width="2.5" fill="none" marker-end="url(#mT)"/>
+    <path d="M783,426 C820,426 822,429 852,429" stroke="#1D8102" stroke-width="2.5" fill="none" marker-end="url(#mM)"/>
+    <path d="M783,555 H852" stroke="#0073BB" stroke-width="2.5" fill="none" marker-end="url(#mL)"/>
+    <path d="M1164,555 H1172 V190 H1168" stroke="#545B64" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#mG)"/>
+    <text x="1176" y="420" class="t xs" text-anchor="middle" transform="rotate(-90 1176 420)">log correlation</text>
+    <text x="872" y="616" class="t xs">All signals share the same trace ID and service name</text>
+
+    <!-- Banner -->
+    <rect x="20" y="660" width="1160" height="56" rx="8" fill="#232F3E"/>
+    <rect x="36" y="676" width="54" height="22" rx="11" fill="#FF9900"/>
+    <text x="63" y="691" class="t xs b" text-anchor="middle">ADOT</text>
+    <text x="100" y="692" class="t s w">adds traces and metrics at startup through configuration, with no code changes</text>
+    <rect x="640" y="676" width="96" height="22" rx="11" fill="#E7157B"/>
+    <text x="688" y="691" class="t xs b w" text-anchor="middle" style="fill:#fff">App Signals</text>
+    <text x="746" y="692" class="t s w">turns them into service health and SLOs</text>
+  </svg>
+  <div class="legend">
+    <span class="la">Application Signals data (spans + computed metrics)</span>
+    <span class="lt">Traces</span>
+    <span class="lm">Business metrics (OTLP)</span>
+    <span class="ll">Logs (Serilog JSON with trace IDs)</span>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2><span class="badge b-adot">ADOT</span> Where ADOT comes in</h2>
+    <ol>
+      <li><b>At launch, not in code.</b> Environment variables tell the .NET runtime to load the ADOT auto-instrumentation before the application starts. The same variables are set by a launch script, a Windows service, or an ECS task definition.</li>
+      <li><b>Instruments common libraries automatically.</b> Incoming requests, outgoing HTTP calls, AWS SDK calls, and .NET runtime health become spans and metrics.</li>
+      <li><b>Listens to your existing telemetry.</b> Business spans and metrics written with .NET's built-in ActivitySource and Meter are picked up by name. That code is identical to the manual-SDK version.</li>
+      <li><b>Adds the AWS layer.</b> The ADOT plugin tags each span with service, operation, and dependency, and computes Application Signals metrics from them.</li>
+    </ol>
+  </section>
+  <section class="card">
+    <h2><span class="badge b-as">App Signals</span> What Application Signals adds</h2>
+    <ul>
+      <li><b>A service-level view without dashboards to build:</b> volume, latency, errors, and faults per service and per operation.</li>
+      <li><b>Dependencies:</b> how the storefront, the API, and AWS services call each other, with health on each edge.</li>
+      <li><b>SLOs:</b> define targets such as checkout success and latency, and alarm on them.</li>
+      <li><b>Pivots:</b> from an unhealthy operation to example traces in AWS X-Ray and the matching logs in CloudWatch Logs.</li>
+      <li><b>Business context stays:</b> custom metrics still land in their own namespace alongside the standard signals.</li>
+    </ul>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Manual SDK vs. ADOT auto-instrumentation</h2>
+  <table>
+    <tr><th></th><th>Manual OpenTelemetry SDK</th><th>ADOT auto-instrumentation + Application Signals</th></tr>
+    <tr><td>Telemetry setup</td><td>Startup code in the application</td><td>Environment variables at launch</td></tr>
+    <tr><td>Business spans and metrics</td><td>ActivitySource and Meter</td><td>Same code, unchanged</td></tr>
+    <tr><td>Library instrumentation</td><td>Registered one by one in code</td><td>Automatic</td></tr>
+    <tr><td>Logs</td><td>Serilog JSON with trace IDs</td><td>Same</td></tr>
+    <tr><td>What appears in CloudWatch</td><td>Traces, custom metrics, logs</td><td>Plus services, operations, dependencies, service map, and SLOs</td></tr>
+    <tr><td>Changing what is collected</td><td>Code change and redeploy</td><td>Configuration change and restart</td></tr>
+  </table>
+  <p style="font-size:14px;color:#545B64;margin:14px 0 0">Many customers combine the two: auto-instrumentation for broad coverage, and a small amount of custom instrumentation where business context matters. Customers can choose based on how much control they need. See the <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Monitoring-Sections.html" style="color:#0073BB">Amazon CloudWatch Application Signals documentation</a>.</p>
+</section>
+
+</main>
+</body>
+</html>

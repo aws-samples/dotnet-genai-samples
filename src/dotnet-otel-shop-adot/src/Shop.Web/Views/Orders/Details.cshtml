@@ -1,0 +1,23 @@
+@model OrderDto
+@{
+    ViewData["Title"] = $"Order {Model.OrderId}";
+}
+<div class="alert alert-success">Thanks, @Model.CustomerName! Your order is confirmed.</div>
+<h1 class="h3">Order @Model.OrderId</h1>
+<p class="text-muted">
+    Placed @Model.CreatedAt.ToLocalTime().ToString("f") &middot;
+    Status: <span class="badge @(Model.Status == OrderStatus.Fulfilled ? "bg-success" : "bg-info text-dark")">@Model.Status</span>
+</p>
+<p class="small text-muted">A background worker picks up the order event and marks it Fulfilled. Refresh to see the status change.</p>
+<table class="table">
+    <thead><tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr><td>@item.Name</td><td class="text-center">@item.Quantity</td><td class="text-end">@item.LineTotal.ToString("C")</td></tr>
+        }
+    </tbody>
+    <tfoot><tr><th colspan="2" class="text-end">Total</th><th class="text-end">@Model.Total.ToString("C")</th></tr></tfoot>
+</table>
+<p><strong>Ship to:</strong> @Model.ShippingAddress</p>
+<a class="btn btn-outline-primary" asp-action="Index">All orders</a>

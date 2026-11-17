@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      No OpenTelemetry SDK, exporters, or instrumentation packages here any more: the ADOT
+      auto-instrumentation in each app supplies all of them. This one reference is only so
+      ShopInstrumentationPlugin can see AspNetCoreTraceInstrumentationOptions. It matches the
+      version ADOT 1.15.0 is built with.
+    -->
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+
+    <!-- Logs: unchanged from the manual-SDK version. Serilog writes JSON lines with trace IDs. -->
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Expressions" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>

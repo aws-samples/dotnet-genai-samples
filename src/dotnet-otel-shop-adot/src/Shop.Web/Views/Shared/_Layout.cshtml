@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Cloud Outfitters</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark mb-4">
+            <div class="container">
+                <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">Cloud Outfitters</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                        aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Products" asp-action="Index">Shop</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Orders" asp-action="Index">My Orders</a></li>
+                        <li class="nav-item"><a class="nav-link text-warning" asp-controller="Demo" asp-action="Index">Telemetry Demo</a></li>
+                    </ul>
+                    @await Component.InvokeAsync("CartSummary")
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main role="main" class="container pb-5 flex-grow-1">
+        @if (TempData["Message"] is string message)
+        {
+            <div class="alert alert-success">@message</div>
+        }
+        @RenderBody()
+    </main>
+    <footer class="border-top py-3 text-muted small">
+        <div class="container">Sample ASP.NET Core app instrumented with OpenTelemetry on AWS</div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

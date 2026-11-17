@@ -7,11 +7,14 @@
 
 receivers:
   otlp:
+    # Loopback only: the apps send from the same host (or the same ECS task, which shares
+    # localhost). Widen this only where other pods must reach it (e.g. an EKS DaemonSet),
+    # and keep it to the cluster network, never a public listener.
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: 127.0.0.1:4317
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: 127.0.0.1:4318
 
 processors:
   batch: {}

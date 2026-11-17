@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Optional checkout integrations for the .NET observability sample: an S3 bucket for order
+  receipts and a Secrets Manager secret for the (fake) payment gateway key. Deploy once, then
+  pass the outputs to the API as Shop__Integrations__ReceiptsBucket / Shop__Integrations__PaymentSecretId.
+
+Resources:
+  # Private bucket: no public access, encrypted at rest, TLS only, objects owned by the account.
+  ReceiptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub dotnet-shop-receipts-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      # Demo data: expire receipts after 30 days.
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-demo-receipts
+            Status: Enabled
+            Prefix: receipts/
+            ExpirationInDays: 30
+      Tags: [{ Key: app, Value: dotnet-shop }]
+
+  ReceiptsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReceiptsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt ReceiptsBucket.Arn
+              - !Sub ${ReceiptsBucket.Arn}/*
+            Condition: { Bool: { aws:SecureTransport: "false" } }
+
+  # The value is a generated placeholder; nothing real is charged in the demo.
+  PaymentGatewaySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: dotnet-shop/payment-gateway
+      Description: API key for the simulated payment gateway used by the Shop API checkout.
+      GenerateSecretString:
+        SecretStringTemplate: '{"provider":"fake-pay"}'
+        GenerateStringKey: apiKey
+        PasswordLength: 32
+        ExcludePunctuation: true
+      Tags: [{ Key: app, Value: dotnet-shop }]
+
+  # Least privilege for the Shop API: write receipts, read this one secret.
+  ShopApiIntegrationsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Shop API access to the receipts bucket and the payment gateway secret.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource: !Sub ${ReceiptsBucket.Arn}/receipts/*
+          - Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: !Ref PaymentGatewaySecret
+
+Outputs:
+  ReceiptsBucket:
+    Value: !Ref ReceiptsBucket
+    Export: { Name: dotnet-shop-receipts-bucket }
+  PaymentSecretArn:
+    Value: !Ref PaymentGatewaySecret
+    Export: { Name: dotnet-shop-payment-secret-arn }
+  ShopApiIntegrationsPolicyArn:
+    Value: !Ref ShopApiIntegrationsPolicy
+    Export: { Name: dotnet-shop-integrations-policy-arn }

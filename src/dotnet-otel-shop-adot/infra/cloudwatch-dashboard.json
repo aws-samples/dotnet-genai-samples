@@ -1,0 +1,410 @@
+{
+  "start": "-PT3H",
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 2,
+      "properties": {
+        "markdown": "## Cloud Outfitters (.NET + ADOT)\nBusiness metrics from custom `Meter` code; service health from **Application Signals**; runtime metrics from ADOT auto-instrumentation."
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 2,
+      "width": 8,
+      "height": 4,
+      "properties": {
+        "title": "Orders processed",
+        "region": "us-east-1",
+        "view": "singleValue",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT SUM(OrdersProcessed) FROM DotnetShop GROUP BY outcome",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "setPeriodToTimeRange": true
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 2,
+      "width": 8,
+      "height": 4,
+      "properties": {
+        "title": "Revenue (USD)",
+        "region": "us-east-1",
+        "view": "singleValue",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT SUM(OrderRevenue) FROM DotnetShop",
+              "id": "q1",
+              "label": "Revenue",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "setPeriodToTimeRange": true
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 2,
+      "width": 8,
+      "height": 4,
+      "properties": {
+        "title": "Avg checkout time (ms)",
+        "region": "us-east-1",
+        "view": "singleValue",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(TotalProcessingDurationMs) FROM DotnetShop GROUP BY outcome",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "setPeriodToTimeRange": true
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Orders processed over time",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT SUM(OrdersProcessed) FROM DotnetShop GROUP BY outcome",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": true
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Checkout time (ms)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(TotalProcessingDurationMs) FROM DotnetShop GROUP BY outcome",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "DynamoDB calls by operation (Application Signals)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "SampleCount",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT COUNT(Latency) FROM SCHEMA(ApplicationSignals, Environment, Operation, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType, RemoteService, Service) WHERE Service = 'shop-api' AND RemoteService = 'AWS::DynamoDB' GROUP BY RemoteOperation, RemoteResourceIdentifier ORDER BY COUNT() DESC",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "DynamoDB latency by operation (ms, Application Signals)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(Latency) FROM SCHEMA(ApplicationSignals, Environment, Operation, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType, RemoteService, Service) WHERE Service = 'shop-api' AND RemoteService = 'AWS::DynamoDB' GROUP BY RemoteOperation, RemoteResourceIdentifier ORDER BY AVG() DESC",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 24,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "### Service health (Application Signals)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 25,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Latency by operation (ms), top 10",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(Latency) FROM ApplicationSignals GROUP BY Service, Operation ORDER BY AVG() DESC LIMIT 10",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 25,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "title": "Faults (5xx) by service",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT SUM(Fault) FROM ApplicationSignals GROUP BY Service",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 25,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "title": "Errors (4xx) by service",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT SUM(Error) FROM ApplicationSignals GROUP BY Service",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 31,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "### Runtime (ADOT auto-instrumentation)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 32,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "HTTP server latency by route (ms)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(\"http.server.request.duration\") FROM DotnetShop GROUP BY \"service.name\", \"http.route\" ORDER BY AVG() DESC LIMIT 10",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 32,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "title": "Process memory (bytes)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Maximum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT MAX(\"process.memory.usage\") FROM DotnetShop GROUP BY \"service.name\"",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18,
+      "y": 32,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "title": "Thread pool queue length",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Maximum",
+        "period": 300,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT MAX(\"dotnet.thread_pool.queue.length\") FROM DotnetShop GROUP BY \"service.name\"",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ],
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 18,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "shop-orders table: calls by operation",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "SampleCount",
+        "period": 60,
+        "stacked": false,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT COUNT(Latency) FROM SCHEMA(ApplicationSignals, Environment, Operation, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType, RemoteService, Service) WHERE Service = 'shop-api' AND RemoteResourceIdentifier = 'shop-orders' GROUP BY RemoteOperation ORDER BY COUNT() DESC",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 18,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "shop-orders table: latency by operation (ms)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stat": "Average",
+        "period": 60,
+        "stacked": false,
+        "metrics": [
+          [
+            {
+              "expression": "SELECT AVG(Latency) FROM SCHEMA(ApplicationSignals, Environment, Operation, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType, RemoteService, Service) WHERE Service = 'shop-api' AND RemoteResourceIdentifier = 'shop-orders' GROUP BY RemoteOperation ORDER BY AVG() DESC",
+              "id": "q1",
+              "label": "",
+              "region": "us-east-1"
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

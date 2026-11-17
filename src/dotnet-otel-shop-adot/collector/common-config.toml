@@ -1,0 +1,5 @@
+# Copy to /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
+# The agent runs as root, so point it at your user's credentials file explicitly.
+[credentials]
+  shared_credential_profile = "default"
+  shared_credential_file = "/Users/<your-mac-user>/.aws/credentials"

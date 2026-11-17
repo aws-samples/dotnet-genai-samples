@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: DynamoDB tables and SQS queues for the .NET OpenTelemetry sample shop.
+
+Parameters:
+  Prefix:
+    Type: String
+    Default: shop
+    Description: Prefix for resource names.
+
+Resources:
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Prefix}-products"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+
+  CartsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Prefix}-carts"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Prefix}-orders"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: OrderId
+          AttributeType: S
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: OrderId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SessionId-index
+          KeySchema:
+            - AttributeName: SessionId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  OrderEventsDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${Prefix}-order-events-dlq"
+      MessageRetentionPeriod: 1209600
+
+  OrderEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${Prefix}-order-events"
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrderEventsDlq.Arn
+        maxReceiveCount: 5
+
+  # Attach this to the role your API runs as (EC2 instance profile, ECS task role, etc.).
+  ShopApiPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Least-privilege access for the Shop API.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Scan
+              - dynamodb:Query
+            Resource:
+              - !GetAtt ProductsTable.Arn
+              - !GetAtt CartsTable.Arn
+              - !GetAtt OrdersTable.Arn
+              - !Sub "${OrdersTable.Arn}/index/*"
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt OrderEventsQueue.Arn
+
+Outputs:
+  OrderQueueUrl:
+    Value: !Ref OrderEventsQueue
+  ShopApiPolicyArn:
+    Value: !Ref ShopApiPolicy

@@ -28,22 +28,18 @@ Parameters:
     Type: String
     Default: ""
     Description: Managed policy granting the API access to the tables and queue.
-  # Optional checkout integrations (infra/demo-integrations.yaml outputs). Empty = off.
+  # Required checkout resources (infra/demo-integrations.yaml outputs).
   ReceiptsBucket:
     Type: String
-    Default: ""
     Description: S3 bucket for order receipts.
   PaymentSecretArn:
     Type: String
-    Default: ""
     Description: Secrets Manager secret with the payment gateway key.
   IntegrationsPolicyArn:
     Type: String
-    Default: ""
     Description: Managed policy granting the API access to the bucket and secret.
 
 Conditions:
-  HasIntegrationsPolicy: !Not [!Equals [!Ref IntegrationsPolicyArn, ""]]
   UseAwsStorage: !Not [!Equals [!Ref OrderQueueUrl, ""]]
 
 Rules:
@@ -302,7 +298,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
-        - !If [HasIntegrationsPolicy, !Ref IntegrationsPolicyArn, !Ref AWS::NoValue]
+        - !Ref IntegrationsPolicyArn
         - !If [UseAwsStorage, !Ref ShopApiPolicyArn, !Ref AWS::NoValue]
 
   # ---------------------------------------------------------------------------

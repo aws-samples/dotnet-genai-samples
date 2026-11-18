@@ -52,59 +52,67 @@ The ADOT NuGet package (rather than the machine-wide installer) puts the profile
 build output, plus `instrument.sh` / `instrument.cmd`, which set the profiler variables. It also works on
 macOS for local runs.
 
+## Prerequisites
+
+- The .NET 10 SDK (`global.json` pins it), the AWS CLI, and AWS credentials for an account you can deploy to.
+- Two CloudFormation stacks in your account and region. The API calls these services, and ADOT traces
+  every call with no code in the app:
+
+| Stack | Template | Creates | Required |
+|---|---|---|---|
+| `dotnet-shop-integrations` | `infra/demo-integrations.yaml` | S3 receipts bucket, Secrets Manager payment key, IAM policy | Yes |
+| `dotnet-shop` | `infra/shop-resources.yaml` | DynamoDB tables, SQS queue with a dead-letter queue, IAM policy | No. Without it the API stores data in memory |
+
+```bash
+aws cloudformation deploy --stack-name dotnet-shop-integrations \
+  --template-file infra/demo-integrations.yaml --capabilities CAPABILITY_IAM
+aws cloudformation deploy --stack-name dotnet-shop \
+  --template-file infra/shop-resources.yaml --capabilities CAPABILITY_IAM
+```
+
+To clean up, empty the receipts bucket (`aws s3 rm s3://<ReceiptsBucket output> --recursive`) and delete
+both stacks. Deleting `dotnet-shop` removes the tables and their data.
+
 ## Run locally
 
 ```bash
-# No AWS, no agent: spans and metrics printed to the terminal
-scripts/run-local.sh api console      # http://localhost:5100
-scripts/run-local.sh web console      # http://localhost:5200
+scripts/run-local.sh api      # http://localhost:5100
+scripts/run-local.sh web      # http://localhost:5200
 
-# With the CloudWatch agent running locally (collector/cloudwatch-agent-config.json):
-scripts/run-local.sh api
-scripts/run-local.sh web
+# Print spans and metrics to the terminal instead of sending them to the CloudWatch agent:
+scripts/run-local.sh api console
+scripts/run-local.sh web console
 ```
 
-To start the agent on a Mac, use `collector/cloudwatch-agent-config.json` and point the agent at your
-AWS profile with `collector/common-config.toml` (the agent runs as root).
+`run-local.sh api` reads the stack outputs with your default AWS credentials and sets
+`Shop__Integrations__ReceiptsBucket`, `Shop__Integrations__PaymentSecretId`, and, when the `dotnet-shop`
+stack exists, `Shop__Storage=Aws` and `Shop__Aws__OrderQueueUrl`. `SHOP_STORAGE=InMemory` forces in-memory
+storage. If the integrations stack is missing, the script stops and says so; the API itself also refuses to
+start without the bucket and secret settings.
+
+Checkout reads the payment gateway key from Secrets Manager and writes a JSON receipt (no customer name,
+email, or address) to S3. There is no tracing code for either: the ADOT AWS SDK instrumentation creates the
+spans, and Application Signals lists DynamoDB, SQS, S3, and Secrets Manager as shop-api dependencies. Code:
+`src/Shop.Api/Integrations/AwsIntegrations.cs`. The secret is read on every checkout so each trace shows it;
+a production service would cache it.
+
+To start the CloudWatch agent on a Mac, use `collector/cloudwatch-agent-config.json` and point the agent at
+your AWS profile with `collector/common-config.toml` (the agent runs as root).
 
 ## Run on Amazon EC2 (Windows Server)
 
 1. Attach an instance role with `CloudWatchAgentServerPolicy`, and enable Application Signals in the account once.
 2. Install the CloudWatch agent and start it with `collector/cloudwatch-agent-config-windows.json`.
-3. `.\scripts\run-windows.ps1 -App api` and `.\scripts\run-windows.ps1 -App web`.
+3. Create the stacks from Prerequisites, and attach their managed policies (`ShopApiPolicy`, `ShopApiIntegrationsPolicy`) to the instance role.
+4. `.\scripts\run-windows.ps1 -App api` and `.\scripts\run-windows.ps1 -App web`.
 
 Serilog writes to `C:\shop-logs\*.log`; the agent tails them into `/dotnet-shop/{api,web,journey}`.
 
 ## Run on Amazon ECS on AWS Fargate
 
-`infra/deploy-ecs.sh` works as before. The profiler is already in each image (`/app`), so the task
+`infra/deploy-ecs.sh` needs the stacks from Prerequisites (`dotnet-shop-integrations` is required, `dotnet-shop` is optional). The profiler is already in each image (`/app`), so the task
 definition only adds environment variables; no init container is needed. The CloudWatch agent sidecar
 config now enables `application_signals`.
-
-## Storage: DynamoDB and SQS on a Mac
-
-`scripts/run-local.sh api` uses DynamoDB and SQS when the `dotnet-shop` stack (`infra/shop-resources.yaml`)
-exists, using your default AWS credentials; otherwise it uses in-memory storage. `SHOP_STORAGE=InMemory`
-forces in-memory. There is no timing code: ADOT traces each DynamoDB and SQS call, and the dashboard's
-DynamoDB widgets read latency and call counts from Application Signals.
-
-## S3 and Secrets Manager dependencies (optional)
-
-Checkout reads the payment gateway API key from AWS Secrets Manager and writes a JSON receipt
-(no customer name, email, or address) to Amazon S3. There is no tracing code for either: the ADOT
-AWS SDK instrumentation creates the spans, and Application Signals lists `AWS::SecretsManager` and
-`AWS::S3` as shop-api dependencies with the secret and bucket as resources.
-
-```bash
-aws cloudformation deploy --stack-name dotnet-shop-integrations \
-  --template-file infra/demo-integrations.yaml --capabilities CAPABILITY_IAM
-```
-
-`scripts/run-local.sh api` and `infra/deploy-ecs.sh` read the stack outputs and turn the
-integrations on (`Shop__Integrations__ReceiptsBucket`, `Shop__Integrations__PaymentSecretId`).
-With the settings empty, the API uses no-op versions and runs without AWS. Code:
-`src/Shop.Api/Integrations/AwsIntegrations.cs`. The secret is read on every checkout so each
-trace shows it; a production service would cache it.
 
 ## Things we found (and how they are handled)
 
@@ -118,26 +126,26 @@ trace shows it; a production service would cache it.
 | MVC conventional routing | Every storefront page is one operation, `GET {controller=Home}/{action=Index}/{id?}` | `OTEL_AWS_HTTP_OPERATION_PATHS` maps URLs to operations, for example `GET /Products/Details/{id}` |
 | Cumulative metrics through the CloudWatch agent | The first export of every new metric series is used as a baseline and dropped, so early orders are missing from CloudWatch | `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta` in `run-local.sh`: the app sends per-interval changes, which the agent passes through as-is |
 | AWS SDK for .NET v4 | The CloudWatch docs list SDK v3 for full Application Signals support | Kept v4. Verified on v4: DynamoDB, SQS, S3 and Secrets Manager calls all appear as shop-api dependencies with their table, queue, bucket and secret. The SQS consumer span shows as an `aws_sqs` node with `UnknownRemoteOperation` |
-| .NET 8 end of support | Auto-instrumentation warned that .NET 8 reached end of support on 2026-11-10 | All projects target `net10.0`; `global.json` pins the .NET 10 SDK. `run-local.sh` picks a `dotnet` that has the .NET 10 SDK (Homebrew `dotnet@8` can't build it); override with `DOTNET=/path/to/dotnet` |
 | Vulnerable transitive package: `OpenTelemetry.Resources.Host` 1.15.1-beta.1 | `NU1903` build warning and a GitHub Dependabot alert for [GHSA-v8pv-4842-x354](https://github.com/advisories/GHSA-v8pv-4842-x354) (high severity, fixed in 1.16.0-beta.2). The advisory describes arbitrary code execution through local PATH hijacking, on macOS only. It comes in through `OpenTelemetry.AutoInstrumentation` 1.16.0, which ADOT 1.15.0 requires | Not overridden: ADOT 1.15.0 is the latest release and is built and tested against this version. On macOS, run the sample only on a machine you trust. To clear it, move to an ADOT release built on a newer upstream auto-instrumentation and remove the `OpenTelemetry.AutoInstrumentation` pin from both `.csproj` files |
 
 ---
 
-# Original sample documentation
+# Reference
 
 A small e-commerce app for exploring OpenTelemetry with .NET on AWS:
 
 - **Shop.Web**: ASP.NET Core MVC storefront (home, catalog, product detail, cart, checkout, orders)
-- **Shop.Api**: ASP.NET Core REST API, using the AWS SDK for .NET (DynamoDB + SQS)
+- **Shop.Api**: ASP.NET Core REST API, using the AWS SDK for .NET (DynamoDB, SQS, S3, Secrets Manager)
 - **Shop.Telemetry**: Serilog JSON logging and the optional auto-instrumentation plugin (no OpenTelemetry SDK setup in this copy)
 - **Shop.Contracts**: DTOs shared by the web app and the API
 
 ```
-Browser ──> Shop.Web (MVC) ──HTTP/REST──> Shop.Api ──AWS SDK──> DynamoDB (products, carts, orders)
-                                              │
-                                              └──AWS SDK──> SQS order-events ──> fulfillment worker
-                     │                        │                                  (in Shop.Api)
-                     └──────── OTLP ──────────┴──> OTel Collector (ADOT) ──> X-Ray / CloudWatch
+Browser ──> Shop.Web (MVC) ──HTTP──> Shop.Api ──AWS SDK──> DynamoDB (products, carts, orders)
+                                        ├──AWS SDK──> Secrets Manager (payment key)
+                                        ├──AWS SDK──> S3 (receipts)
+                                        └──AWS SDK──> SQS order-events ──> fulfillment worker (in Shop.Api)
+
+Both apps (ADOT auto-instrumentation) ──OTLP──> CloudWatch agent ──> X-Ray / Application Signals / CloudWatch
 ```
 
 One checkout produces a single trace that spans both services and the async worker:
@@ -150,62 +158,14 @@ POST Checkout/Index                       shop-web
          ├─ DynamoDB.GetItem (cart)
          ├─ ValidateStock → DynamoDB.GetItem
          ├─ ProcessPayment                (simulated latency, ~10% declined)
+         │  └─ SecretsManager.GetSecretValue
          ├─ DynamoDB.PutItem (order)
          ├─ DynamoDB.DeleteItem (cart)
-         └─ SQS.SendMessage               (traceparent injected into message attributes)
-            └─ order-events process       (consumer, continues the same trace)
-               └─ DynamoDB.UpdateItem     (status → Fulfilled)
+         ├─ SQS.SendMessage               (traceparent injected into message attributes)
+         │  └─ order-events process       (consumer, continues the same trace)
+         │     └─ DynamoDB.UpdateItem     (status → Fulfilled)
+         └─ S3.PutObject (receipt)
 ```
-
-## Run locally (no AWS needed)
-
-Requires the .NET 10 SDK. By default the API uses in-memory storage and an in-process queue.
-
-```bash
-# Terminal 1: API on http://localhost:5100
-scripts/run-local.sh api console
-
-# Terminal 2: storefront on http://localhost:5200
-scripts/run-local.sh web console
-```
-
-`console` prints spans and metrics to the terminal (logs still go to the JSON file). To see traces in a UI,
-leave the exporter at the default (`otlp`) and run any OTLP backend on `localhost:4317`, such as
-Jaeger, the .NET Aspire dashboard, or the collector in `collector/`.
-
-## Run against AWS
-
-1. **Create the resources** (DynamoDB tables, SQS queue with DLQ, and an IAM policy for the API):
-
-   ```bash
-   aws cloudformation deploy --stack-name dotnet-shop \
-     --template-file infra/shop-resources.yaml --capabilities CAPABILITY_IAM
-   aws cloudformation describe-stacks --stack-name dotnet-shop \
-     --query "Stacks[0].Outputs" --output table
-   ```
-
-2. **Run a collector** with `collector/otel-collector-config.yaml`. Use the
-   [ADOT collector](https://aws-otel.github.io/docs/getting-started/collector) (EC2, ECS sidecar, EKS add-on),
-   or `otelcol-contrib` locally. The collector needs `AWS_REGION` and permissions for
-   `xray:PutTraceSegments`, `xray:PutTelemetryRecords`, `logs:CreateLogGroup`, `logs:CreateLogStream`,
-   and `logs:PutLogEvents`. The AWS-managed `AWSXrayWriteOnlyAccess` and `CloudWatchAgentServerPolicy`
-   policies cover these.
-
-3. **Start the API in AWS mode** (credentials come from the default AWS chain: env vars, profile, or role):
-
-   ```bash
-   Shop__Storage=Aws \
-   Shop__Aws__OrderQueueUrl=<OrderQueueUrl output> \
-   AWS__Region=us-east-1 \
-   dotnet run --project src/Shop.Api
-   ```
-
-   On startup the API seeds the products table if it's empty.
-
-4. **Start Shop.Web** as above, then shop. Traces appear in the X-Ray / CloudWatch trace map, metrics
-   under the `DotnetShop` namespace, and logs in `/dotnet-shop/app`.
-
-To clean up: `aws cloudformation delete-stack --stack-name dotnet-shop`. This deletes the tables and their data.
 
 ## Deploy to ECS on Fargate
 
@@ -236,7 +196,7 @@ repositories and delete `dotnet-shop-ecr`.
 |---|---|---|
 | Traces | ASP.NET Core | `GET Products/Details`, `POST /api/orders` |
 | Traces | HttpClient | Web → API calls, with W3C `traceparent` propagation |
-| Traces | AWS SDK (`OpenTelemetry.Instrumentation.AWS`) | `DynamoDB.GetItem`, `DynamoDB.Query`, `SQS.SendMessage` |
+| Traces | AWS SDK (`OpenTelemetry.Instrumentation.AWS`) | `DynamoDB.GetItem`, `DynamoDB.Query`, `SQS.SendMessage`, `S3.PutObject`, `SecretsManager.GetSecretValue` |
 | Traces | Custom (`Shop.Api` ActivitySource) | `Checkout`, `ValidateStock`, `ProcessPayment`, `order-events process` |
 | Metrics | ASP.NET Core, HttpClient, .NET runtime | `http.server.request.duration`, GC, thread pool |
 | Metrics | AWS SDK | AWS SDK client metrics |
@@ -356,10 +316,8 @@ Set these in `appsettings.json` or as environment variables (`__` separates sect
 
 | Setting | Default | Notes |
 |---|---|---|
-| `Telemetry:Exporter` | `otlp` | `otlp`, `console`, or `both` |
-| `Telemetry:AwsResourceDetector` | `none` | `ec2`, `ecs`, or `eks` adds cloud/host resource attributes. Leave it `none` off AWS, because detectors add startup latency. |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | Standard OTel env var |
-| `Shop:Storage` (API) | `InMemory` | `Aws` uses DynamoDB + SQS |
+| `Shop:Storage` (API) | `InMemory` | `Aws` uses DynamoDB + SQS (`run-local.sh` sets it when the `dotnet-shop` stack exists) |
+| `Shop:Integrations:ReceiptsBucket` / `PaymentSecretId` (API) | none, required | S3 bucket and Secrets Manager secret from `dotnet-shop-integrations` |
 | `Shop:Aws:*` (API) | `shop-*` names | Table names, GSI name, `OrderQueueUrl` |
 | `Shop:Chaos:PaymentFailureRate` (API) | `0.1` | Fraction of payments declined |
 | `Shop:Chaos:PaymentMin/MaxLatencyMs` (API) | `50` / `600` | Simulated payment latency |
@@ -374,4 +332,3 @@ Set these in `appsettings.json` or as environment variables (`__` separates sect
 - X-Ray accepts W3C trace IDs, so no X-Ray ID generator or propagator is needed. If you put an ALB in front, its
   `X-Amzn-Trace-Id` header is a separate trace. Add `OpenTelemetry.Extensions.AWS` and the `AWSXRayPropagator` if you
   want to join them.
-- For CloudWatch Application Signals, the ADOT .NET auto-instrumentation is an alternative to this manual SDK setup.

@@ -18,8 +18,8 @@ public class CheckoutService(
     IProductRepository products,
     IOrderRepository orders,
     IOrderEventPublisher events,
-    IPaymentCredentialProvider paymentCredentials,
-    IOrderReceiptStore receipts,
+    SecretsManagerPaymentCredentialProvider paymentCredentials,
+    S3OrderReceiptStore receipts,
     IOptions<ShopOptions> options,
     ILogger<CheckoutService> logger)
 {

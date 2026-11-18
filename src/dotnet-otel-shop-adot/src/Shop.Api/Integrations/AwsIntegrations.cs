@@ -10,17 +10,10 @@ using Shop.Contracts;
 
 namespace Shop.Api.Integrations;
 
-// Optional AWS integrations used during checkout. There is no tracing code here: the ADOT
-// auto-instrumentation wraps every AWS SDK call in a client span (for example
-// "SecretsManager.GetSecretValue" and "S3.PutObject"), and Application Signals reports S3 and
-// Secrets Manager as dependencies of shop-api. Each integration falls back to a no-op when its
-// setting is empty (see IntegrationOptions), so the app still runs without an AWS account.
-
-/// <summary>Supplies the payment gateway API key used to authorize a charge.</summary>
-public interface IPaymentCredentialProvider
-{
-    Task<string> GetApiKeyAsync(CancellationToken ct);
-}
+// AWS calls used during checkout. There is no tracing code here: the ADOT auto-instrumentation
+// wraps every AWS SDK call in a client span (for example "SecretsManager.GetSecretValue" and
+// "S3.PutObject"), and Application Signals reports S3 and Secrets Manager as dependencies of
+// shop-api. Both resources are required; see infra/demo-integrations.yaml.
 
 /// <summary>Reads the payment gateway API key from AWS Secrets Manager.</summary>
 /// <remarks>
@@ -30,7 +23,7 @@ public interface IPaymentCredentialProvider
 public sealed class SecretsManagerPaymentCredentialProvider(
     IAmazonSecretsManager secrets,
     IOptions<ShopOptions> options,
-    ILogger<SecretsManagerPaymentCredentialProvider> logger) : IPaymentCredentialProvider
+    ILogger<SecretsManagerPaymentCredentialProvider> logger)
 {
     public async Task<string> GetApiKeyAsync(CancellationToken ct)
     {
@@ -65,23 +58,11 @@ public sealed class SecretsManagerPaymentCredentialProvider(
     }
 }
 
-/// <summary>Used when no secret is configured (local runs without AWS).</summary>
-public sealed class LocalPaymentCredentialProvider : IPaymentCredentialProvider
-{
-    public Task<string> GetApiKeyAsync(CancellationToken ct) => Task.FromResult("local-dev-key");
-}
-
-/// <summary>Stores an order receipt after the order is placed.</summary>
-public interface IOrderReceiptStore
-{
-    Task StoreAsync(OrderDto order, CancellationToken ct);
-}
-
 /// <summary>Writes one JSON receipt per order to Amazon S3.</summary>
 public sealed class S3OrderReceiptStore(
     IAmazonS3 s3,
     IOptions<ShopOptions> options,
-    ILogger<S3OrderReceiptStore> logger) : IOrderReceiptStore
+    ILogger<S3OrderReceiptStore> logger)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
@@ -111,10 +92,4 @@ public sealed class S3OrderReceiptStore(
 
         ShopLog.ReceiptStored(logger, order.OrderId, $"s3://{bucket}/{key}", stopwatch.ElapsedMilliseconds);
     }
-}
-
-/// <summary>Used when no bucket is configured.</summary>
-public sealed class NoOpOrderReceiptStore : IOrderReceiptStore
-{
-    public Task StoreAsync(OrderDto order, CancellationToken ct) => Task.CompletedTask;
 }

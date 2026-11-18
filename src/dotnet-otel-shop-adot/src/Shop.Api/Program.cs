@@ -27,10 +27,11 @@ builder.AddShopFileLogging("shop-api");
 builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection(ShopOptions.Section));
 var shop = builder.Configuration.GetSection(ShopOptions.Section).Get<ShopOptions>() ?? new ShopOptions();
 
+// Region and profile come from the "AWS" config section or the standard AWS environment/credential chain.
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+
 if (shop.UseAws)
 {
-    // Region and profile come from the "AWS" config section or the standard AWS environment/credential chain.
-    builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
     builder.Services.AddAWSService<IAmazonDynamoDB>();
     builder.Services.AddAWSService<IAmazonSQS>();
 
@@ -53,31 +54,17 @@ else
     builder.Services.AddHostedService<InMemoryFulfillmentWorker>();
 }
 
-// Optional AWS integrations used by checkout, independent of the storage choice:
-// Secrets Manager holds the payment gateway key, S3 stores order receipts.
+// Checkout reads the payment key from Secrets Manager and writes receipts to S3. Both are required.
 var integrations = shop.Integrations;
-if (!shop.UseAws && (integrations.UseS3 || integrations.UseSecretsManager))
-    builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+if (string.IsNullOrWhiteSpace(integrations.ReceiptsBucket) || string.IsNullOrWhiteSpace(integrations.PaymentSecretId))
+    throw new InvalidOperationException(
+        "Set Shop__Integrations__ReceiptsBucket and Shop__Integrations__PaymentSecretId " +
+        "(deploy infra/demo-integrations.yaml to create the bucket and secret; scripts/run-local.sh sets them for you).");
 
-if (integrations.UseSecretsManager)
-{
-    builder.Services.AddAWSService<IAmazonSecretsManager>();
-    builder.Services.AddSingleton<IPaymentCredentialProvider, SecretsManagerPaymentCredentialProvider>();
-}
-else
-{
-    builder.Services.AddSingleton<IPaymentCredentialProvider, LocalPaymentCredentialProvider>();
-}
-
-if (integrations.UseS3)
-{
-    builder.Services.AddAWSService<IAmazonS3>();
-    builder.Services.AddSingleton<IOrderReceiptStore, S3OrderReceiptStore>();
-}
-else
-{
-    builder.Services.AddSingleton<IOrderReceiptStore, NoOpOrderReceiptStore>();
-}
+builder.Services.AddAWSService<IAmazonSecretsManager>();
+builder.Services.AddAWSService<IAmazonS3>();
+builder.Services.AddSingleton<SecretsManagerPaymentCredentialProvider>();
+builder.Services.AddSingleton<S3OrderReceiptStore>();
 
 builder.Services.AddSingleton<OrderFulfillmentProcessor>();
 builder.Services.AddScoped<CheckoutService>();

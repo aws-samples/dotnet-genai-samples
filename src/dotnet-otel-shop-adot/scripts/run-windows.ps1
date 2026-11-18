@@ -76,6 +76,19 @@ if ($Mode -eq 'console') {
   $env:OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE = 'delta'   # agent drops the first cumulative point of each series
 }
 
+# --- The API needs two AWS stacks (see README, Prerequisites), read with the instance role or your profile ---
+if ($App -eq 'api') {
+  function Get-StackOutput($Stack, $Key) {
+    aws cloudformation describe-stacks --stack-name $Stack --query "Stacks[0].Outputs[?OutputKey=='$Key'].OutputValue" --output text 2>$null
+  }
+  $bucket = Get-StackOutput 'dotnet-shop-integrations' 'ReceiptsBucket'
+  if (-not $bucket -or $bucket -eq 'None') { throw 'Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first (see README).' }
+  $env:Shop__Integrations__ReceiptsBucket = $bucket
+  $env:Shop__Integrations__PaymentSecretId = Get-StackOutput 'dotnet-shop-integrations' 'PaymentSecretArn'
+  $queue = Get-StackOutput 'dotnet-shop' 'OrderQueueUrl'          # optional: without it the API stores data in memory
+  if ($queue -and $queue -ne 'None') { $env:Shop__Storage = 'Aws'; $env:Shop__Aws__OrderQueueUrl = $queue }
+}
+
 Write-Host "==> $Service on http://localhost:$Port (ADOT auto-instrumentation, mode: $Mode)"
 Set-Location "src/$Project"
 dotnet (Join-Path $Out "$Project.dll") --urls "http://localhost:$Port"

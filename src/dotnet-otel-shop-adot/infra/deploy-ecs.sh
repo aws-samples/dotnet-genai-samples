@@ -34,24 +34,24 @@ done
 
 out() { aws cloudformation describe-stacks --stack-name "$1" \
           --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text; }
-INTEGRATIONS=()
-# Optional: if infra/shop-resources.yaml (stack dotnet-shop) is deployed, use DynamoDB + SQS.
+
+# Required: the S3 bucket and Secrets Manager secret (infra/demo-integrations.yaml).
+aws cloudformation describe-stacks --stack-name dotnet-shop-integrations >/dev/null 2>&1 ||
+  { echo "Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first." >&2; exit 1; }
+PARAMS=(ReceiptsBucket="$(out dotnet-shop-integrations ReceiptsBucket)"
+        PaymentSecretArn="$(out dotnet-shop-integrations PaymentSecretArn)"
+        IntegrationsPolicyArn="$(out dotnet-shop-integrations ShopApiIntegrationsPolicyArn)")
+
+# Optional: DynamoDB + SQS (infra/shop-resources.yaml). Without it the API stores data in memory.
 if aws cloudformation describe-stacks --stack-name dotnet-shop >/dev/null 2>&1; then
-  INTEGRATIONS+=(OrderQueueUrl="$(out dotnet-shop OrderQueueUrl)" ShopApiPolicyArn="$(out dotnet-shop ShopApiPolicyArn)")
+  PARAMS+=(OrderQueueUrl="$(out dotnet-shop OrderQueueUrl)" ShopApiPolicyArn="$(out dotnet-shop ShopApiPolicyArn)")
   echo "==> Storage: DynamoDB + SQS"
-fi
-# Optional: if infra/demo-integrations.yaml is deployed, give the API its S3 bucket and secret.
-if aws cloudformation describe-stacks --stack-name dotnet-shop-integrations >/dev/null 2>&1; then
-  INTEGRATIONS+=(ReceiptsBucket="$(out dotnet-shop-integrations ReceiptsBucket)"
-                 PaymentSecretArn="$(out dotnet-shop-integrations PaymentSecretArn)"
-                 IntegrationsPolicyArn="$(out dotnet-shop-integrations ShopApiIntegrationsPolicyArn)")
-  echo "==> Integrations on: S3 receipts and Secrets Manager payment key"
 fi
 
 echo "==> ECS stack (storefront allowed from $ALLOWED_CIDR)"
 aws cloudformation deploy --stack-name dotnet-shop-ecs --template-file infra/ecs-fargate.yaml \
   --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" AllowedCidr="$ALLOWED_CIDR" ${INTEGRATIONS[@]+"${INTEGRATIONS[@]}"}
+  --parameter-overrides ImageTag="$TAG" AllowedCidr="$ALLOWED_CIDR" "${PARAMS[@]}"
 
 aws cloudformation describe-stacks --stack-name dotnet-shop-ecs \
   --query "Stacks[0].Outputs[?OutputKey=='StorefrontUrl'].OutputValue" --output text

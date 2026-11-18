@@ -19,20 +19,14 @@ public class ShopOptions
     public bool UseAws => string.Equals(Storage, "Aws", StringComparison.OrdinalIgnoreCase);
 }
 
-/// <summary>
-/// Optional AWS integrations, independent of <see cref="ShopOptions.Storage"/>. Each one is off
-/// when its value is empty, so the app still runs with no AWS account.
-/// </summary>
+/// <summary>AWS resources that checkout needs. Both are required; infra/demo-integrations.yaml creates them.</summary>
 public class IntegrationOptions
 {
-    /// <summary>S3 bucket for order receipts (one JSON object per order). Empty = don't write receipts.</summary>
+    /// <summary>S3 bucket for order receipts (one JSON object per order).</summary>
     public string ReceiptsBucket { get; set; } = "";
 
-    /// <summary>Secrets Manager secret ID or ARN holding the payment gateway API key. Empty = no lookup.</summary>
+    /// <summary>Secrets Manager secret ID or ARN holding the payment gateway API key.</summary>
     public string PaymentSecretId { get; set; } = "";
-
-    public bool UseS3 => !string.IsNullOrWhiteSpace(ReceiptsBucket);
-    public bool UseSecretsManager => !string.IsNullOrWhiteSpace(PaymentSecretId);
 }
 
 public class AwsResourceOptions

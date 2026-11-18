@@ -3,11 +3,11 @@
 #
 #   scripts/run-local.sh api            # send to the local CloudWatch agent (Application Signals)
 #   scripts/run-local.sh web
-#   scripts/run-local.sh api console    # no agent needed: print spans and metrics to the terminal
+#   scripts/run-local.sh api console    # no CloudWatch agent needed: print spans and metrics to the terminal
 #   scripts/run-local.sh api both       # send to the agent AND print to the terminal
 #
 # The app has no telemetry code. Everything is the environment variables below.
-# Requires the .NET 10 SDK (set DOTNET=/path/to/dotnet to choose a specific install).
+# Requires the .NET 10 SDK (global.json pins it) and the AWS stacks described below.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -21,19 +21,8 @@ case "$APP" in
   *) echo "unknown app: $APP (use api or web)" >&2; exit 1 ;;
 esac
 
-# Use a dotnet host that has the .NET 10 SDK. Set DOTNET to override; otherwise prefer the
-# one on PATH, then the Microsoft installer location (Homebrew's dotnet@8 can't build net10.0).
-TFM=net10.0
-if [ -z "${DOTNET:-}" ]; then
-  for candidate in "$(command -v dotnet || true)" /usr/local/share/dotnet/dotnet "$HOME/.dotnet/dotnet"; do
-    if [ -x "$candidate" ] && "$candidate" --list-sdks 2>/dev/null | grep -q '^10\.'; then DOTNET="$candidate"; break; fi
-  done
-fi
-[ -n "${DOTNET:-}" ] || { echo "The .NET 10 SDK was not found. Install it or set DOTNET=/path/to/dotnet" >&2; exit 1; }
-export DOTNET_ROOT="$(dirname "$(readlink -f "$DOTNET")")"
-
-"$DOTNET" build "src/$PROJECT/$PROJECT.csproj" -c Release -v q --nologo
-OUT="$PWD/src/$PROJECT/bin/Release/$TFM"
+dotnet build "src/$PROJECT/$PROJECT.csproj" -c Release -v q --nologo
+OUT="$PWD/src/$PROJECT/bin/Release/net10.0"
 
 # Which native profiler to load: osx-arm64, osx-x64, linux-arm64, or linux-x64.
 case "$(uname -s)" in Darwin) OS=osx; EXT=dylib ;; *) OS=linux; EXT=so ;; esac
@@ -72,24 +61,30 @@ fi
 stack_out() { aws cloudformation describe-stacks --stack-name "$1" \
                 --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null; }
 
-# Storage: DynamoDB tables + SQS queue when infra/shop-resources.yaml (stack dotnet-shop) is
-# deployed, otherwise in memory. Uses your default AWS credentials. SHOP_STORAGE=InMemory forces
-# in-memory. DynamoDB and SQS calls are traced by ADOT with no code in the app.
-if [ "$APP" = api ] && [ "$MODE" != console ] && [ "${SHOP_STORAGE:-auto}" != InMemory ]; then
-  if queue="$(stack_out dotnet-shop OrderQueueUrl)" && [ -n "$queue" ] && [ "$queue" != None ]; then
+# The API needs two AWS stacks, both read with your default AWS credentials:
+#   dotnet-shop               DynamoDB tables + SQS queue  (infra/shop-resources.yaml). Optional:
+#                             without it the API stores data in memory. SHOP_STORAGE=InMemory forces that.
+#   dotnet-shop-integrations  S3 receipts bucket + Secrets Manager payment key
+#                             (infra/demo-integrations.yaml). Required.
+# ADOT traces every call to these services with no code in the app.
+if [ "$APP" = api ]; then
+  stack_out() { aws cloudformation describe-stacks --stack-name "$1" \
+                  --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null; }
+
+  bucket="$(stack_out dotnet-shop-integrations ReceiptsBucket)"
+  if [ -z "$bucket" ] || [ "$bucket" = None ]; then
+    echo "Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first (see README)." >&2
+    exit 1
+  fi
+  export Shop__Integrations__ReceiptsBucket="$bucket"
+  export Shop__Integrations__PaymentSecretId="$(stack_out dotnet-shop-integrations PaymentSecretArn)"
+  echo "==> receipts: s3://$bucket, payment key: Secrets Manager"
+
+  queue="$(stack_out dotnet-shop OrderQueueUrl)"
+  if [ "${SHOP_STORAGE:-auto}" != InMemory ] && [ -n "$queue" ] && [ "$queue" != None ]; then
     export Shop__Storage=Aws
     export Shop__Aws__OrderQueueUrl="$queue"
     echo "==> storage: DynamoDB + SQS ($queue)"
-  fi
-fi
-
-# Optional: checkout reads the payment key from Secrets Manager and writes receipts to S3. On when
-# infra/demo-integrations.yaml (stack dotnet-shop-integrations) is deployed; SHOP_INTEGRATIONS=off skips it.
-if [ "$APP" = api ] && [ "$MODE" != console ] && [ "${SHOP_INTEGRATIONS:-on}" != off ]; then
-  if bucket="$(stack_out dotnet-shop-integrations ReceiptsBucket)" && [ -n "$bucket" ] && [ "$bucket" != None ]; then
-    export Shop__Integrations__ReceiptsBucket="$bucket"
-    export Shop__Integrations__PaymentSecretId="$(stack_out dotnet-shop-integrations PaymentSecretArn)"
-    echo "==> integrations on: s3://$bucket, Secrets Manager payment key"
   fi
 fi
 
@@ -125,4 +120,4 @@ fi
 # ------------------------------------------------------------------------------------------
 echo "==> shop-$APP on http://localhost:$PORT (mode: $MODE)"
 cd "src/$PROJECT"
-exec "$DOTNET" "$OUT/$PROJECT.dll" --urls "http://localhost:$PORT"
+exec dotnet "$OUT/$PROJECT.dll" --urls "http://localhost:$PORT"

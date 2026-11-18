@@ -61,31 +61,27 @@ fi
 stack_out() { aws cloudformation describe-stacks --stack-name "$1" \
                 --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null; }
 
-# The API needs two AWS stacks, both read with your default AWS credentials:
-#   dotnet-shop               DynamoDB tables + SQS queue  (infra/shop-resources.yaml). Optional:
-#                             without it the API stores data in memory. SHOP_STORAGE=InMemory forces that.
-#   dotnet-shop-integrations  S3 receipts bucket + Secrets Manager payment key
-#                             (infra/demo-integrations.yaml). Required.
+# The API needs two AWS stacks, read with your default AWS credentials (see README, Prerequisites):
+#   dotnet-shop               DynamoDB tables + SQS queue          (infra/shop-resources.yaml)
+#   dotnet-shop-integrations  S3 receipts bucket + payment secret  (infra/demo-integrations.yaml)
 # ADOT traces every call to these services with no code in the app.
 if [ "$APP" = api ]; then
   stack_out() { aws cloudformation describe-stacks --stack-name "$1" \
                   --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null; }
 
+  queue="$(stack_out dotnet-shop OrderQueueUrl)"
+  if [ -z "$queue" ] || [ "$queue" = None ]; then
+    echo "Stack dotnet-shop not found. Deploy infra/shop-resources.yaml first (see README)." >&2; exit 1
+  fi
   bucket="$(stack_out dotnet-shop-integrations ReceiptsBucket)"
   if [ -z "$bucket" ] || [ "$bucket" = None ]; then
-    echo "Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first (see README)." >&2
-    exit 1
+    echo "Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first (see README)." >&2; exit 1
   fi
+  export Shop__Aws__OrderQueueUrl="$queue"
   export Shop__Integrations__ReceiptsBucket="$bucket"
   export Shop__Integrations__PaymentSecretId="$(stack_out dotnet-shop-integrations PaymentSecretArn)"
+  echo "==> DynamoDB + SQS: $queue"
   echo "==> receipts: s3://$bucket, payment key: Secrets Manager"
-
-  queue="$(stack_out dotnet-shop OrderQueueUrl)"
-  if [ "${SHOP_STORAGE:-auto}" != InMemory ] && [ -n "$queue" ] && [ "$queue" != None ]; then
-    export Shop__Storage=Aws
-    export Shop__Aws__OrderQueueUrl="$queue"
-    echo "==> storage: DynamoDB + SQS ($queue)"
-  fi
 fi
 
 # ------------------------------------------------------------------------------------------

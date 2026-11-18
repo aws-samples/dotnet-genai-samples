@@ -2,7 +2,6 @@ using Amazon.DynamoDBv2;
 using Amazon.S3;
 using Amazon.SecretsManager;
 using Amazon.SQS;
-using Microsoft.Extensions.Options;
 using Shop.Api;
 using Shop.Api.Data;
 using Shop.Api.Demo;
@@ -27,45 +26,31 @@ builder.AddShopFileLogging("shop-api");
 builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection(ShopOptions.Section));
 var shop = builder.Configuration.GetSection(ShopOptions.Section).Get<ShopOptions>() ?? new ShopOptions();
 
+// The sample needs the AWS resources from infra/shop-resources.yaml (DynamoDB tables, SQS queue) and
+// infra/demo-integrations.yaml (S3 receipts bucket, Secrets Manager payment key).
+if (string.IsNullOrWhiteSpace(shop.Aws.OrderQueueUrl) ||
+    string.IsNullOrWhiteSpace(shop.Integrations.ReceiptsBucket) ||
+    string.IsNullOrWhiteSpace(shop.Integrations.PaymentSecretId))
+    throw new InvalidOperationException(
+        "Set Shop__Aws__OrderQueueUrl, Shop__Integrations__ReceiptsBucket and Shop__Integrations__PaymentSecretId " +
+        "(scripts/run-local.sh reads them from the dotnet-shop and dotnet-shop-integrations stacks).");
+
 // Region and profile come from the "AWS" config section or the standard AWS environment/credential chain.
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-
-if (shop.UseAws)
-{
-    builder.Services.AddAWSService<IAmazonDynamoDB>();
-    builder.Services.AddAWSService<IAmazonSQS>();
-
-    // No timing code: ADOT traces every DynamoDB and SQS call, and Application Signals turns those
-    // spans into latency, error, and fault metrics per operation.
-    builder.Services.AddSingleton<IProductRepository, DynamoDbProductRepository>();
-    builder.Services.AddSingleton<ICartRepository, DynamoDbCartRepository>();
-    builder.Services.AddSingleton<IOrderRepository, DynamoDbOrderRepository>();
-    builder.Services.AddSingleton<IOrderEventPublisher, SqsOrderEventPublisher>();
-    builder.Services.AddHostedService<SqsFulfillmentWorker>();
-}
-else
-{
-    // In-memory storage makes no network calls, so there is nothing for ADOT to trace here.
-    builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-    builder.Services.AddSingleton<ICartRepository, InMemoryCartRepository>();
-    builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
-    builder.Services.AddSingleton<InMemoryOrderQueue>();
-    builder.Services.AddSingleton<IOrderEventPublisher>(sp => sp.GetRequiredService<InMemoryOrderQueue>());
-    builder.Services.AddHostedService<InMemoryFulfillmentWorker>();
-}
-
-// Checkout reads the payment key from Secrets Manager and writes receipts to S3. Both are required.
-var integrations = shop.Integrations;
-if (string.IsNullOrWhiteSpace(integrations.ReceiptsBucket) || string.IsNullOrWhiteSpace(integrations.PaymentSecretId))
-    throw new InvalidOperationException(
-        "Set Shop__Integrations__ReceiptsBucket and Shop__Integrations__PaymentSecretId " +
-        "(deploy infra/demo-integrations.yaml to create the bucket and secret; scripts/run-local.sh sets them for you).");
-
+builder.Services.AddAWSService<IAmazonDynamoDB>();
+builder.Services.AddAWSService<IAmazonSQS>();
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 builder.Services.AddAWSService<IAmazonS3>();
+
+// No timing code anywhere: ADOT traces every DynamoDB, SQS, S3 and Secrets Manager call, and
+// Application Signals turns those spans into latency, error, and fault metrics per operation.
+builder.Services.AddSingleton<IProductRepository, DynamoDbProductRepository>();
+builder.Services.AddSingleton<ICartRepository, DynamoDbCartRepository>();
+builder.Services.AddSingleton<IOrderRepository, DynamoDbOrderRepository>();
+builder.Services.AddSingleton<IOrderEventPublisher, SqsOrderEventPublisher>();
+builder.Services.AddHostedService<SqsFulfillmentWorker>();
 builder.Services.AddSingleton<SecretsManagerPaymentCredentialProvider>();
 builder.Services.AddSingleton<S3OrderReceiptStore>();
-
 builder.Services.AddSingleton<OrderFulfillmentProcessor>();
 builder.Services.AddScoped<CheckoutService>();
 builder.Services.AddHostedService<CatalogSeeder>();
@@ -79,7 +64,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapShopEndpoints();
 app.MapDemoEndpoints();
 
-app.Logger.LogInformation("Shop API starting with {Storage} storage",
-    app.Services.GetRequiredService<IOptions<ShopOptions>>().Value.Storage);
+app.Logger.LogInformation("Shop API starting with DynamoDB and SQS storage");
 
 app.Run();

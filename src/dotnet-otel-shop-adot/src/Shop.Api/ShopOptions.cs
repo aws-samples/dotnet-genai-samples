@@ -4,9 +4,6 @@ public class ShopOptions
 {
     public const string Section = "Shop";
 
-    /// <summary>"InMemory" runs with no AWS dependencies; "Aws" uses DynamoDB and SQS.</summary>
-    public string Storage { get; set; } = "InMemory";
-
     /// <summary>Insert the sample catalog when the products store is empty.</summary>
     public bool SeedProducts { get; set; } = true;
 
@@ -15,8 +12,6 @@ public class ShopOptions
     public ChaosOptions Chaos { get; set; } = new();
 
     public IntegrationOptions Integrations { get; set; } = new();
-
-    public bool UseAws => string.Equals(Storage, "Aws", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>AWS resources that checkout needs. Both are required; infra/demo-integrations.yaml creates them.</summary>

@@ -35,18 +35,17 @@ done
 out() { aws cloudformation describe-stacks --stack-name "$1" \
           --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text; }
 
-# Required: the S3 bucket and Secrets Manager secret (infra/demo-integrations.yaml).
-aws cloudformation describe-stacks --stack-name dotnet-shop-integrations >/dev/null 2>&1 ||
-  { echo "Stack dotnet-shop-integrations not found. Deploy infra/demo-integrations.yaml first." >&2; exit 1; }
-PARAMS=(ReceiptsBucket="$(out dotnet-shop-integrations ReceiptsBucket)"
+# Required: DynamoDB + SQS (infra/shop-resources.yaml) and the S3 bucket + Secrets Manager secret
+# (infra/demo-integrations.yaml). See README, Prerequisites.
+for stack in dotnet-shop dotnet-shop-integrations; do
+  aws cloudformation describe-stacks --stack-name "$stack" >/dev/null 2>&1 ||
+    { echo "Stack $stack not found. Deploy its template first (see README, Prerequisites)." >&2; exit 1; }
+done
+PARAMS=(OrderQueueUrl="$(out dotnet-shop OrderQueueUrl)"
+        ShopApiPolicyArn="$(out dotnet-shop ShopApiPolicyArn)"
+        ReceiptsBucket="$(out dotnet-shop-integrations ReceiptsBucket)"
         PaymentSecretArn="$(out dotnet-shop-integrations PaymentSecretArn)"
         IntegrationsPolicyArn="$(out dotnet-shop-integrations ShopApiIntegrationsPolicyArn)")
-
-# Optional: DynamoDB + SQS (infra/shop-resources.yaml). Without it the API stores data in memory.
-if aws cloudformation describe-stacks --stack-name dotnet-shop >/dev/null 2>&1; then
-  PARAMS+=(OrderQueueUrl="$(out dotnet-shop OrderQueueUrl)" ShopApiPolicyArn="$(out dotnet-shop ShopApiPolicyArn)")
-  echo "==> Storage: DynamoDB + SQS"
-fi
 
 echo "==> ECS stack (storefront allowed from $ALLOWED_CIDR)"
 aws cloudformation deploy --stack-name dotnet-shop-ecs --template-file infra/ecs-fargate.yaml \

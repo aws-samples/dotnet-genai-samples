@@ -19,14 +19,12 @@ Parameters:
   CloudWatchAgentImage:
     Type: String
     Default: public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest
-  # Optional storage (infra/shop-resources.yaml outputs). Empty = in-memory storage.
+  # Required storage resources (infra/shop-resources.yaml outputs).
   OrderQueueUrl:
     Type: String
-    Default: ""
-    Description: SQS queue URL; when set, the API uses DynamoDB + SQS.
+    Description: SQS order queue URL. The API also uses the DynamoDB tables from the same stack.
   ShopApiPolicyArn:
     Type: String
-    Default: ""
     Description: Managed policy granting the API access to the tables and queue.
   # Required checkout resources (infra/demo-integrations.yaml outputs).
   ReceiptsBucket:
@@ -38,9 +36,6 @@ Parameters:
   IntegrationsPolicyArn:
     Type: String
     Description: Managed policy granting the API access to the bucket and secret.
-
-Conditions:
-  UseAwsStorage: !Not [!Equals [!Ref OrderQueueUrl, ""]]
 
 Rules:
   NotOpenToInternet:
@@ -299,7 +294,7 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
         - !Ref IntegrationsPolicyArn
-        - !If [UseAwsStorage, !Ref ShopApiPolicyArn, !Ref AWS::NoValue]
+        - !Ref ShopApiPolicyArn
 
   # ---------------------------------------------------------------------------
   # Task definitions: app container + CloudWatch agent sidecar
@@ -398,7 +393,6 @@ Resources:
             - { Name: api, ContainerPort: 8080, AppProtocol: http }
           Environment:
             - { Name: ASPNETCORE_HTTP_PORTS, Value: "8080" }
-            - { Name: Shop__Storage, Value: !If [UseAwsStorage, Aws, InMemory] }
             - { Name: Shop__Aws__OrderQueueUrl, Value: !Ref OrderQueueUrl }
             - { Name: Shop__Integrations__ReceiptsBucket, Value: !Ref ReceiptsBucket }
             - { Name: Shop__Integrations__PaymentSecretId, Value: !Ref PaymentSecretArn }

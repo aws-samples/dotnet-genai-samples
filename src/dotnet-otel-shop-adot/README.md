@@ -61,7 +61,7 @@ macOS for local runs.
 | Stack | Template | Creates | Required |
 |---|---|---|---|
 | `dotnet-shop-integrations` | `infra/demo-integrations.yaml` | S3 receipts bucket, Secrets Manager payment key, IAM policy | Yes |
-| `dotnet-shop` | `infra/shop-resources.yaml` | DynamoDB tables, SQS queue with a dead-letter queue, IAM policy | No. Without it the API stores data in memory |
+| `dotnet-shop` | `infra/shop-resources.yaml` | DynamoDB tables, SQS queue with a dead-letter queue, IAM policy | Yes |
 
 ```bash
 aws cloudformation deploy --stack-name dotnet-shop-integrations \
@@ -84,11 +84,10 @@ scripts/run-local.sh api console
 scripts/run-local.sh web console
 ```
 
-`run-local.sh api` reads the stack outputs with your default AWS credentials and sets
-`Shop__Integrations__ReceiptsBucket`, `Shop__Integrations__PaymentSecretId`, and, when the `dotnet-shop`
-stack exists, `Shop__Storage=Aws` and `Shop__Aws__OrderQueueUrl`. `SHOP_STORAGE=InMemory` forces in-memory
-storage. If the integrations stack is missing, the script stops and says so; the API itself also refuses to
-start without the bucket and secret settings.
+`run-local.sh api` reads both stacks' outputs with your default AWS credentials and sets
+`Shop__Aws__OrderQueueUrl`, `Shop__Integrations__ReceiptsBucket`, and `Shop__Integrations__PaymentSecretId`.
+If a stack is missing, the script stops and says which; the API itself also refuses to start without
+these settings.
 
 Checkout reads the payment gateway key from Secrets Manager and writes a JSON receipt (no customer name,
 email, or address) to S3. There is no tracing code for either: the ADOT AWS SDK instrumentation creates the
@@ -110,7 +109,7 @@ Serilog writes to `C:\shop-logs\*.log`; the agent tails them into `/dotnet-shop/
 
 ## Run on Amazon ECS on AWS Fargate
 
-`infra/deploy-ecs.sh` needs the stacks from Prerequisites (`dotnet-shop-integrations` is required, `dotnet-shop` is optional). The profiler is already in each image (`/app`), so the task
+`infra/deploy-ecs.sh` needs the stacks from Prerequisites (both are required). The profiler is already in each image (`/app`), so the task
 definition only adds environment variables; no init container is needed. The CloudWatch agent sidecar
 config now enables `application_signals`.
 
@@ -316,9 +315,8 @@ Set these in `appsettings.json` or as environment variables (`__` separates sect
 
 | Setting | Default | Notes |
 |---|---|---|
-| `Shop:Storage` (API) | `InMemory` | `Aws` uses DynamoDB + SQS (`run-local.sh` sets it when the `dotnet-shop` stack exists) |
 | `Shop:Integrations:ReceiptsBucket` / `PaymentSecretId` (API) | none, required | S3 bucket and Secrets Manager secret from `dotnet-shop-integrations` |
-| `Shop:Aws:*` (API) | `shop-*` names | Table names, GSI name, `OrderQueueUrl` |
+| `Shop:Aws:*` (API) | `shop-*` names | Table names and GSI name. `OrderQueueUrl` is required |
 | `Shop:Chaos:PaymentFailureRate` (API) | `0.1` | Fraction of payments declined |
 | `Shop:Chaos:PaymentMin/MaxLatencyMs` (API) | `50` / `600` | Simulated payment latency |
 | `AWS:Region` / `AWS:Profile` (API) | `us-east-1` | Standard AWS SDK settings |
